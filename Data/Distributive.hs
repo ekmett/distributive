@@ -22,6 +22,8 @@ import Control.Monad.Trans.Identity
 import Control.Monad.Trans.Reader
 import Control.Monad.Instances ()
 import Data.Functor.Identity
+import Data.Functor.Product
+import Data.Functor.Compose
 
 -- | This is the categorical dual of 'Traversable'. However, there appears
 -- to be little benefit to allow the distribution via an arbitrary comonad
@@ -76,7 +78,15 @@ instance Distributive g => Distributive (ReaderT e g) where
 instance Distributive g => Distributive (IdentityT g) where
   collect f = IdentityT . collect (runIdentityT . f)
 
+instance (Distributive f, Distributive g) => Distributive (Compose f g) where
+  distribute = Compose . fmap distribute . collect getCompose
+
+instance (Distributive f, Distributive g) => Distributive (Product f g) where
+  -- distribute  :: Functor w => w (Product f g a) -> Product f g (w a)
+  distribute wp = Pair (collect fstP wp) (collect sndP wp) where 
+    fstP (Pair a _) = a
+    sndP (Pair _ b) = b
+
 -- | Every 'Distributive' is a 'Functor'. This is a valid default definition.
 fmapDefault :: Distributive g => (a -> b) -> g a -> g b
 fmapDefault f = cotraverse (f . runIdentity) . Identity
-
