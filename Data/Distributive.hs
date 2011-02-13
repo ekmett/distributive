@@ -45,7 +45,7 @@ class Functor g => Distributive g where
   distribute  = collect id
 
   -- | 
-  -- > collect   = distribute . fmap f
+  -- > collect = distribute . fmap f
   collect     :: Functor f => (a -> g b) -> f a -> g (f b)
   collect f   = distribute . fmap f
 
@@ -87,6 +87,6 @@ instance (Distributive f, Distributive g) => Distributive (Product f g) where
     fstP (Pair a _) = a
     sndP (Pair _ b) = b
 
--- | Every 'Distributive' is a 'Functor'. This is a valid default definition.
+-- | Given a definition for 'collect', a 'Distributive' is a 'Functor'.
 fmapDefault :: Distributive g => (a -> b) -> g a -> g b
-fmapDefault f = cotraverse (f . runIdentity) . Identity
+fmapDefault f = runIdentity . collect (Identity . f)
