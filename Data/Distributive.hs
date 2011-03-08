@@ -11,7 +11,6 @@
 ----------------------------------------------------------------------------
 module Data.Distributive 
   ( Distributive(..)
-  , fmapDefault
   , cotraverse
   , comapM
   ) where
@@ -86,7 +85,3 @@ instance (Distributive f, Distributive g) => Distributive (Product f g) where
   distribute wp = Pair (collect fstP wp) (collect sndP wp) where 
     fstP (Pair a _) = a
     sndP (Pair _ b) = b
-
--- | Given a definition for 'collect', a 'Distributive' is a 'Functor'.
-fmapDefault :: Distributive g => (a -> b) -> g a -> g b
-fmapDefault f = runIdentity . collect (Identity . f)

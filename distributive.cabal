@@ -1,6 +1,6 @@
 name:          distributive
 category:      Data Structures
-version:       0.1.2
+version:       0.2.0
 license:       BSD3
 cabal-version: >= 1.6
 license-file:  LICENSE
