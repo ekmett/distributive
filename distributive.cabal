@@ -1,6 +1,6 @@
 name:          distributive
 category:      Data Structures
-version:       0.2.0.1
+version:       0.2.1
 license:       BSD3
 cabal-version: >= 1.6
 license-file:  LICENSE
@@ -19,10 +19,10 @@ source-repository head
 
 library
   build-depends: 
-    base >= 4 && < 5,
-    transformers >= 0.2.0 && < 0.3
+    base         >= 4 && < 5,
+    transformers >= 0.3 && < 0.4
 
   exposed-modules:
     Data.Distributive
 
-  ghc-options: -Wall 
+  ghc-options: -Wall
