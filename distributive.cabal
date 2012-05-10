@@ -8,17 +8,19 @@ author:        Edward A. Kmett
 maintainer:    Edward A. Kmett <ekmett@gmail.com>
 stability:     provisional
 homepage:      http://github.com/ekmett/distributive/
+bug-reports:   http://github.com/ekmett/distributive/issues
 copyright:     Copyright (C) 2011 Edward A. Kmett
 synopsis:      Haskell 98 Distributive functors -- Dual to Traversable
 description:   Haskell 98 Distributive functors -- Dual to Traversable
 build-type:    Simple
+extra-source-files: .travis.yml
 
 source-repository head
   type: git
   location: git://github.com/ekmett/distributive.git
 
 library
-  build-depends: 
+  build-depends:
     base         >= 4 && < 5,
     transformers >= 0.2 && < 0.4
 
