@@ -26,6 +26,8 @@ import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
 
+{-# ANN module "ignore Use section" #-}
+
 -- | This is the categorical dual of 'Traversable'. However, there appears
 -- to be little benefit to allow the distribution via an arbitrary comonad
 -- so we restrict ourselves to 'Functor'.
