@@ -1,8 +1,8 @@
 name:          distributive
 category:      Data Structures
-version:       0.2.2.1
+version:       0.3
 license:       BSD3
-cabal-version: >= 1.6
+cabal-version: >= 1.8
 license-file:  LICENSE
 author:        Edward A. Kmett
 maintainer:    Edward A. Kmett <ekmett@gmail.com>
@@ -12,19 +12,48 @@ bug-reports:   http://github.com/ekmett/distributive/issues
 copyright:     Copyright (C) 2011 Edward A. Kmett
 synopsis:      Haskell 98 Distributive functors -- Dual to Traversable
 description:   Haskell 98 Distributive functors -- Dual to Traversable
-build-type:    Simple
-extra-source-files: .travis.yml
+build-type:    Custom
+extra-source-files:
+  .ghci
+  .travis.yml
+  .vim.custom
+  config
+  travis-cabal-apt-install
+  CHANGELOG.markdown
+  README.markdown
 
 source-repository head
   type: git
   location: git://github.com/ekmett/distributive.git
 
+flag lib-Werror
+  manual: True
+  default: False
+
 library
   build-depends:
-    base         >= 4 && < 5,
-    transformers >= 0.2 && < 0.4
+    base                >= 4   && < 5,
+    transformers        >= 0.2 && < 0.4,
+    transformers-compat >= 0.1 && < 0.2
 
-  exposed-modules:
-    Data.Distributive
+  hs-source-dirs:  src
+  exposed-modules: Data.Distributive
 
-  ghc-options: -Wall
+  if flag(lib-Werror)
+    ghc-options: -Werror
+  else
+    ghc-options: -Wall
+
+-- Verify the results of the examples
+test-suite doctests
+  type:    exitcode-stdio-1.0
+  main-is: doctests.hs
+  build-depends:
+    base      >= 4,
+    directory >= 1.0,
+    doctest   >= 0.9.1,
+    filepath  >= 1.2
+  ghc-options: -Wall -threaded
+  if impl(ghc<7.6.1)
+    ghc-options: -Werror
+  hs-source-dirs: tests
