@@ -50,7 +50,7 @@ class Functor g => Distributive g where
   distribute  = collect id
 
   -- |
-  -- @'collect' = 'distribute' . 'fmap' f@
+  -- @'collect' f = 'distribute' . 'fmap' f@
   collect     :: Functor f => (a -> g b) -> f a -> g (f b)
   collect f   = distribute . fmap f
 
