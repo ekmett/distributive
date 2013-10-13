@@ -28,9 +28,14 @@ import Data.Functor.Reverse
 
 {-# ANN module "ignore Use section" #-}
 
--- | This is the categorical dual of 'Traversable'. However, there appears
--- to be little benefit to allow the distribution via an arbitrary comonad
--- so we restrict ourselves to 'Functor'.
+-- | This is the categorical dual of 'Traversable'. 
+--
+-- Due to the lack of non-trivial comonoids in Haskell, we can restrict
+-- ourselves to requiring a 'Functor' rather than
+-- some Coapplicative class. Categorically every 'Distributive'
+-- functor is actually a right adjoint, and so it must be 'Representable'
+-- endofunctor and preserve all limits. This is a fancy way of saying it
+-- isomorphic to `(->) x` for some x.
 --
 -- Minimal complete definition: 'distribute' or 'collect'
 --
@@ -39,6 +44,7 @@ import Data.Functor.Reverse
 -- means that the holes in all values of that type, must have the same
 -- cardinality, fixed sized vectors, infinite streams, functions, etc.
 -- and no extra information to try to merge together.
+--
 class Functor g => Distributive g where
   -- | The dual of 'Data.Traversable.sequenceA'
   --
