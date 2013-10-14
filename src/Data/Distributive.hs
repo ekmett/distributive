@@ -26,7 +26,6 @@ import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
 
-{-# ANN module "ignore Use section" #-}
 
 -- | This is the categorical dual of 'Traversable'. 
 --
