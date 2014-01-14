@@ -25,9 +25,11 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
+import Data.Proxy
+import Data.Tagged
 
 
--- | This is the categorical dual of 'Traversable'. 
+-- | This is the categorical dual of 'Traversable'.
 --
 -- Due to the lack of non-trivial comonoids in Haskell, we can restrict
 -- ourselves to requiring a 'Functor' rather than
@@ -85,6 +87,14 @@ comapM f = fmap f . distributeM
 instance Distributive Identity where
   collect f = Identity . fmap (runIdentity . f)
   distribute = Identity . fmap runIdentity
+
+instance Distributive Proxy where
+  collect _ _ = Proxy
+  distribute _ = Proxy
+
+instance Distributive (Tagged t) where
+  collect f = Tagged . fmap (unTagged . f)
+  distribute = Tagged . fmap unTagged
 
 instance Distributive ((->)e) where
   distribute a e = fmap ($e) a
