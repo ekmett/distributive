@@ -1,3 +1,7 @@
+0.4
+---
+* Added support for `Data.Tagged` and `Data.Proxy`.
+
 0.3.1
 -----
 * Minor documentation fix
