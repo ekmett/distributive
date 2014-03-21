@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Distributive
@@ -18,7 +19,9 @@ module Data.Distributive
 import Control.Applicative
 import Control.Applicative.Backwards
 import Control.Monad (liftM)
+#if __GLASGOW_HASKELL__ <= 706
 import Control.Monad.Instances ()
+#endif
 import Control.Monad.Trans.Identity
 import Control.Monad.Trans.Reader
 import Data.Functor.Compose
