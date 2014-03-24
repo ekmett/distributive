@@ -1,3 +1,7 @@
+0.4.1
+-----
+* `Control.Monad.Instances` is deprecated in GHC 7.8. Don't import it there.
+
 0.4
 ---
 * Added support for `Data.Tagged` and `Data.Proxy`.
