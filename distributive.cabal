@@ -40,10 +40,10 @@ library
   hs-source-dirs:  src
   exposed-modules: Data.Distributive
 
-  if flag(lib-Werror)
-    ghc-options: -Werror
-  else
-    ghc-options: -Wall
+--  if flag(lib-Werror)
+--    ghc-options: -Werror
+--  else
+  ghc-options: -Wall
 
 -- Verify the results of the examples
 -- test-suite doctests
