@@ -46,15 +46,15 @@ library
     ghc-options: -Wall
 
 -- Verify the results of the examples
-test-suite doctests
-  type:    exitcode-stdio-1.0
-  main-is: doctests.hs
-  build-depends:
-    base      >= 4,
-    directory >= 1.0,
-    doctest   >= 0.9.1,
-    filepath  >= 1.2
-  ghc-options: -Wall -threaded
-  if impl(ghc<7.6.1)
-    ghc-options: -Werror
-  hs-source-dirs: tests
+-- test-suite doctests
+--  type:    exitcode-stdio-1.0
+--  main-is: doctests.hs
+--  build-depends:
+--    base      >= 4,
+--    directory >= 1.0,
+--    doctest   >= 0.9.1,
+--    filepath  >= 1.2
+--  ghc-options: -Wall -threaded
+--  if impl(ghc<7.6.1)
+--    ghc-options: -Werror
+--  hs-source-dirs: tests
