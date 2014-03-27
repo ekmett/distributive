@@ -26,9 +26,9 @@ source-repository head
   type: git
   location: git://github.com/ekmett/distributive.git
 
-flag lib-Werror
-  manual: True
-  default: False
+-- flag lib-Werror
+--  manual: True
+--  default: False
 
 library
   build-depends:
