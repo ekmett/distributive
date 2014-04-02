@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 -----------------------------------------------------------------------------
 -- |
@@ -16,7 +15,6 @@ module Data.Distributive
   ( Distributive(..)
   , cotraverse
   , comapM
-  , genericDistribute
   ) where
 
 import Control.Applicative
@@ -33,7 +31,10 @@ import Data.Functor.Product
 import Data.Functor.Reverse
 import Data.Proxy
 import Data.Tagged
-import GHC.Generics
+
+#ifndef HLINT
+{-# ANN module "hlint: ignore Use section" #-}
+#endif
 
 -- | This is the categorical dual of 'Traversable'.
 --
@@ -124,45 +125,3 @@ instance Distributive f => Distributive (Backwards f) where
 
 instance Distributive f => Distributive (Reverse f) where
   distribute = Reverse . collect getReverse
-
--- | 'distribute' derived from a 'Generic1' type
---
--- This can be used to easily produce a 'Distributive' instance for a
--- type with a 'Generic1' instance,
---
--- > data V2 a = V2 a a deriving (Show, Functor, Generic1)
--- > instance Distributive V2' where distribute = genericDistribute
-genericDistribute  :: (Functor f, Generic1 g, GDistributive (Rep1 g)) => f (g a) -> g (f a)
-genericDistribute = to1 . gdistribute . fmap from1
-
--- Can't distribute over,
---   * sums (:+:)
---   * K1
-class GDistributive g where
-  gdistribute :: Functor f => f (g a) -> g (f a)
-
-instance GDistributive U1 where
-  gdistribute _ = U1
-  {-# INLINE gdistribute #-}
-
-instance (GDistributive a, GDistributive b) => GDistributive (a :*: b) where
-  gdistribute f = gdistribute (fmap fstP f) :*: gdistribute (fmap sndP f) where
-    fstP (l :*: _) = l
-    sndP (_ :*: r) = r
-  {-# INLINE gdistribute #-}
-
-instance (Functor a, Functor b, GDistributive a, GDistributive b) => GDistributive (a :.: b) where
-  gdistribute = Comp1 . fmap gdistribute . gdistribute . fmap unComp1
-  {-# INLINE gdistribute #-}
-  
-instance GDistributive Par1 where
-  gdistribute = Par1 . fmap unPar1
-  {-# INLINE gdistribute #-}
-
-instance GDistributive f => GDistributive (Rec1 f) where
-  gdistribute = Rec1 . gdistribute . fmap unRec1
-  {-# INLINE gdistribute #-}
-
-instance GDistributive f => GDistributive (M1 i c f) where
-  gdistribute = M1 . gdistribute . fmap unM1
-  {-# INLINE gdistribute #-}

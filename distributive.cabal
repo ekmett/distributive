@@ -1,6 +1,6 @@
 name:          distributive
 category:      Data Structures
-version:       0.4.1
+version:       0.4.2
 license:       BSD3
 cabal-version: >= 1.8
 license-file:  LICENSE
@@ -38,7 +38,7 @@ library
     transformers-compat >= 0.1 && < 0.2
 
   hs-source-dirs:  src
-  exposed-modules: Data.Distributive
+  exposed-modules: Data.Distributive Data.Distributive.Generic
 
   if flag(lib-Werror)
     ghc-options: -Werror
