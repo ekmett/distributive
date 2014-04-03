@@ -1,3 +1,11 @@
+0.4.3.1
+-----
+* Fixed builds with older versions of GHC
+
+0.4.2
+-------
+* Added `Data.Distributive.Generic`.
+
 0.4.1
 -----
 * `Control.Monad.Instances` is deprecated in GHC 7.8. Don't import it there.
