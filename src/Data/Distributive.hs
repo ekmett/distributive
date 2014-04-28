@@ -32,7 +32,7 @@ import Data.Functor.Reverse
 import Data.Proxy
 import Data.Tagged
 
-#ifndef HLINT
+#ifdef HLINT
 {-# ANN module "hlint: ignore Use section" #-}
 #endif
 
