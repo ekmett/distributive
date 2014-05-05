@@ -1,3 +1,7 @@
+0.4.4
+-----
+* `transformers 0.4` compatibility
+
 0.4.3.1
 -----
 * Fixed builds with older versions of GHC
