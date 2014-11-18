@@ -18,6 +18,7 @@ module Data.Distributive.Generic
   ) where
 
 import GHC.Generics
+import Data.Distributive
 
 -- | 'distribute' derived from a 'Generic1' type
 --
@@ -60,3 +61,9 @@ instance GDistributive f => GDistributive (Rec1 f) where
 instance GDistributive f => GDistributive (M1 i c f) where
   gdistribute = M1 . gdistribute . fmap unM1
   {-# INLINE gdistribute #-}
+
+instance Distributive U1
+instance (Distributive a, Distributive b) => Distributive (a :*: b)
+instance Distributive Par1
+instance Distributive f => Distributive (Rec1 f)
+instance Distributive f => Distributive (M1 i c f)
