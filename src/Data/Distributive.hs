@@ -29,8 +29,13 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
+
+#if (defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 707) || defined(MIN_VERSION_tagged)
 import Data.Proxy
+#endif
+#ifdef MIN_VERSION_tagged
 import Data.Tagged
+#endif
 
 #ifdef HLINT
 {-# ANN module "hlint: ignore Use section" #-}

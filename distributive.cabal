@@ -1,6 +1,6 @@
 name:          distributive
 category:      Data Structures
-version:       0.4.4
+version:       0.5
 license:       BSD3
 cabal-version: >= 1.8
 license-file:  LICENSE
@@ -29,11 +29,21 @@ source-repository head
 flag lib-Werror
   manual: True
   default: False
+  description:
+    When enabled any warning during the build process will result in a failure. This is useful in buildbot configurations, but should
+    not be used during normal day-to-day use.
+
+flag tagged
+  manual: True
+  default: True
+  description:
+    You can disable the use of the `tagged` package using `-f-tagged`.
+    .
+    Disabling this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
 
 library
   build-depends:
     base                >= 4   && < 5,
-    tagged              >= 0.7 && < 1,
     transformers        >= 0.2 && < 0.5,
     transformers-compat >= 0.3 && < 1
 
@@ -43,6 +53,11 @@ library
 
   if impl(ghc>=7.2)
     exposed-modules: Data.Distributive.Generic
+
+  if flag(tagged)
+    build-depends: tagged >= 0.7 && < 1
+
+  if impl(ghc>=7.4 && < 7.6)
     build-depends: ghc-prim
 
   if flag(lib-Werror)

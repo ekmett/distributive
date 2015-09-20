@@ -1,3 +1,8 @@
+0.5
+---
+* Added flags for removing some dependencies.
+* Support `doctests` when building to non-standard locations (such as when using `stack`.)
+
 0.4.4
 -----
 * `transformers 0.4` compatibility
