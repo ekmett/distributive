@@ -16,7 +16,7 @@ main = getSources >>= \sources -> doctest $
     "-isrc"
   : ("-i" ++ autogen_dir)
   : "-optP-include"
-  : ("-optP" ++ autogen_dir ++ "cabal_macros.h")
+  : ("-optP" ++ autogen_dir ++ "/cabal_macros.h")
   : "-hide-all-packages"
   : map ("-package="++) deps ++ sources
 
