@@ -14,7 +14,6 @@ synopsis:      Distributive functors -- Dual to Traversable
 description:   Distributive functors -- Dual to Traversable
 build-type:    Custom
 extra-source-files:
-  .ghci
   .travis.yml
   .vim.custom
   config
