@@ -29,7 +29,12 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
+import qualified Data.Monoid as Monoid
+import Data.Orphans ()
 
+#if MIN_VERSION_base(4,4,0)
+import Data.Complex
+#endif
 #if (defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 707) || defined(MIN_VERSION_tagged)
 import Data.Proxy
 #endif
@@ -130,3 +135,24 @@ instance Distributive f => Distributive (Backwards f) where
 
 instance Distributive f => Distributive (Reverse f) where
   distribute = Reverse . collect getReverse
+
+instance Distributive Monoid.Dual where
+  collect f  = Monoid.Dual . fmap (Monoid.getDual . f)
+  distribute = Monoid.Dual . fmap Monoid.getDual
+
+instance Distributive Monoid.Product where
+  collect f  = Monoid.Product . fmap (Monoid.getProduct . f)
+  distribute = Monoid.Product . fmap Monoid.getProduct
+
+instance Distributive Monoid.Sum where
+  collect f  = Monoid.Sum . fmap (Monoid.getSum . f)
+  distribute = Monoid.Sum . fmap Monoid.getSum
+
+#if MIN_VERSION_base(4,4,0)
+instance Distributive Complex where
+  distribute wc = fmap realP wc :+ fmap imagP wc where
+    -- Redefine realPart and imagPart to avoid incurring redundant RealFloat
+    -- constraints on older versions of base
+    realP (r :+ _) = r
+    imagP (_ :+ i) = i
+#endif
