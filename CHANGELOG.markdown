@@ -2,6 +2,7 @@
 ---
 * Added flags for removing some dependencies.
 * Support `doctests` when building to non-standard locations (such as when using `stack`.)
+* Support `base-orphans`
 
 0.4.4
 -----
