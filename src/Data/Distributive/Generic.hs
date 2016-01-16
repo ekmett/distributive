@@ -45,7 +45,7 @@ instance (GDistributive a, GDistributive b) => GDistributive (a :*: b) where
     sndP (_ :*: r) = r
   {-# INLINE gdistribute #-}
 
-instance (Functor a, Functor b, GDistributive a, GDistributive b) => GDistributive (a :.: b) where
+instance (Functor a, GDistributive a, GDistributive b) => GDistributive (a :.: b) where
   gdistribute = Comp1 . fmap gdistribute . gdistribute . fmap unComp1
   {-# INLINE gdistribute #-}
 
