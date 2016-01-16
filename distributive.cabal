@@ -25,13 +25,6 @@ source-repository head
   type: git
   location: git://github.com/ekmett/distributive.git
 
-flag lib-Werror
-  manual: True
-  default: False
-  description:
-    When enabled any warning during the build process will result in a failure. This is useful in buildbot configurations, but should
-    not be used during normal day-to-day use.
-
 flag tagged
   manual: True
   default: True
@@ -60,10 +53,7 @@ library
   if impl(ghc>=7.4 && < 7.6)
     build-depends: ghc-prim
 
-  if flag(lib-Werror)
-    ghc-options: -Werror
-  else
-    ghc-options: -Wall
+  ghc-options: -Wall
 
 -- Verify the results of the examples
 test-suite doctests
@@ -75,6 +65,4 @@ test-suite doctests
     doctest   >= 0.9.1,
     filepath  >= 1.2
   ghc-options: -Wall -threaded
-  if impl(ghc<7.6.1)
-    ghc-options: -Werror
   hs-source-dirs: tests
