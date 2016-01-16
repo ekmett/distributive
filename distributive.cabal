@@ -9,7 +9,7 @@ maintainer:    Edward A. Kmett <ekmett@gmail.com>
 stability:     provisional
 homepage:      http://github.com/ekmett/distributive/
 bug-reports:   http://github.com/ekmett/distributive/issues
-copyright:     Copyright (C) 2011-2014 Edward A. Kmett
+copyright:     Copyright (C) 2011-2016 Edward A. Kmett
 synopsis:      Distributive functors -- Dual to Traversable
 description:   Distributive functors -- Dual to Traversable
 build-type:    Custom
