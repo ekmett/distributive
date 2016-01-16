@@ -53,9 +53,6 @@ library
   if impl(ghc>=7.2 && < 7.6)
     build-depends: ghc-prim
 
-  if impl(ghc>=7.4 && < 7.6)
-    build-depends: transformers < 0.5 || > 0.5
-
   ghc-options: -Wall
 
 -- Verify the results of the examples
