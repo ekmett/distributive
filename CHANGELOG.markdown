@@ -1,3 +1,7 @@
+0.5.0.1
+-------
+* Fix builds on GHC 7.2
+
 0.5
 ---
 * Added flags for removing some dependencies.
