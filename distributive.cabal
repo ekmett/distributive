@@ -38,8 +38,7 @@ library
     base                >= 4   && < 5,
     base-orphans        >= 0.5 && < 1,
     transformers        >= 0.2 && < 0.6,
-    transformers-compat >= 0.3 && < 1,
-    ghc-prim
+    transformers-compat >= 0.3 && < 1
 
   hs-source-dirs:  src
   exposed-modules:
@@ -51,8 +50,9 @@ library
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1
 
-  if impl(ghc>=7.4 && < 7.6)
+  if impl(ghc>=7.2 && < 7.6)
     build-depends: ghc-prim
+
 
   ghc-options: -Wall
 
