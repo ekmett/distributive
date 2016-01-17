@@ -40,11 +40,11 @@ matrix:
       compiler: ": #GHC 7.10.2"
       addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.2,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
 
-    - env: BUILD=stack STACK_OPTIONS=--skip-ghc-check
-      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.2,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
+#    - env: BUILD=stack STACK_OPTIONS=--skip-ghc-check
+#      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.2,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
 
-    - env: BUILD=stack
-      os: osx
+#    - env: BUILD=stack
+#      os: osx
 
 
 before_install:
