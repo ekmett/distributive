@@ -1,3 +1,7 @@
+0.5.0.2
+-------
+* A more elegant fix for builds on GHC 7.2
+
 0.5.0.1
 -------
 * Fix builds on GHC 7.2
