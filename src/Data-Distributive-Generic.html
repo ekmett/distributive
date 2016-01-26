@@ -13,7 +13,7 @@
 <a name="line-4"></a><span class='hs-comment'>-----------------------------------------------------------------------------</span>
 <a name="line-5"></a><span class='hs-comment'>-- |</span>
 <a name="line-6"></a><span class='hs-comment'>-- Module      :  Data.Distributive</span>
-<a name="line-7"></a><span class='hs-comment'>-- Copyright   :  (C) 2011-2014 Edward Kmett</span>
+<a name="line-7"></a><span class='hs-comment'>-- Copyright   :  (C) 2011-2016 Edward Kmett</span>
 <a name="line-8"></a><span class='hs-comment'>-- License     :  BSD-style (see the file LICENSE)</span>
 <a name="line-9"></a><span class='hs-comment'>--</span>
 <a name="line-10"></a><span class='hs-comment'>-- Maintainer  :  Edward Kmett &lt;ekmett@gmail.com&gt;</span>
@@ -54,7 +54,7 @@
 <a name="line-45"></a>    <span class='hs-varid'>sndP</span> <span class='hs-layout'>(</span><span class='hs-keyword'>_</span> <span class='hs-conop'>:*:</span> <span class='hs-varid'>r</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>r</span>
 <a name="line-46"></a>  <span class='hs-comment'>{-# INLINE gdistribute #-}</span>
 <a name="line-47"></a>
-<a name="line-48"></a><a name="instance%20GDistributive%20(a%20:.:%20b)"></a><span class='hs-keyword'>instance</span> <span class='hs-layout'>(</span><span class='hs-conid'>Functor</span> <span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-conid'>Functor</span> <span class='hs-varid'>b</span><span class='hs-layout'>,</span> <span class='hs-conid'>GDistributive</span> <span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-conid'>GDistributive</span> <span class='hs-varid'>b</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>GDistributive</span> <span class='hs-layout'>(</span><span class='hs-varid'>a</span> <span class='hs-conop'>:.:</span> <span class='hs-varid'>b</span><span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
+<a name="line-48"></a><a name="instance%20GDistributive%20(a%20:.:%20b)"></a><span class='hs-keyword'>instance</span> <span class='hs-layout'>(</span><span class='hs-conid'>Functor</span> <span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-conid'>GDistributive</span> <span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-conid'>GDistributive</span> <span class='hs-varid'>b</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>GDistributive</span> <span class='hs-layout'>(</span><span class='hs-varid'>a</span> <span class='hs-conop'>:.:</span> <span class='hs-varid'>b</span><span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
 <a name="line-49"></a>  <span class='hs-varid'>gdistribute</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Comp1</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fmap</span> <span class='hs-varid'>gdistribute</span> <span class='hs-varop'>.</span> <span class='hs-varid'>gdistribute</span> <span class='hs-varop'>.</span> <span class='hs-varid'>fmap</span> <span class='hs-varid'>unComp1</span>
 <a name="line-50"></a>  <span class='hs-comment'>{-# INLINE gdistribute #-}</span>
 <a name="line-51"></a>
