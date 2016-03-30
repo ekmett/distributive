@@ -72,6 +72,7 @@ class Functor g => Distributive g where
   --
   -- @
   -- 'distribute' = 'collect' 'id'
+  -- 'distribute' . 'distribute' = 'id'
   -- @
   distribute  :: Functor f => f (g a) -> g (f a)
   distribute  = collect id
