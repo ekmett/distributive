@@ -15,6 +15,7 @@ module Data.Distributive
   ( Distributive(..)
   , cotraverse
   , comapM
+  , fmapCollect
   ) where
 
 import Control.Applicative
@@ -75,6 +76,7 @@ class Functor g => Distributive g where
 
   -- |
   -- @'collect' f = 'distribute' . 'fmap' f@
+  -- @'fmap' f = 'runIdentity' . 'collect' ('Identity' . f)@
   collect     :: Functor f => (a -> g b) -> f a -> g (f b)
   collect f   = distribute . fmap f
 
@@ -156,3 +158,8 @@ instance Distributive Complex where
     realP (r :+ _) = r
     imagP (_ :+ i) = i
 #endif
+
+-- | 'fmapCollect' is a viable default definition for 'fmap' given
+-- a 'Distributive' instance defined in terms of 'collect'.
+fmapCollect :: Distributive f => (a -> b) -> f a -> f b
+fmapCollect f = runIdentity . collect (Identity . f)
