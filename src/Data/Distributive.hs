@@ -70,36 +70,50 @@ class Functor g => Distributive g where
   -- >>> distribute [(+1),(+2)] 1
   -- [2,3]
   --
-  -- @'distribute' = 'collect' 'id'@
+  -- @
+  -- 'distribute' = 'collect' 'id'
+  -- @
   distribute  :: Functor f => f (g a) -> g (f a)
   distribute  = collect id
 
   -- |
-  -- @'collect' f = 'distribute' . 'fmap' f@
-  -- @'fmap' f = 'runIdentity' . 'collect' ('Identity' . f)@
+  -- @
+  -- 'collect' f = 'distribute' . 'fmap' f
+  -- 'fmap' f = 'runIdentity' . 'collect' ('Identity' . f)
+  -- 'fmap' 'distribute' . 'collect' f = 'getCompose' . 'collect' ('Compose' . f)
+  -- @
+
   collect     :: Functor f => (a -> g b) -> f a -> g (f b)
   collect f   = distribute . fmap f
 
   -- | The dual of 'Data.Traversable.sequence'
   --
-  -- @'distributeM' = 'fmap' 'unwrapMonad' . 'distribute' . 'WrapMonad'@
+  -- @
+  -- 'distributeM' = 'fmap' 'unwrapMonad' . 'distribute' . 'WrapMonad'
+  -- @
   distributeM :: Monad m => m (g a) -> g (m a)
   distributeM = fmap unwrapMonad . distribute . WrapMonad
 
   -- |
-  -- @'collectM' = 'distributeM' . 'liftM' f@
+  -- @
+  -- 'collectM' = 'distributeM' . 'liftM' f
+  -- @
   collectM    :: Monad m => (a -> g b) -> m a -> g (m b)
   collectM f  = distributeM . liftM f
 
 -- | The dual of 'Data.Traversable.traverse'
 --
--- @'cotraverse' f = 'fmap' f . 'distribute'@
+-- @
+-- 'cotraverse' f = 'fmap' f . 'distribute'
+-- @
 cotraverse :: (Functor f, Distributive g) => (f a -> b) -> f (g a) -> g b
 cotraverse f = fmap f . distribute
 
 -- | The dual of 'Data.Traversable.mapM'
 --
--- @'comapM' f = 'fmap' f . 'distributeM'@
+-- @
+-- 'comapM' f = 'fmap' f . 'distributeM'
+-- @
 comapM :: (Monad m, Distributive g) => (m a -> b) -> m (g a) -> g b
 comapM f = fmap f . distributeM
 
