@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeOperators #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Distributive
@@ -41,6 +42,9 @@ import Data.Proxy
 #endif
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
+#endif
+#if __GLASGOW_HASKELL__ >= 702
+import GHC.Generics (U1(..), (:*:)(..), (:.:)(..), Par1(..), Rec1(..), M1(..))
 #endif
 
 #ifdef HLINT
@@ -178,3 +182,25 @@ instance Distributive Complex where
 -- a 'Distributive' instance defined in terms of 'collect'.
 fmapCollect :: Distributive f => (a -> b) -> f a -> f b
 fmapCollect f = runIdentity . collect (Identity . f)
+
+#if __GLASGOW_HASKELL__ >= 702
+instance Distributive U1 where
+  distribute _ = U1
+
+instance (Distributive a, Distributive b) => Distributive (a :*: b) where
+  distribute f = distribute (fmap fstP f) :*: distribute (fmap sndP f) where
+    fstP (l :*: _) = l
+    sndP (_ :*: r) = r
+
+instance (Distributive a, Distributive b) => Distributive (a :.: b) where
+  distribute = Comp1 . fmap distribute . distribute . fmap unComp1
+
+instance Distributive Par1 where
+  distribute = Par1 . fmap unPar1
+
+instance Distributive f => Distributive (Rec1 f) where
+  distribute = Rec1 . distribute . fmap unRec1
+
+instance Distributive f => Distributive (M1 i c f) where
+  distribute = M1 . distribute . fmap unM1
+#endif
