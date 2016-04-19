@@ -22,7 +22,7 @@ module Data.Distributive
 import Control.Applicative
 import Control.Applicative.Backwards
 import Control.Monad (liftM)
-#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ < 707
+#if __GLASGOW_HASKELL__ < 707
 import Control.Monad.Instances ()
 #endif
 import Control.Monad.Trans.Identity
@@ -37,8 +37,11 @@ import Data.Orphans ()
 #if MIN_VERSION_base(4,4,0)
 import Data.Complex
 #endif
-#if (defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 707) || defined(MIN_VERSION_tagged)
+#if __GLASGOW_HASKELL__ >= 707 || defined(MIN_VERSION_tagged)
 import Data.Proxy
+#endif
+#if __GLASGOW_HASKELL__ >= 800 || defined(MIN_VERSION_semigroups)
+import qualified Data.Semigroup as Semigroup
 #endif
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
@@ -126,13 +129,17 @@ instance Distributive Identity where
   collect f = Identity . fmap (runIdentity . f)
   distribute = Identity . fmap runIdentity
 
+#if __GLASGOW_HASKELL__ >= 707 || defined(MIN_VERSION_tagged)
 instance Distributive Proxy where
   collect _ _ = Proxy
   distribute _ = Proxy
+#endif
 
+#if defined(MIN_VERSION_tagged)
 instance Distributive (Tagged t) where
   collect f = Tagged . fmap (unTagged . f)
   distribute = Tagged . fmap unTagged
+#endif
 
 instance Distributive ((->)e) where
   distribute a e = fmap ($e) a
@@ -168,6 +175,24 @@ instance Distributive Monoid.Product where
 instance Distributive Monoid.Sum where
   collect f  = Monoid.Sum . fmap (Monoid.getSum . f)
   distribute = Monoid.Sum . fmap Monoid.getSum
+
+#if __GLASGOW_HASKELL__ >= 800 || defined(MIN_VERSION_semigroups)
+instance Distributive Semigroup.Min where
+  collect f  = Semigroup.Min . fmap (Semigroup.getMin . f)
+  distribute = Semigroup.Min . fmap Semigroup.getMin
+
+instance Distributive Semigroup.Max where
+  collect f  = Semigroup.Max . fmap (Semigroup.getMax . f)
+  distribute = Semigroup.Max . fmap Semigroup.getMax
+
+instance Distributive Semigroup.First where
+  collect f  = Semigroup.First . fmap (Semigroup.getFirst . f)
+  distribute = Semigroup.First . fmap Semigroup.getFirst
+
+instance Distributive Semigroup.Last where
+  collect f  = Semigroup.Last . fmap (Semigroup.getLast . f)
+  distribute = Semigroup.Last . fmap Semigroup.getLast
+#endif
 
 #if MIN_VERSION_base(4,4,0)
 instance Distributive Complex where

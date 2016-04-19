@@ -25,6 +25,14 @@ source-repository head
   type: git
   location: git://github.com/ekmett/distributive.git
 
+flag semigroups
+  manual: True
+  default: True
+  description:
+    You can disable the use of the `tagged` package using `-f-tagged`.
+    .
+    Disabling this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
+
 flag tagged
   manual: True
   default: True
@@ -52,6 +60,10 @@ library
 
   if impl(ghc>=7.2 && < 7.6)
     build-depends: ghc-prim
+
+  if impl(ghc < 8.0)
+    if flag(semigroups)
+      build-depends: semigroups >= 0.11 && < 1
 
   ghc-options: -Wall
 

@@ -1,6 +1,6 @@
 next
 ----
-* Added `Distributive` instances for `GHC.Generics` datatypes
+* Added `Distributive` instances for datatypes from `Data.Semigroup` and `GHC.Generics`
 
 0.5.0.2
 -------
