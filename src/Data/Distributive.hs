@@ -114,7 +114,7 @@ class Functor g => Distributive g where
 -- @
 -- 'cotraverse' f = 'fmap' f . 'distribute'
 -- @
-cotraverse :: (Functor f, Distributive g) => (f a -> b) -> f (g a) -> g b
+cotraverse :: (Distributive g, Functor f) => (f a -> b) -> f (g a) -> g b
 cotraverse f = fmap f . distribute
 
 -- | The dual of 'Data.Traversable.mapM'
@@ -122,7 +122,7 @@ cotraverse f = fmap f . distribute
 -- @
 -- 'comapM' f = 'fmap' f . 'distributeM'
 -- @
-comapM :: (Monad m, Distributive g) => (m a -> b) -> m (g a) -> g b
+comapM :: (Distributive g, Monad m) => (m a -> b) -> m (g a) -> g b
 comapM f = fmap f . distributeM
 
 instance Distributive Identity where
