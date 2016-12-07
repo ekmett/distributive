@@ -1,6 +1,7 @@
 next
 ----
-* Added `Distributive` instances for datatypes from `Data.Semigroup` and `GHC.Generics`
+* Add `Distributive` instances for datatypes from `Data.Semigroup` and `GHC.Generics`
+* Add `MINIMAL` pragma for `Distributive`
 
 0.5.0.2
 -------
