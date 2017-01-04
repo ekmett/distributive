@@ -1,5 +1,5 @@
-next
-----
+0.5.1
+-----
 * Add `Distributive` instances for datatypes from `Data.Semigroup` and `GHC.Generics`
 * Add `MINIMAL` pragma for `Distributive`
 
