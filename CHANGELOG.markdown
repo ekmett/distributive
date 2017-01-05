@@ -1,3 +1,8 @@
+0.5.2
+-----
+* Fix bugs in the implementation of `genericDistribute` that cause it not to
+  work properly for datatypes with recursive types
+
 0.5.1
 -----
 * Add `Distributive` instances for datatypes from `Data.Semigroup` and `GHC.Generics`
