@@ -25,7 +25,7 @@ import Test.Hspec
 
 #if __GLASGOW_HASKELL__ >= 702
 import           Data.Distributive (Distributive(..))
-import           Data.Distributive.Generic (genericDistribute)
+import           Data.Distributive.Generic (genericCollect, genericDistribute)
 
 # if __GLASGOW_HASKELL__ >= 706
 import           Generics.Deriving.Base hiding (Rep)
@@ -55,6 +55,7 @@ spec = do
 newtype Id a = Id { runId :: a }
   deriving (Eq, Functor, Show)
 instance Distributive Id where
+  collect    = genericCollect
   distribute = genericDistribute
 
 idExample :: Id (Id Int)
@@ -63,6 +64,7 @@ idExample = Id (Id 42)
 data Stream a = (:>) { shead :: a, stail :: Stream a }
   deriving Functor
 instance Distributive Stream where
+  collect    = genericCollect
   distribute = genericDistribute
 
 streamExample :: Id (Stream Int)
@@ -71,6 +73,7 @@ streamExample = Id $ let s = 0 :> fmap (+1) s in s
 data PolyRec a = PolyRec { pinit :: Id (PolyRec a), plast :: a }
   deriving Functor
 instance Distributive PolyRec where
+  collect    = genericCollect
   distribute = genericDistribute
 
 polyRecExample :: Id (PolyRec Int)
