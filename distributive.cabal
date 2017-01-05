@@ -65,6 +65,10 @@ library
     if flag(semigroups)
       build-depends: semigroups >= 0.11 && < 1
 
+  if impl(ghc < 7.8)
+    hs-source-dirs: src-compat
+    other-modules: Data.Coerce
+
   ghc-options: -Wall
 
 -- Verify the results of the examples

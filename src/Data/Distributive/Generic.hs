@@ -1,6 +1,10 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Distributive
@@ -14,50 +18,73 @@
 ----------------------------------------------------------------------------
 module Data.Distributive.Generic
   ( GDistributive(..)
+  , genericCollect
   , genericDistribute
   ) where
 
 import Data.Distributive
 import GHC.Generics
+import Data.Coerce
 
--- | 'distribute' derived from a 'Generic1' type
+-- | 'collect' derived from a 'Generic1' type
 --
 -- This can be used to easily produce a 'Distributive' instance for a
 -- type with a 'Generic1' instance,
 --
 -- > data V2 a = V2 a a deriving (Show, Functor, Generic1)
--- > instance Distributive V2' where distribute = genericDistribute
+-- > instance Distributive V2' where collect = genericCollect
+genericCollect :: (Functor f, Generic1 g, GDistributive (Rep1 g))
+               => (a -> g b) -> f a -> g (f b)
+genericCollect f = to1 . gcollect (from1 . f)
+
+-- | 'distribute' derived from a 'Generic1' type
+--
+-- It's often more efficient to use 'genericCollect' instead.
 genericDistribute  :: (Functor f, Generic1 g, GDistributive (Rep1 g)) => f (g a) -> g (f a)
 genericDistribute = to1 . gdistribute . fmap from1
+
 
 -- Can't distribute over,
 --   * sums (:+:)
 --   * K1
+--   * V1
 class GDistributive g where
-  gdistribute :: Functor f => f (g a) -> g (f a)
+  gcollect :: Functor f => (a -> g b) -> f a -> g (f b)
+
+gdistribute :: (GDistributive g, Functor f) => f (g b) -> g (f b)
+gdistribute = gcollect id
+{-# INLINE gdistribute #-}
 
 instance GDistributive U1 where
-  gdistribute _ = U1
-  {-# INLINE gdistribute #-}
+  gcollect _ _ = U1
+  {-# INLINE gcollect #-}
 
 instance (GDistributive a, GDistributive b) => GDistributive (a :*: b) where
-  gdistribute f = gdistribute (fmap fstP f) :*: gdistribute (fmap sndP f) where
+  -- It might be tempting to fuse `gcollect fstP (fmap f x)` into
+  -- `gcollect (fstP . f) x`, but this would lead to a loss of sharing.
+  gcollect f x = gcollect fstP x' :*: gcollect sndP x' where
+    x' = fmap f x
     fstP (l :*: _) = l
     sndP (_ :*: r) = r
-  {-# INLINE gdistribute #-}
+  {-# INLINE gcollect #-}
 
-instance (Functor a, Distributive a, GDistributive b) => GDistributive (a :.: b) where
-  gdistribute = Comp1 . fmap gdistribute . distribute . fmap unComp1
-  {-# INLINE gdistribute #-}
+instance (Distributive a, GDistributive b) => GDistributive (a :.: b) where
+  gcollect f = Comp1 . fmap gdistribute . collect (coerce f)
+  {-# INLINE gcollect #-}
 
 instance GDistributive Par1 where
-  gdistribute = Par1 . fmap unPar1
-  {-# INLINE gdistribute #-}
+  gcollect = coerce (fmap :: (a -> b) -> f a -> f b)
+    :: forall f a b . Functor f => (a -> Par1 b) -> f a -> Par1 (f b)
+  {-# INLINE gcollect #-}
 
 instance Distributive f => GDistributive (Rec1 f) where
-  gdistribute = Rec1 . distribute . fmap unRec1
-  {-# INLINE gdistribute #-}
+  gcollect = coerce (collect :: (a -> f b) -> g a -> f (g b))
+    :: forall g a b . Functor g
+    => (a -> Rec1 f b) -> g a -> Rec1 f (g b)
+  {-# INLINE gcollect #-}
 
 instance GDistributive f => GDistributive (M1 i c f) where
-  gdistribute = M1 . gdistribute . fmap unM1
-  {-# INLINE gdistribute #-}
+  gcollect = coerce (gcollect :: (a -> f b) -> g a -> f (g b))
+    :: forall g a b . Functor g
+    => (a -> M1 i c f b) -> g a -> M1 i c f (g b)
+  {-# INLINE gcollect #-}
