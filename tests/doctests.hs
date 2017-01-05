@@ -14,6 +14,7 @@ import Test.DocTest
 main :: IO ()
 main = getSources >>= \sources -> doctest $
     "-isrc"
+  : "-isrc-compat"
   : ("-i" ++ autogen_dir)
   : "-optP-include"
   : ("-optP" ++ autogen_dir ++ "/cabal_macros.h")

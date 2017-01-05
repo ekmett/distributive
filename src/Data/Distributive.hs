@@ -32,11 +32,7 @@ import Control.Monad.Instances ()
 #endif
 import Control.Monad.Trans.Identity
 import Control.Monad.Trans.Reader
-#if __GLASGOW_HASKELL__ >= 708
 import Data.Coerce
-#else
-import Unsafe.Coerce
-#endif
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
@@ -136,11 +132,6 @@ cotraverse f = fmap f . distribute
 comapM :: (Distributive g, Monad m) => (m a -> b) -> m (g a) -> g b
 comapM f = fmap f . distributeM
 
-#if __GLASGOW_HASKELL__ < 708
-coerce :: a -> b
-coerce = unsafeCoerce
-#endif
-
 instance Distributive Identity where
   collect = coerce (fmap :: (a -> b) -> f a -> f b)
     :: forall a b f . Functor f => (a -> Identity b) -> f a -> Identity (f b)
@@ -176,6 +167,10 @@ instance (Distributive f, Distributive g) => Distributive (Compose f g) where
   collect f = Compose . fmap distribute . collect (coerce f)
 
 instance (Distributive f, Distributive g) => Distributive (Product f g) where
+  -- It might be tempting to write a 'collect' implementation that
+  -- composes the passed function with fstP and sndP. This could be bad,
+  -- because it would lead to the passed function being evaluated twice
+  -- for each element of the underlying functor.
   distribute wp = Pair (collect fstP wp) (collect sndP wp) where
     fstP (Pair a _) = a
     sndP (Pair _ b) = b
@@ -256,7 +251,11 @@ instance Distributive U1 where
   distribute _ = U1
 
 instance (Distributive a, Distributive b) => Distributive (a :*: b) where
-  distribute f = distribute (fmap fstP f) :*: distribute (fmap sndP f) where
+  -- It might be tempting to write a 'collect' implementation that
+  -- composes the passed function with fstP and sndP. This could be bad,
+  -- because it would lead to the passed function being evaluated twice
+  -- for each element of the underlying functor.
+  distribute f = collect fstP f :*: collect sndP f where
     fstP (l :*: _) = l
     sndP (_ :*: r) = r
 
