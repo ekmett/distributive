@@ -17,6 +17,7 @@ module Data.Distributive.Generic
   , genericDistribute
   ) where
 
+import Data.Distributive
 import GHC.Generics
 
 -- | 'distribute' derived from a 'Generic1' type
@@ -45,16 +46,16 @@ instance (GDistributive a, GDistributive b) => GDistributive (a :*: b) where
     sndP (_ :*: r) = r
   {-# INLINE gdistribute #-}
 
-instance (Functor a, GDistributive a, GDistributive b) => GDistributive (a :.: b) where
-  gdistribute = Comp1 . fmap gdistribute . gdistribute . fmap unComp1
+instance (Functor a, Distributive a, GDistributive b) => GDistributive (a :.: b) where
+  gdistribute = Comp1 . fmap gdistribute . distribute . fmap unComp1
   {-# INLINE gdistribute #-}
 
 instance GDistributive Par1 where
   gdistribute = Par1 . fmap unPar1
   {-# INLINE gdistribute #-}
 
-instance GDistributive f => GDistributive (Rec1 f) where
-  gdistribute = Rec1 . gdistribute . fmap unRec1
+instance Distributive f => GDistributive (Rec1 f) where
+  gdistribute = Rec1 . distribute . fmap unRec1
   {-# INLINE gdistribute #-}
 
 instance GDistributive f => GDistributive (M1 i c f) where
