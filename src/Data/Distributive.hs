@@ -1,6 +1,11 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+#if __GLASGOW_HASKELL__ >= 702
+{-# LANGUAGE Trustworthy #-}
+#endif
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Data.Distributive
@@ -27,6 +32,11 @@ import Control.Monad.Instances ()
 #endif
 import Control.Monad.Trans.Identity
 import Control.Monad.Trans.Reader
+#if __GLASGOW_HASKELL__ >= 708
+import Data.Coerce
+#else
+import Unsafe.Coerce
+#endif
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
@@ -126,8 +136,14 @@ cotraverse f = fmap f . distribute
 comapM :: (Distributive g, Monad m) => (m a -> b) -> m (g a) -> g b
 comapM f = fmap f . distributeM
 
+#if __GLASGOW_HASKELL__ < 708
+coerce :: a -> b
+coerce = unsafeCoerce
+#endif
+
 instance Distributive Identity where
-  collect f = Identity . fmap (runIdentity . f)
+  collect = coerce (fmap :: (a -> b) -> f a -> f b)
+    :: forall a b f . Functor f => (a -> Identity b) -> f a -> Identity (f b)
   distribute = Identity . fmap runIdentity
 
 #if __GLASGOW_HASKELL__ >= 707 || defined(MIN_VERSION_tagged)
@@ -138,60 +154,86 @@ instance Distributive Proxy where
 
 #if defined(MIN_VERSION_tagged)
 instance Distributive (Tagged t) where
-  collect f = Tagged . fmap (unTagged . f)
+  collect = coerce (fmap :: (a -> b) -> f a -> f b)
+    :: forall a b f . Functor f => (a -> Tagged t b) -> f a -> Tagged t (f b)
   distribute = Tagged . fmap unTagged
 #endif
 
 instance Distributive ((->)e) where
   distribute a e = fmap ($e) a
+  collect f q e = fmap (flip f e) q
 
 instance Distributive g => Distributive (ReaderT e g) where
   distribute a = ReaderT $ \e -> collect (flip runReaderT e) a
+  collect f x = ReaderT $ \e -> collect (\a -> runReaderT (f a) e) x
 
 instance Distributive g => Distributive (IdentityT g) where
-  collect f = IdentityT . collect (runIdentityT . f)
+  collect = coerce (collect :: (a -> g b) -> f a -> g (f b))
+            :: forall a b f . Functor f => (a -> IdentityT g b) -> f a -> IdentityT g (f b)
 
 instance (Distributive f, Distributive g) => Distributive (Compose f g) where
   distribute = Compose . fmap distribute . collect getCompose
+  collect f = Compose . fmap distribute . collect (coerce f)
 
 instance (Distributive f, Distributive g) => Distributive (Product f g) where
   distribute wp = Pair (collect fstP wp) (collect sndP wp) where
     fstP (Pair a _) = a
     sndP (Pair _ b) = b
 
+
 instance Distributive f => Distributive (Backwards f) where
   distribute = Backwards . collect forwards
+  collect = coerce (collect :: (a -> f b) -> g a -> f (g b))
+    :: forall g a b . Functor g
+    => (a -> Backwards f b) -> g a -> Backwards f (g b)
 
 instance Distributive f => Distributive (Reverse f) where
   distribute = Reverse . collect getReverse
+  collect = coerce (collect :: (a -> f b) -> g a -> f (g b))
+    :: forall g a b . Functor g
+    => (a -> Reverse f b) -> g a -> Reverse f (g b)
 
 instance Distributive Monoid.Dual where
-  collect f  = Monoid.Dual . fmap (Monoid.getDual . f)
+  collect = coerce (fmap :: (a -> b) -> f a -> f b)
+    :: forall f a b . Functor f
+    => (a -> Monoid.Dual b) -> f a -> Monoid.Dual (f b)
   distribute = Monoid.Dual . fmap Monoid.getDual
 
 instance Distributive Monoid.Product where
-  collect f  = Monoid.Product . fmap (Monoid.getProduct . f)
+  collect = coerce (fmap :: (a -> b) -> f a -> f b)
+    :: forall f a b . Functor f
+    => (a -> Monoid.Product b) -> f a -> Monoid.Product (f b)
   distribute = Monoid.Product . fmap Monoid.getProduct
 
 instance Distributive Monoid.Sum where
-  collect f  = Monoid.Sum . fmap (Monoid.getSum . f)
+  collect = coerce (fmap :: (a -> b) -> f a -> f b)
+    :: forall f a b . Functor f
+    => (a -> Monoid.Sum b) -> f a -> Monoid.Sum (f b)
   distribute = Monoid.Sum . fmap Monoid.getSum
 
 #if __GLASGOW_HASKELL__ >= 800 || defined(MIN_VERSION_semigroups)
 instance Distributive Semigroup.Min where
-  collect f  = Semigroup.Min . fmap (Semigroup.getMin . f)
+  collect = coerce (fmap :: (a -> b) -> f a -> f b)
+    :: forall f a b . Functor f
+    => (a -> Semigroup.Min b) -> f a -> Semigroup.Min (f b)
   distribute = Semigroup.Min . fmap Semigroup.getMin
 
 instance Distributive Semigroup.Max where
-  collect f  = Semigroup.Max . fmap (Semigroup.getMax . f)
+  collect = coerce (fmap :: (a -> b) -> f a -> f b)
+    :: forall f a b . Functor f
+    => (a -> Semigroup.Max b) -> f a -> Semigroup.Max (f b)
   distribute = Semigroup.Max . fmap Semigroup.getMax
 
 instance Distributive Semigroup.First where
-  collect f  = Semigroup.First . fmap (Semigroup.getFirst . f)
+  collect = coerce (fmap :: (a -> b) -> f a -> f b)
+    :: forall f a b . Functor f
+    => (a -> Semigroup.First b) -> f a -> Semigroup.First (f b)
   distribute = Semigroup.First . fmap Semigroup.getFirst
 
 instance Distributive Semigroup.Last where
-  collect f  = Semigroup.Last . fmap (Semigroup.getLast . f)
+  collect = coerce (fmap :: (a -> b) -> f a -> f b)
+    :: forall f a b . Functor f
+    => (a -> Semigroup.Last b) -> f a -> Semigroup.Last (f b)
   distribute = Semigroup.Last . fmap Semigroup.getLast
 #endif
 
@@ -206,8 +248,8 @@ instance Distributive Complex where
 
 -- | 'fmapCollect' is a viable default definition for 'fmap' given
 -- a 'Distributive' instance defined in terms of 'collect'.
-fmapCollect :: Distributive f => (a -> b) -> f a -> f b
-fmapCollect f = runIdentity . collect (Identity . f)
+fmapCollect :: forall f a b . Distributive f => (a -> b) -> f a -> f b
+fmapCollect = coerce (collect :: (a -> Identity b) -> f a -> Identity (f b))
 
 #if __GLASGOW_HASKELL__ >= 702
 instance Distributive U1 where
@@ -219,14 +261,23 @@ instance (Distributive a, Distributive b) => Distributive (a :*: b) where
     sndP (_ :*: r) = r
 
 instance (Distributive a, Distributive b) => Distributive (a :.: b) where
-  distribute = Comp1 . fmap distribute . distribute . fmap unComp1
+  distribute = Comp1 . fmap distribute . collect unComp1
+  collect f = Comp1 . fmap distribute . collect (coerce f)
 
 instance Distributive Par1 where
   distribute = Par1 . fmap unPar1
+  collect = coerce (fmap :: (a -> b) -> f a -> f b)
+    :: forall f a b . Functor f => (a -> Par1 b) -> f a -> Par1 (f b)
 
 instance Distributive f => Distributive (Rec1 f) where
-  distribute = Rec1 . distribute . fmap unRec1
+  distribute = Rec1 . collect unRec1
+  collect = coerce (collect :: (a -> f b) -> g a -> f (g b))
+    :: forall g a b . Functor g
+    => (a -> Rec1 f b) -> g a -> Rec1 f (g b)
 
 instance Distributive f => Distributive (M1 i c f) where
-  distribute = M1 . distribute . fmap unM1
+  distribute = M1 . collect unM1
+  collect = coerce (collect :: (a -> f b) -> g a -> f (g b))
+    :: forall g a b . Functor g
+    => (a -> M1 i c f b) -> g a -> M1 i c f (g b)
 #endif
