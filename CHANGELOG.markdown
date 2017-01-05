@@ -1,7 +1,10 @@
 0.5.2
 -----
-* Fix bugs in the implementation of `genericDistribute` that cause it not to
-  work properly for datatypes with recursive types
+* Fix bugs in `Data.Distributive.Generic` that cause generic `Distributive`
+  instances not to work properly for datatypes with recursive types
+* Add `genericCollect` to `Data.Distributive.Generic`, and switch the underlying
+  machinery in that module to work on a `collect`-like method instead of a
+  `distribute`-like one
 
 0.5.1
 -----
