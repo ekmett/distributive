@@ -45,10 +45,6 @@ generateBuildModule flags pkg lbi = do
   withLibLBI pkg lbi $ \lib libcfg -> do
     let libBI = libBuildInfo lib
 
-    -- Lib sources and includes
-    let iArgs = map ("-i"++) $ hsSourceDirs libBI
-    let includeArgs = map ("-I"++) $ includeDirs libBI
-
     -- modules
     let modules = exposedModules lib ++ otherModules libBI
     -- it seems that doctest is happy to take in module names, not actual files!
@@ -60,6 +56,10 @@ generateBuildModule flags pkg lbi = do
 #else
     let libAutogenDir = autogenModulesDir lbi
 #endif
+
+    -- Lib sources and includes
+    let iArgs = map ("-i"++) $ libAutogenDir : hsSourceDirs libBI
+    let includeArgs = map ("-I"++) $ includeDirs libBI
 
     -- CPP includes, i.e. include cabal_macros.h
     let cppFlags = [ "-optP-include", "-optP" ++ libAutogenDir ++ "/cabal_macros.h" ]
