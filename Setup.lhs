@@ -49,6 +49,11 @@ generateBuildModule flags pkg lbi = do
     let iArgs = map ("-i"++) $ hsSourceDirs libBI
     let includeArgs = map ("-I"++) $ includeDirs libBI
 
+    -- modules
+    let modules = exposedModules lib ++ otherModules libBI
+    -- it seems that doctest is happy to take in module names, not actual files!
+    let module_sources = modules
+
     -- We need the directory with library's cabal_macros.h!
 #if MIN_VERSION_Cabal(1,25,0)
     let libAutogenDir = autogenComponentModulesDir lbi libcfg
@@ -82,8 +87,8 @@ generateBuildModule flags pkg lbi = do
         , "flags :: [String]"
         , "flags = " ++ show (iArgs ++ includeArgs ++ dbFlags ++ cppFlags)
         , ""
-        , "src_dirs :: [String]"
-        , "src_dirs = " ++ show (hsSourceDirs libBI)
+        , "module_sources :: [String]"
+        , "module_sources = " ++ show (map display module_sources)
         ]
   where
     -- we do this check in Setup, as then doctests don't need to depend on Cabal

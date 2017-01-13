@@ -80,9 +80,7 @@ test-suite doctests
   main-is: doctests.hs
   build-depends:
     base      >= 4,
-    directory >= 1.0,
-    doctest   >= 0.9.1,
-    filepath  >= 1.2
+    doctest   >= 0.9.1
   ghc-options: -Wall -threaded
   hs-source-dirs: tests
 
