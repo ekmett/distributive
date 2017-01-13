@@ -127,7 +127,8 @@ script:
        cabal test --show-details=always;
        cabal bench || true;
        cabal sdist || true;
-       SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz && (cd dist && cabal install --force-reinstalls "$SRC_TGZ");;
+       SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz;
+       if [ -f $SRC_TGZ ]; then (cd dist && cabal install --force-reinstalls "$SRC_TGZ"); fi;
    esac
 
 notifications:
