@@ -1,5 +1,6 @@
 \begin{code}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
 #ifndef MIN_VERSION_Cabal
 #define MIN_VERSION_Cabal(x,y,z) 0
 #endif
@@ -82,8 +83,6 @@ generateBuildModule flags pkg lbi = do
             [ "-include", libAutogenDir ++ "/cabal_macros.h" ]
             ++ cppOptions libBI
 
-    -- Actually we need to check whether testName suite == "doctests"
-    -- pending https://github.com/haskell/cabal/pull/4229 getting into GHC HEAD tree
     withTestLBI pkg lbi $ \suite suitecfg -> when (testName suite == "doctests") $ do
 
       -- get and create autogen dir
