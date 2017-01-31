@@ -48,7 +48,7 @@ matrix:
       compiler: ": #GHC 8.0.2"
       addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
 
-    - env: CABALVER=1.24 GHCVER=head BUILD=cabal
+    - env: CABALVER=1.24 GHCVER=head BUILD=cabal CABALFLAGS=--allow-newer
       compiler: ": #GHC head"
       addons: {apt: {packages: [cabal-install-1.24,ghc-head,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
 
@@ -61,7 +61,7 @@ matrix:
   allow_failures:
     - env: CABALVER=1.18 GHCVER=7.0.4 BUILD=cabal
     - env: CABALVER=1.18 GHCVER=7.2.2 BUILD=cabal
-    - env: CABALVER=1.24 GHCVER=head BUILD=cabal
+    - env: CABALVER=1.24 GHCVER=head BUILD=cabal CABALFLAGS=--allow-newer
 
 before_install:
  - unset CC
@@ -91,7 +91,7 @@ install:
               $HOME/.cabal/packages/hackage.haskell.org/00-index.tar;
        fi;
        travis_retry cabal update;
-       cabal install --only-dependencies --enable-tests --enable-benchmarks --dry -v > installplan.txt;
+       cabal install --only-dependencies --enable-tests --enable-benchmarks --dry -v $CABALFLAGS> installplan.txt;
        sed -i -e '1,/^Resolving /d' installplan.txt; cat installplan.txt;
        if diff -u installplan.txt $HOME/.cabsnap/installplan.txt; then
          echo "cabal build-cache HIT";
@@ -102,7 +102,7 @@ install:
          echo "cabal build-cache MISS";
          rm -rf $HOME/.cabsnap;
          mkdir -p $HOME/.ghc $HOME/.cabal/lib $HOME/.cabal/share $HOME/.cabal/bin;
-         cabal install --only-dependencies --enable-tests --enable-benchmarks;
+         cabal install --only-dependencies --enable-tests --enable-benchmarks $CABALFLAGS;
          if [ "$GHCVER" = "7.10.3" ]; then cabal install Cabal-1.22.4.0; fi;
        fi;
        if [ ! -d $HOME/.cabsnap ]; then
@@ -122,12 +122,13 @@ script:
      stack)
        scripts/travis_long stack --no-terminal $STACK_OPTIONS build -j2;;
      cabal)
-       cabal configure --enable-tests -v2;
+       cabal configure --enable-tests -v2 $CABALFLAGS;
        cabal build;
        cabal test --show-details=always;
        cabal bench || true;
        cabal sdist || true;
-       SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz && (cd dist && cabal install --force-reinstalls "$SRC_TGZ");;
+       SRC_TGZ=$(cabal info . | awk '{print $2;exit}').tar.gz;
+       if [ -f $SRC_TGZ ]; then (cd dist && cabal install --force-reinstalls "$SRC_TGZ"); fi;
    esac
 
 notifications:
