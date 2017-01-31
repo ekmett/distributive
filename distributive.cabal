@@ -26,7 +26,9 @@ source-repository head
   location: git://github.com/ekmett/distributive.git
 
 custom-setup
-  setup-depends: base >= 4 && <5, Cabal, filepath, directory
+  setup-depends:
+    base >= 4 && <5,
+    cabal-doctest >= 1 && <1.1
 
 flag semigroups
   manual: True
@@ -80,7 +82,7 @@ test-suite doctests
   main-is: doctests.hs
   build-depends:
     base      >= 4,
-    doctest   >= 0.9.1
+    doctest   >= 0.11.1 && <0.12
   ghc-options: -Wall -threaded
   hs-source-dirs: tests
 
