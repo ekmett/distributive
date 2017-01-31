@@ -1,10 +1,14 @@
 0.5.2
 -----
+* Revamp `Setup.hs` to use `cabal-doctest`. This makes `distributive` build
+  with `Cabal-1.25`, and makes the `doctest`s work with `cabal new-build` and
+  sandboxes.
 * Fix bugs in `Data.Distributive.Generic` that cause generic `Distributive`
   instances not to work properly for datatypes with recursive types
 * Add `genericCollect` to `Data.Distributive.Generic`, and switch the underlying
   machinery in that module to work on a `collect`-like method instead of a
   `distribute`-like one
+* Add a test suite for regression-testing `Data.Distributive.Generic`
 
 0.5.1
 -----
