@@ -29,9 +29,7 @@ custom-setup
   setup-depends:
     base >= 4 && <5,
     Cabal,
-    cabal-doctest >= 1 && <1.1,
-    directory,
-    filepath
+    cabal-doctest >= 1 && <1.1
 
 flag semigroups
   manual: True
