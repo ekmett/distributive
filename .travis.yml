@@ -14,25 +14,25 @@ before_cache:
 
 matrix:
   include:
-    - env: CABALVER=1.18 GHCVER=7.0.4 BUILD=cabal
+    - env: CABALVER=1.24 GHCVER=7.0.4 BUILD=cabal
       compiler: ": #GHC 7.0.4"
-      addons: {apt: {packages: [cabal-install-1.18,ghc-7.0.4,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [cabal-install-1.24,ghc-7.0.4,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
 
-    - env: CABALVER=1.18 GHCVER=7.2.2 BUILD=cabal
+    - env: CABALVER=1.24 GHCVER=7.2.2 BUILD=cabal
       compiler: ": #GHC 7.2.2"
-      addons: {apt: {packages: [cabal-install-1.18,ghc-7.2.2,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [cabal-install-1.24,ghc-7.2.2,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
 
-    - env: CABALVER=1.18 GHCVER=7.4.2 BUILD=cabal
+    - env: CABALVER=1.24 GHCVER=7.4.2 BUILD=cabal
       compiler: ": #GHC 7.4.2"
-      addons: {apt: {packages: [cabal-install-1.18,ghc-7.4.2,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [cabal-install-1.24,ghc-7.4.2,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
 
-    - env: CABALVER=1.18 GHCVER=7.6.3 BUILD=cabal
+    - env: CABALVER=1.24 GHCVER=7.6.3 BUILD=cabal
       compiler: ": #GHC 7.6.3"
-      addons: {apt: {packages: [cabal-install-1.18,ghc-7.6.3,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [cabal-install-1.24,ghc-7.6.3,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
 
-    - env: CABALVER=1.18 GHCVER=7.8.4 BUILD=cabal
+    - env: CABALVER=1.24 GHCVER=7.8.4 BUILD=cabal
       compiler: ": #GHC 7.8.4"
-      addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.4,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [cabal-install-1.24,ghc-7.8.4,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
 
 #    - env: BUILD=stack STACK_YAML=stack-7.8.yaml STACK_OPTIONS=--skip-ghc-check
 #      addons: {apt: {packages: [cabal-install-1.18,ghc-7.8.4,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
@@ -40,9 +40,9 @@ matrix:
 #    - env: BUILD=stack STACK_YAML=stack-7.8.yaml
 #      os: osx
 
-    - env: CABALVER=1.22 GHCVER=7.10.3 BUILD=cabal
+    - env: CABALVER=1.24 GHCVER=7.10.3 BUILD=cabal
       compiler: ": #GHC 7.10.3"
-      addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.3,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
+      addons: {apt: {packages: [cabal-install-1.24,ghc-7.10.3,alex-3.1.4,happy-1.19.5], sources: [hvr-ghc]}}
 
     - env: CABALVER=1.24 GHCVER=8.0.2 BUILD=cabal
       compiler: ": #GHC 8.0.2"
@@ -63,8 +63,8 @@ matrix:
 #      os: osx
 
   allow_failures:
-    - env: CABALVER=1.18 GHCVER=7.0.4 BUILD=cabal
-    - env: CABALVER=1.18 GHCVER=7.2.2 BUILD=cabal
+    - env: CABALVER=1.24 GHCVER=7.0.4 BUILD=cabal
+    - env: CABALVER=1.24 GHCVER=7.2.2 BUILD=cabal
     - env: CABALVER=1.24 GHCVER=head BUILD=cabal CABALFLAGS=--allow-newer
 
 before_install:
