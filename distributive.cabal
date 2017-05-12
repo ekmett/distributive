@@ -20,6 +20,7 @@ extra-source-files:
   travis-cabal-apt-install
   CHANGELOG.markdown
   README.markdown
+  Warning.hs
 
 source-repository head
   type: git
