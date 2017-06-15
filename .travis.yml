@@ -107,7 +107,6 @@ install:
          rm -rf $HOME/.cabsnap;
          mkdir -p $HOME/.ghc $HOME/.cabal/lib $HOME/.cabal/share $HOME/.cabal/bin;
          cabal install --only-dependencies --enable-tests --enable-benchmarks $CABALFLAGS;
-         if [ "$GHCVER" = "7.10.3" ]; then cabal install Cabal-1.22.4.0; fi;
        fi;
        if [ ! -d $HOME/.cabsnap ]; then
          echo "snapshotting package-db to build-cache";
