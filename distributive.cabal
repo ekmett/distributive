@@ -84,7 +84,8 @@ test-suite doctests
   main-is: doctests.hs
   build-depends:
     base      >= 4,
-    doctest   >= 0.11.1 && <0.12
+    distributive,
+    doctest   >= 0.11.1 && <0.13
   ghc-options: -Wall -threaded
   hs-source-dirs: tests
 

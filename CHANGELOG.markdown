@@ -1,3 +1,7 @@
+next
+----
+* Support `doctest-0.12`
+
 0.5.2
 -----
 * Revamp `Setup.hs` to use `cabal-doctest`. This makes `distributive` build
