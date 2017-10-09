@@ -21,7 +21,6 @@ module Data.Distributive
   ( Distributive(..)
   , cotraverse
   , comapM
-  , fmapCollect
   ) where
 
 import Control.Applicative
@@ -240,11 +239,6 @@ instance Distributive Complex where
     realP (r :+ _) = r
     imagP (_ :+ i) = i
 #endif
-
--- | 'fmapCollect' is a viable default definition for 'fmap' given
--- a 'Distributive' instance defined in terms of 'collect'.
-fmapCollect :: forall f a b . Distributive f => (a -> b) -> f a -> f b
-fmapCollect = coerce (collect :: (a -> Identity b) -> f a -> Identity (f b))
 
 #if __GLASGOW_HASKELL__ >= 702
 instance Distributive U1 where
