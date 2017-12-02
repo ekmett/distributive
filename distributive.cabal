@@ -58,6 +58,7 @@ library
   hs-source-dirs:  src
   exposed-modules:
     Data.Distributive
+    Data.Distributive.Unsafe
 
   if impl(ghc>=7.2)
     exposed-modules: Data.Distributive.Generic
