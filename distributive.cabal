@@ -70,7 +70,7 @@ library
 
   if impl(ghc < 8.0)
     if flag(semigroups)
-      build-depends: semigroups >= 0.11 && < 1
+      build-depends: semigroups >= 0.13 && < 1
 
   if impl(ghc < 7.8)
     hs-source-dirs: src-compat
