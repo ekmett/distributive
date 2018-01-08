@@ -11,7 +11,7 @@ homepage:      http://github.com/ekmett/distributive/
 bug-reports:   http://github.com/ekmett/distributive/issues
 copyright:     Copyright (C) 2011-2016 Edward A. Kmett
 synopsis:      Distributive functors -- Dual to Traversable
-description:   Distributive functors -- Dual to Traversable
+description:   Distributive functors -- Dual to @Traversable@
 build-type:    Custom
 tested-with:   GHC == 7.0.4
              , GHC == 7.2.2
