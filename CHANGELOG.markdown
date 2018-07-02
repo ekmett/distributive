@@ -1,5 +1,5 @@
-next [????.??.??]
------------------
+0.6 [2018.07.02]
+----------------
 * Remove `fmapCollect`. (See
   [here](https://github.com/ekmett/distributive/commit/1020655f15714514048d0dc842ffe4adcec89a7b)
   for an explanation of why it was removed.)
