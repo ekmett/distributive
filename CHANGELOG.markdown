@@ -1,3 +1,10 @@
+next [????.??.??]
+-----------------
+* Remove `fmapCollect`. (See
+  [here](https://github.com/ekmett/distributive/commit/1020655f15714514048d0dc842ffe4adcec89a7b)
+  for an explanation of why it was removed.)
+* Avoid incurring some dependencies when using recent GHCs.
+
 0.5.3
 -----
 * Support `doctest-0.12`
