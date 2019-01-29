@@ -21,6 +21,8 @@ module Data.Distributive
   ( Distributive(..)
   , cotraverse
   , comapM
+  , fmapGrate
+  , zipGrate
   ) where
 
 import Control.Applicative
@@ -76,7 +78,7 @@ import GHC.Generics (U1(..), (:*:)(..), (:.:)(..), Par1(..), Rec1(..), M1(..))
 --
 class Functor g => Distributive g where
 #if __GLASGOW_HASKELL__ >= 707
-  {-# MINIMAL distribute | collect #-}
+  {-# MINIMAL grate , (distribute | collect) #-}
 #endif
   -- | The dual of 'Data.Traversable.sequenceA'
   --
@@ -115,6 +117,26 @@ class Functor g => Distributive g where
   collectM    :: Monad m => (a -> g b) -> m a -> g (m b)
   collectM f  = distributeM . liftM f
 
+  grate :: ((g a -> a) -> b) -> g b
+
+-- | 'fmap' implemented using 'grate'.
+--
+-- >>> fmapGrate succ (1 :+ 2)
+-- 2 :+ 3
+--
+fmapGrate :: Distributive g => (a -> b) -> g a -> g b
+fmapGrate f x = grate $ \i -> f (i x)
+
+-- | 'zip' implemented using 'grate'.
+--
+-- >>> zipGrate (+) (1 :+ 2) (3 :+ 4)
+-- 4 :+ 6
+--
+-- /Note:/ this is not as polymorphic as we'd wish.
+--
+zipGrate :: Distributive g => (a -> a -> b) -> g a -> g a -> g b
+zipGrate f x y = grate $ \i -> f (i x) (i y)
+
 -- | The dual of 'Data.Traversable.traverse'
 --
 -- @
@@ -136,10 +158,13 @@ instance Distributive Identity where
     :: forall a b f . Functor f => (a -> Identity b) -> f a -> Identity (f b)
   distribute = Identity . fmap runIdentity
 
+  grate aab = Identity (aab runIdentity)
+
 #if __GLASGOW_HASKELL__ >= 707 || defined(MIN_VERSION_tagged)
 instance Distributive Proxy where
   collect _ _ = Proxy
   distribute _ = Proxy
+  grate _ = Proxy
 #endif
 
 #if defined(MIN_VERSION_tagged)
@@ -147,23 +172,33 @@ instance Distributive (Tagged t) where
   collect = coerce (fmap :: (a -> b) -> f a -> f b)
     :: forall a b f . Functor f => (a -> Tagged t b) -> f a -> Tagged t (f b)
   distribute = Tagged . fmap unTagged
+
+  grate aab = Tagged (aab unTagged)
 #endif
 
 instance Distributive ((->)e) where
   distribute a e = fmap ($e) a
   collect f q e = fmap (flip f e) q
 
+  grate aab e = aab ($ e)
+
 instance Distributive g => Distributive (ReaderT e g) where
   distribute a = ReaderT $ \e -> collect (flip runReaderT e) a
   collect f x = ReaderT $ \e -> collect (\a -> runReaderT (f a) e) x
+
+  grate aab = ReaderT $ \e -> grate $ \f -> aab $ \g -> f (runReaderT g e)
 
 instance Distributive g => Distributive (IdentityT g) where
   collect = coerce (collect :: (a -> g b) -> f a -> g (f b))
             :: forall a b f . Functor f => (a -> IdentityT g b) -> f a -> IdentityT g (f b)
 
+  grate aab = IdentityT $ grate $ \f -> aab (f . runIdentityT)
+
 instance (Distributive f, Distributive g) => Distributive (Compose f g) where
   distribute = Compose . fmap distribute . collect getCompose
   collect f = Compose . fmap distribute . collect (coerce f)
+
+  grate aab = Compose $ grate $ \f -> grate $ \g -> aab $ \(Compose fg) -> g (f fg)
 
 instance (Distributive f, Distributive g) => Distributive (Product f g) where
   -- It might be tempting to write a 'collect' implementation that
@@ -174,6 +209,9 @@ instance (Distributive f, Distributive g) => Distributive (Product f g) where
     fstP (Pair a _) = a
     sndP (Pair _ b) = b
 
+  grate aab = Pair
+    (grate $ \f -> aab $ \(Pair a _) -> f a)
+    (grate $ \f -> aab $ \(Pair _ b) -> f b)
 
 instance Distributive f => Distributive (Backwards f) where
   distribute = Backwards . collect forwards
@@ -236,6 +274,10 @@ instance Distributive Complex where
   distribute wc = fmap realP wc :+ fmap imagP wc where
     -- Redefine realPart and imagPart to avoid incurring redundant RealFloat
     -- constraints on older versions of base
+    realP (r :+ _) = r
+    imagP (_ :+ i) = i
+
+  grate aab = aab realP :+ aab imagP where
     realP (r :+ _) = r
     imagP (_ :+ i) = i
 #endif
