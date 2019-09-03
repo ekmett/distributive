@@ -240,6 +240,9 @@ instance Distributive Complex where
     imagP (_ :+ i) = i
 #endif
 
+instance (Distributive m, Monad m) => Distributive (WrappedMonad m) where
+  collect f = WrapMonad . collect (coerce f)
+
 #if __GLASGOW_HASKELL__ >= 702
 instance Distributive U1 where
   distribute _ = U1
