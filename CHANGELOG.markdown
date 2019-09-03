@@ -1,3 +1,7 @@
+?????
+----------------
+* Add a `Distributive` instance for `WrappedMonad m`.
+
 0.6 [2018.07.02]
 ----------------
 * Remove `fmapCollect`. (See
