@@ -66,7 +66,7 @@ import GHC.Generics (U1(..), (:*:)(..), (:.:)(..), Par1(..), Rec1(..), M1(..))
 -- some Coapplicative class. Categorically every 'Distributive'
 -- functor is actually a right adjoint, and so it must be 'Representable'
 -- endofunctor and preserve all limits. This is a fancy way of saying it
--- isomorphic to @(->) x@ for some x.
+-- is isomorphic to @(->) x@ for some x.
 --
 -- To be distributable a container will need to have a way to consistently
 -- zip a potentially infinite number of copies of itself. This effectively
