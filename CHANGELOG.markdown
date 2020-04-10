@@ -1,3 +1,7 @@
+0.6.2 [2020.04.10]
+------------------
+* Make the `Distributive` instance for `Tagged` poly-kinded.
+
 0.6.1 [2019.09.06]
 ------------------
 * Add a `Distributive` instance for `WrappedMonad m`.
