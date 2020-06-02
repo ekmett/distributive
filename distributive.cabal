@@ -100,7 +100,7 @@ test-suite doctests
   build-depends:
     base      >= 4,
     distributive,
-    doctest   >= 0.11.1 && <0.17
+    doctest   >= 0.11.1 && <0.18
   ghc-options: -Wall -threaded
   hs-source-dirs: tests
 
