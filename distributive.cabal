@@ -2,7 +2,7 @@ name:          distributive
 category:      Data Structures
 version:       0.6.2
 license:       BSD3
-cabal-version: >= 1.8
+cabal-version: >= 1.10
 license-file:  LICENSE
 author:        Edward A. Kmett
 maintainer:    Edward A. Kmett <ekmett@gmail.com>
@@ -92,6 +92,7 @@ library
     other-modules: Data.Coerce
 
   ghc-options: -Wall
+  default-language: Haskell2010
 
 -- Verify the results of the examples
 test-suite doctests
@@ -103,6 +104,7 @@ test-suite doctests
     doctest   >= 0.11.1 && <0.18
   ghc-options: -Wall -threaded
   hs-source-dirs: tests
+  default-language: Haskell2010
 
 test-suite spec
   type:           exitcode-stdio-1.0
@@ -120,3 +122,4 @@ test-suite spec
   other-modules: GenericsSpec
 
   ghc-options: -Wall -threaded -rtsopts
+  default-language: Haskell2010
