@@ -1,7 +1,8 @@
 distributive
 ============
 
-[![Hackage](https://img.shields.io/hackage/v/distributive.svg)](https://hackage.haskell.org/package/distributive) [![Build Status](https://secure.travis-ci.org/ekmett/distributive.png?branch=master)](http://travis-ci.org/ekmett/distributive)
+
+[![Hackage](https://img.shields.io/hackage/v/distributive.svg)](https://hackage.haskell.org/package/distributive) [![Build Status](https://github.com/ekmett/distributive/workflows/Haskell-CI/badge.svg)](https://github.com/ekmett/distributive/actions?query=workflow%3AHaskell-CI)
 
 This package provides the notion that is categorically dual to `Traversable`.
 
