@@ -125,7 +125,7 @@ class Functor f => Distributive (f :: Type -> Type) where
   default scatter
     :: (Generic1 f, Distributive (Rep1 f), FFunctor w)
     => (g ~> f) -> w g -> f (w Identity)
-  scatter phi w = to1 $ scatter (from1 . phi) w
+  scatter phi = to1 . scatter (from1 . phi)
 
   tabulate :: (Log f -> a) -> f a
   default tabulate :: (Log f ~ Logarithm f) => (Log f -> a) -> f a
@@ -188,7 +188,7 @@ instance Distributive f => Distributive (Rec1 f) where
 
 instance Distributive Par1 where
   type Log Par1 = ()
-  scatter f = Par1 #. ffmap ((Identity . unPar1) #. f )
+  scatter f = Par1 #. ffmap ((Identity . unPar1) #. f)
   index x () = unPar1 x
   tabulate f = Par1 $ f ()
 
