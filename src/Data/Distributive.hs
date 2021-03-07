@@ -1,283 +1,331 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-#if __GLASGOW_HASKELL__ >= 702
-{-# LANGUAGE Trustworthy #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
-{-# LANGUAGE PolyKinds #-}
-#endif
-
------------------------------------------------------------------------------
+{-# Language CPP #-}
+{-# Language BlockArguments #-}
+{-# Language DefaultSignatures #-}
+{-# Language DeriveAnyClass #-}
+{-# Language DeriveGeneric #-}
+{-# Language DeriveTraversable #-}
+{-# Language DerivingStrategies #-}
+{-# Language DerivingVia #-}
+{-# Language FlexibleContexts #-}
+{-# Language GeneralizedNewtypeDeriving #-}
+{-# Language LambdaCase #-}
+{-# Language PatternSynonyms #-}
+{-# Language RankNTypes #-}
+{-# Language StandaloneDeriving #-}
+{-# Language TypeApplications #-}
+{-# Language TypeFamilies #-}
+{-# Language TypeOperators #-}
+{-# Language UndecidableInstances #-}
+{-# Language ViewPatterns #-}
 -- |
--- Module      :  Data.Distributive
--- Copyright   :  (C) 2011-2016 Edward Kmett
--- License     :  BSD-style (see the file LICENSE)
+-- Module      : Data.Distributive
+-- Copyright   : (C) 2011-2021 Edward Kmett, (c) 2018 Aaron Vargo
+-- License     : BSD-style (see the file LICENSE)
 --
--- Maintainer  :  Edward Kmett <ekmett@gmail.com>
--- Stability   :  provisional
--- Portability :  portable
+-- Maintainer  : Edward Kmett <ekmett@gmail.com>
+-- Stability   : provisional
+-- Portability : non-portable
 --
-----------------------------------------------------------------------------
+-- Examples:
+--
+-- For most data types you can use @GHC.Generics@ and @DeriveAnyClass@
+-- along with the `Dist` newtype to fill in a ton of instances.
+--
+-- @
+-- data V3 a = V3 a a a
+--   deriving stock (Functor, Generic1)
+--   deriving anyclass Distributive
+--   deriving (Applicative, Monad, MonadFix, MonadZip) via Dist V3
+-- @
+--
+-- @
+-- If you want a special form for the 'Log' of your functor you can
+-- implement tabulate and index directly, `Dist` can still be used.
+-- @
+--
+-- data Moore a b = Moore b (a -> Moore a b)
+--   deriving stock Functor
+--   deriving (Comonad, Applicative, Monad, MonadFix, MonadZip) via Dist (Moore a)
+--   
+-- instance Distributive (Moore a) where
+--   type Log (Moore a) = [a]
+--   scatter = scatterDefault
+--   tabulate f = Moore (f []) \x -> tabulate $ f . (x:)
+--   index (Moore a _) [] = a
+--   index (Moore _ as) (x:xs) = index (as x) xs
+--
+-- data Mealy a b = Mealy (a -> (b, Mealy a b)) 
+--   deriving stock Functor
+--   deriving (Applicative, Monad, MonadFix, MonadZip) via Dist (Mealy a)
+--   
+-- instance Distributive (Mealy a) where
+--   type Log (Mealy a) = NonEmpty a
+--   scatter = scatterDefault
+--   tabulate f = Mealy \x -> (f (pure x), tabulate $ f . NE.cons x)
+--   index (Mealy f) (x :| xs) = case xs of
+--       [] -> y
+--       x':xs' -> index ys (x':|xs')
+--     where (y, ys) = f x 
+-- @
 module Data.Distributive
   ( Distributive(..)
+  , Logarithm(..)
+  , tabulateLogarithm
+  , indexLogarithm
+  , scatterDefault
+  , distrib
+  , distribute
+  , collect
   , cotraverse
-  , comapM
+  , tabulation
+  , extractDefault, extractWithDefault
+  , extendDefault, extendWithDefault
+  , duplicateDefault, duplicateWithDefault
+  , DistEndo(..)
+  , tabulateDistEndo
+  , indexDistEndo
   ) where
 
 import Control.Applicative
-import Control.Applicative.Backwards
-import Control.Monad (liftM)
-#if __GLASGOW_HASKELL__ < 707
-import Control.Monad.Instances ()
-#endif
-import Control.Monad.Trans.Identity
-import Control.Monad.Trans.Reader
+import Control.Arrow
+import Control.Monad.Fix
+import Control.Monad.Zip
 import Data.Coerce
+import Data.Complex
+import Data.Functor
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
-import Data.Functor.Reverse
-import qualified Data.Monoid as Monoid
-import Data.Orphans ()
-
-#if MIN_VERSION_base(4,4,0)
-import Data.Complex
-#endif
-#if __GLASGOW_HASKELL__ >= 707 || defined(MIN_VERSION_tagged)
+import Data.HKD
+import Data.Kind
+-- import Data.List.NonEmpty as NE
 import Data.Proxy
+import Data.Void
+import GHC.Generics
+
+#ifdef MIN_VERSION_comonad
+import Control.Comonad
+import Control.Comonad.Traced (TracedT(..))
 #endif
-#if __GLASGOW_HASKELL__ >= 800 || defined(MIN_VERSION_semigroups)
-import qualified Data.Semigroup as Semigroup
+
+#ifdef MIN_VERSION_transformers
+import Control.Monad.Trans.Identity
+import Control.Monad.Trans.Reader
 #endif
+
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
 #endif
-#if __GLASGOW_HASKELL__ >= 702
-import GHC.Generics (U1(..), (:*:)(..), (:.:)(..), Par1(..), Rec1(..), M1(..))
-#endif
 
-#ifdef HLINT
-{-# ANN module "hlint: ignore Use section" #-}
-#endif
+class Functor f => Distributive (f :: Type -> Type) where
+  type Log f :: Type
+  type Log f = Logarithm f
 
--- | This is the categorical dual of 'Traversable'.
---
--- Due to the lack of non-trivial comonoids in Haskell, we can restrict
--- ourselves to requiring a 'Functor' rather than
--- some Coapplicative class. Categorically every 'Distributive'
--- functor is actually a right adjoint, and so it must be 'Representable'
--- endofunctor and preserve all limits. This is a fancy way of saying it
--- is isomorphic to @(->) x@ for some x.
---
--- To be distributable a container will need to have a way to consistently
--- zip a potentially infinite number of copies of itself. This effectively
--- means that the holes in all values of that type, must have the same
--- cardinality, fixed sized vectors, infinite streams, functions, etc.
--- and no extra information to try to merge together.
---
-class Functor g => Distributive g where
-#if __GLASGOW_HASKELL__ >= 707
-  {-# MINIMAL distribute | collect #-}
-#endif
-  -- | The dual of 'Data.Traversable.sequenceA'
-  --
-  -- >>> distribute [(+1),(+2)] 1
-  -- [2,3]
-  --
-  -- @
-  -- 'distribute' = 'collect' 'id'
-  -- 'distribute' . 'distribute' = 'id'
-  -- @
-  distribute  :: Functor f => f (g a) -> g (f a)
-  distribute  = collect id
+  scatter :: FFunctor w => (g ~> f) -> w g -> f (w Identity)
+  default scatter
+    :: (Generic1 f, Distributive (Rep1 f), FFunctor w)
+    => (g ~> f) -> w g -> f (w Identity)
+  scatter phi w = to1 $ scatter (from1 . phi) w
 
-  -- |
-  -- @
-  -- 'collect' f = 'distribute' . 'fmap' f
-  -- 'fmap' f = 'runIdentity' . 'collect' ('Identity' . f)
-  -- 'fmap' 'distribute' . 'collect' f = 'getCompose' . 'collect' ('Compose' . f)
-  -- @
+  tabulate :: (Log f -> a) -> f a
+  default tabulate :: (Log f ~ Logarithm f) => (Log f -> a) -> f a
+  tabulate = tabulateLogarithm
 
-  collect     :: Functor f => (a -> g b) -> f a -> g (f b)
-  collect f   = distribute . fmap f
+  index :: f a -> Log f -> a
+  default index :: (Log f ~ Logarithm f) => f a -> Log f -> a
+  index = indexLogarithm
 
-  -- | The dual of 'Data.Traversable.sequence'
-  --
-  -- @
-  -- 'distributeM' = 'fmap' 'unwrapMonad' . 'distribute' . 'WrapMonad'
-  -- @
-  distributeM :: Monad m => m (g a) -> g (m a)
-  distributeM = fmap unwrapMonad . distribute . WrapMonad
+distrib :: (Distributive f, FFunctor w) => w f -> f (w Identity)
+distrib = scatter id
 
-  -- |
-  -- @
-  -- 'collectM' = 'distributeM' . 'liftM' f
-  -- @
-  collectM    :: Monad m => (a -> g b) -> m a -> g (m b)
-  collectM f  = distributeM . liftM f
+--- | implement in terms of tabulate and index
+scatterDefault :: (Distributive f, FFunctor w) => (g ~> f) -> w g -> f (w Identity)
+scatterDefault phi wg = tabulate \x -> ffmap (\g -> Identity $ index (phi g) x) wg
 
--- | The dual of 'Data.Traversable.traverse'
---
--- @
--- 'cotraverse' f = 'fmap' f . 'distribute'
--- @
-cotraverse :: (Distributive g, Functor f) => (f a -> b) -> f (g a) -> g b
-cotraverse f = fmap f . distribute
+tabulateLogarithm :: Distributive f => (Logarithm f -> a) -> f a
+tabulateLogarithm f =
+  distrib (Tab f) <&> \(Tab f') -> f' (Logarithm runIdentity)
 
--- | The dual of 'Data.Traversable.mapM'
---
--- @
--- 'comapM' f = 'fmap' f . 'distributeM'
--- @
-comapM :: (Distributive g, Monad m) => (m a -> b) -> m (g a) -> g b
-comapM f = fmap f . distributeM
+newtype DX a f g = DX { runDX :: f (g a) }
+instance Functor f => FFunctor (DX a f) where
+  ffmap f = DX #. (fmap f .# runDX)
 
-instance Distributive Identity where
-  collect = coerce (fmap :: (a -> b) -> f a -> f b)
-    :: forall a b f . Functor f => (a -> Identity b) -> f a -> Identity (f b)
-  distribute = Identity . fmap runIdentity
+distribute :: (Functor f, Distributive g) => f (g a) -> g (f a)
+distribute f = distrib (DX f) <&> \(DX f') -> runIdentity <$> f'
 
-#if __GLASGOW_HASKELL__ >= 707 || defined(MIN_VERSION_tagged)
-instance Distributive Proxy where
-  collect _ _ = Proxy
-  distribute _ = Proxy
-#endif
+collect :: (Functor f, Distributive g) => (a -> g b) -> f a -> g (f b)
+collect f fa = distrib (DX f) <&> \(DX f') -> coerce f' <$> fa
 
-#if defined(MIN_VERSION_tagged)
-instance Distributive (Tagged t) where
-  collect = coerce (fmap :: (a -> b) -> f a -> f b)
-    :: forall a b f . Functor f => (a -> Tagged t b) -> f a -> Tagged t (f b)
-  distribute = Tagged . fmap unTagged
-#endif
+cotraverse :: (Functor f, Distributive g) => (f a -> b) -> f (g a) -> g b
+cotraverse fab fga = distrib (DX fga) <&> \(DX f') -> fab (runIdentity <$> f')
 
-instance Distributive ((->)e) where
-  distribute a e = fmap ($e) a
-  collect f q e = fmap (flip f e) q
-
-instance Distributive g => Distributive (ReaderT e g) where
-  distribute a = ReaderT $ \e -> collect (flip runReaderT e) a
-  collect f x = ReaderT $ \e -> collect (\a -> runReaderT (f a) e) x
-
-instance Distributive g => Distributive (IdentityT g) where
-  collect = coerce (collect :: (a -> g b) -> f a -> g (f b))
-            :: forall a b f . Functor f => (a -> IdentityT g b) -> f a -> IdentityT g (f b)
-
-instance (Distributive f, Distributive g) => Distributive (Compose f g) where
-  distribute = Compose . fmap distribute . collect getCompose
-  collect f = Compose . fmap distribute . collect (coerce f)
-
-instance (Distributive f, Distributive g) => Distributive (Product f g) where
-  -- It might be tempting to write a 'collect' implementation that
-  -- composes the passed function with fstP and sndP. This could be bad,
-  -- because it would lead to the passed function being evaluated twice
-  -- for each element of the underlying functor.
-  distribute wp = Pair (collect fstP wp) (collect sndP wp) where
-    fstP (Pair a _) = a
-    sndP (Pair _ b) = b
-
-
-instance Distributive f => Distributive (Backwards f) where
-  distribute = Backwards . collect forwards
-  collect = coerce (collect :: (a -> f b) -> g a -> f (g b))
-    :: forall g a b . Functor g
-    => (a -> Backwards f b) -> g a -> Backwards f (g b)
-
-instance Distributive f => Distributive (Reverse f) where
-  distribute = Reverse . collect getReverse
-  collect = coerce (collect :: (a -> f b) -> g a -> f (g b))
-    :: forall g a b . Functor g
-    => (a -> Reverse f b) -> g a -> Reverse f (g b)
-
-instance Distributive Monoid.Dual where
-  collect = coerce (fmap :: (a -> b) -> f a -> f b)
-    :: forall f a b . Functor f
-    => (a -> Monoid.Dual b) -> f a -> Monoid.Dual (f b)
-  distribute = Monoid.Dual . fmap Monoid.getDual
-
-instance Distributive Monoid.Product where
-  collect = coerce (fmap :: (a -> b) -> f a -> f b)
-    :: forall f a b . Functor f
-    => (a -> Monoid.Product b) -> f a -> Monoid.Product (f b)
-  distribute = Monoid.Product . fmap Monoid.getProduct
-
-instance Distributive Monoid.Sum where
-  collect = coerce (fmap :: (a -> b) -> f a -> f b)
-    :: forall f a b . Functor f
-    => (a -> Monoid.Sum b) -> f a -> Monoid.Sum (f b)
-  distribute = Monoid.Sum . fmap Monoid.getSum
-
-#if __GLASGOW_HASKELL__ >= 800 || defined(MIN_VERSION_semigroups)
-instance Distributive Semigroup.Min where
-  collect = coerce (fmap :: (a -> b) -> f a -> f b)
-    :: forall f a b . Functor f
-    => (a -> Semigroup.Min b) -> f a -> Semigroup.Min (f b)
-  distribute = Semigroup.Min . fmap Semigroup.getMin
-
-instance Distributive Semigroup.Max where
-  collect = coerce (fmap :: (a -> b) -> f a -> f b)
-    :: forall f a b . Functor f
-    => (a -> Semigroup.Max b) -> f a -> Semigroup.Max (f b)
-  distribute = Semigroup.Max . fmap Semigroup.getMax
-
-instance Distributive Semigroup.First where
-  collect = coerce (fmap :: (a -> b) -> f a -> f b)
-    :: forall f a b . Functor f
-    => (a -> Semigroup.First b) -> f a -> Semigroup.First (f b)
-  distribute = Semigroup.First . fmap Semigroup.getFirst
-
-instance Distributive Semigroup.Last where
-  collect = coerce (fmap :: (a -> b) -> f a -> f b)
-    :: forall f a b . Functor f
-    => (a -> Semigroup.Last b) -> f a -> Semigroup.Last (f b)
-  distribute = Semigroup.Last . fmap Semigroup.getLast
-#endif
-
-#if MIN_VERSION_base(4,4,0)
-instance Distributive Complex where
-  distribute wc = fmap realP wc :+ fmap imagP wc where
-    -- Redefine realPart and imagPart to avoid incurring redundant RealFloat
-    -- constraints on older versions of base
-    realP (r :+ _) = r
-    imagP (_ :+ i) = i
-#endif
-
-instance (Distributive m, Monad m) => Distributive (WrappedMonad m) where
-  collect f = WrapMonad . collect (coerce f)
-
-#if __GLASGOW_HASKELL__ >= 702
-instance Distributive U1 where
-  distribute _ = U1
-
-instance (Distributive a, Distributive b) => Distributive (a :*: b) where
-  -- It might be tempting to write a 'collect' implementation that
-  -- composes the passed function with fstP and sndP. This could be bad,
-  -- because it would lead to the passed function being evaluated twice
-  -- for each element of the underlying functor.
-  distribute f = collect fstP f :*: collect sndP f where
-    fstP (l :*: _) = l
-    sndP (_ :*: r) = r
-
-instance (Distributive a, Distributive b) => Distributive (a :.: b) where
-  distribute = Comp1 . fmap distribute . collect unComp1
-  collect f = Comp1 . fmap distribute . collect (coerce f)
-
-instance Distributive Par1 where
-  distribute = Par1 . fmap unPar1
-  collect = coerce (fmap :: (a -> b) -> f a -> f b)
-    :: forall f a b . Functor f => (a -> Par1 b) -> f a -> Par1 (f b)
-
-instance Distributive f => Distributive (Rec1 f) where
-  distribute = Rec1 . collect unRec1
-  collect = coerce (collect :: (a -> f b) -> g a -> f (g b))
-    :: forall g a b . Functor g
-    => (a -> Rec1 f b) -> g a -> Rec1 f (g b)
+instance (Distributive f, Distributive g) => Distributive (f :*: g) where
+  type Log (f :*: g) = Either (Log f) (Log g)
+  scatter f (ffmap f -> w)
+      = scatter (\(l :*: _) -> l) w
+    :*: scatter (\(_ :*: r) -> r) w
+  tabulate f = tabulate (f . Left) :*: tabulate (f . Right)
+  index (f :*: _) (Left x) = index f x
+  index (_ :*: g) (Right y) = index g y
 
 instance Distributive f => Distributive (M1 i c f) where
-  distribute = M1 . collect unM1
-  collect = coerce (collect :: (a -> f b) -> g a -> f (g b))
-    :: forall g a b . Functor g
-    => (a -> M1 i c f b) -> g a -> M1 i c f (g b)
+  type Log (M1 i c f) = Log f
+  scatter f = M1 #. scatter (unM1 #. f)
+  index = index .# unM1
+  tabulate = M1 #. tabulate
+
+instance Distributive U1 where
+  type Log U1 = Void
+  scatter _ _ = U1
+  tabulate _ = U1
+  index _ = absurd
+
+instance Distributive f => Distributive (Rec1 f) where
+  type Log (Rec1 f) = Log f
+  scatter f = Rec1 #. scatter (unRec1 #. f)
+  index = index .# unRec1
+  tabulate = Rec1 #. tabulate
+
+instance Distributive Par1 where
+  type Log Par1 = ()
+  scatter f = Par1 #. ffmap ((Identity . unPar1) #. f )
+  index x () = unPar1 x
+  tabulate f = Par1 $ f ()
+
+instance (Distributive f, Distributive g) => Distributive (f :.: g) where
+  type Log (f :.: g) = (Log f, Log g)
+  scatter = scatterDefault
+  index (Comp1 f) (x, y) = index (index f x) y
+  tabulate f = Comp1 $ tabulate \i -> tabulate \j -> f (i, j)
+
+instance (Distributive f, Distributive g) => Distributive (Compose f g)
+instance (Distributive f, Distributive g) => Distributive (Product f g)
+
+instance Distributive Proxy
+
+instance Distributive Identity
+instance Distributive ((->) x) where
+  type Log ((->) x) = x
+  scatter phi wg x = ffmap (\g -> Identity $ phi g x) wg
+  tabulate = id
+  index = id
+
+#ifdef MIN_VERSION_tagged
+instance Distributive (Tagged r)
 #endif
+
+#ifdef MIN_VERSION_transformers
+deriving newtype
+  instance Distributive f => Distributive (IdentityT f)
+
+deriving via (((->) e) :.: f)
+  instance Distributive f => Distributive (ReaderT e f)
+#endif
+
+-- * Defaults, for use with @DerivingVia@
+
+newtype Dist f a = Dist { runDist :: f a }
+  deriving stock Functor
+
+instance Distributive f => Distributive (Dist f) where
+  type Log (Dist f) = Log f
+  scatter f = Dist #. scatter (runDist #. f) 
+  tabulate = Dist #. tabulate
+  index = index .# runDist
+
+data DAp x y f = DAp (f x) (f y)
+instance FFunctor (DAp x y) where
+  ffmap f (DAp l r) = DAp (f l) (f r)
+
+instance Distributive f => Applicative (Dist f) where
+  pure = tabulate . const
+  liftA2 f fa fb = distrib (DAp fa fb) <&> \(DAp a b) -> coerce f a b
+  fab <*> fa = distrib (DAp fab fa) <&> \(DAp ab a) -> coerce ab a
+  _ *> m = m
+  m <* _ = m
+
+data DBind x y f = DBind (f x) (x -> f y)
+instance FFunctor (DBind x y) where
+  ffmap f (DBind l r) = DBind (f l) (f . r)
+
+instance Distributive f => Monad (Dist f) where
+  m >>= f = distrib (DBind m f) <&> \(DBind (Identity a) f') -> runIdentity (f' a)
+
+instance Distributive f => MonadFix (Dist f) where
+  mfix ama = distrib (DX ama) <&> fix . coerce
+
+instance Distributive f => MonadZip (Dist f) where
+  mzipWith = liftA2
+  munzip = fmap fst &&& fmap snd
+  
+#ifdef MIN_VERSION_comonad
+instance (Distributive f, Monoid (Log f)) => Comonad (Dist f) where
+  extract f = index f mempty
+  duplicate f = tabulate \i -> tabulate \j -> index f (i <> j)
+  extend f g = tabulate \i -> f $ tabulate \j -> index g (i <> j)
+#endif
+
+-- * Comonads
+--
+extractDefault :: (Distributive f, Monoid (Log f)) => f a -> a
+extractDefault = flip index mempty
+
+extendDefault :: (Distributive f, Semigroup (Log f)) => (f a -> b) -> f a -> f b
+extendDefault f g = tabulate \i -> f $ tabulate \j -> index g (i <> j)
+
+duplicateDefault :: (Distributive f, Semigroup (Log f)) => f a -> f (f a)
+duplicateDefault f = tabulate \i -> tabulate \j -> index f (i <> j)
+
+extractWithDefault :: Distributive f => Log f -> f a -> a
+extractWithDefault = flip index
+
+extendWithDefault :: Distributive f => (Log f -> Log f -> Log f) -> (f a -> b) -> f a -> f b
+extendWithDefault t f g = tabulate \i -> f $ tabulate \j -> index g (t i j)
+
+duplicateWithDefault :: Distributive f => (Log f -> Log f -> Log f) -> f a -> f (f a)
+duplicateWithDefault t f = tabulate \i -> tabulate \j -> index f (t i j)
+
+#ifdef MIN_VERSION_comonad
+deriving via (f :.: ((->) e))
+  instance Distributive f => Distributive (TracedT e f)
+#endif
+
+-- * Tabulated Endomorphisms
+
+tabulation :: Distributive f => f (Log f)
+tabulation = tabulate id
+
+newtype DistEndo f = DistEndo { runDistEndo :: f (Log f) }
+
+instance Distributive f => Semigroup (DistEndo f) where
+  DistEndo f <> DistEndo g = DistEndo $ tabulate \x -> index f (index g x)
+
+instance Distributive f => Monoid (DistEndo f) where
+  mempty = DistEndo tabulation
+
+indexDistEndo :: Distributive f => DistEndo f -> Log f -> Log f 
+indexDistEndo = index .# runDistEndo
+
+tabulateDistEndo :: Distributive f => (Log f -> Log f) -> DistEndo f
+tabulateDistEndo = DistEndo #. tabulate
+
+instance Distributive Complex where
+  type Log Complex = Bool
+  scatter = scatterDefault
+  tabulate f = f False :+ f True
+  index (r :+ i) = \case
+    False -> r
+    True -> i
+
+-- * Utilities
+
+(#.) :: Coercible b c => (b -> c) -> (a -> b) -> a -> c
+(#.) _ = coerce
+{-# inline (#.) #-}
+
+(.#) :: Coercible a b => (b -> c) -> (a -> b) -> a -> c
+(.#) f _ = coerce f
+{-# inline (.#) #-}
+
+infix 9 #., .#
+
