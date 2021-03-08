@@ -13,6 +13,7 @@
 {-# Language ScopedTypeVariables #-}
 {-# Language LambdaCase #-}
 {-# Language PatternSynonyms #-}
+{-# Language PolyKinds #-}
 {-# Language RankNTypes #-}
 {-# Language StandaloneDeriving #-}
 {-# Language TypeApplications #-}
@@ -64,45 +65,52 @@ module Data.Distributive
   , collect
   , cotraverse
   -- * Default definitions
+  -- ** via Generics
+  , tabulateRep
+  , indexRep
+  , scatterRep
+  -- ** Simple Scattering
+  , scatterDefault
+  -- ** Canonical 'Logarithm's
+  , Logarithm(..)
+  , tabulateLogarithm
+  , indexLogarithm
+  -- ** via DerivingVia
   , Dist(..)
-  -- * Functor
+  -- ** for other classes
+  -- *** Functor
   , fmapDist
-  -- * Applicative
+  -- *** Applicative
+  , pureDist
   , apDist
   , liftD2
   , liftD3
   , liftD4
   , liftD5
-  -- * Monad
+  -- *** Monad
   , bindDist
-  -- * MonadFix
+  -- *** MonadFix
   , mfixDist
-  -- * MonadZip
+  -- *** MonadZip
   , mzipWithDist
-  -- * MonadReader
+  -- *** MonadReader
   , askDist
-  -- * Comonad
+  -- *** Comonad
   , extractDist, extractDistBy
   , extendDist, extendDistBy
   , duplicateDist, duplicateDistBy
-  -- * ComonadTrace
+  -- *** ComonadTrace
   , traceDist
-  -- * FunctorWithIndex
+  -- *** FunctorWithIndex
   , imapDist
-  -- * FoldableWithIndex
+  -- *** FoldableWithIndex
   , ifoldMapDist
-  -- * TraversableWithIndex
+  -- *** TraversableWithIndex
   , itraverseDist
   -- * Tabulated endomorphisms
   , DistEndo(..)
   , tabulateDistEndo
   , indexDistEndo
-  -- * Simple scattering
-  , scatterDefault
-  -- * Always a valid choice of representation
-  , Logarithm(..)
-  , tabulateLogarithm
-  , indexLogarithm
   ) where
 
 import Control.Applicative
@@ -119,6 +127,7 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
+import Data.Kind
 import qualified Data.Monoid as Monoid
 import qualified Data.Semigroup as Semigroup
 import Data.HKD
@@ -158,18 +167,20 @@ class Functor f => Distributive f where
   type Log f
   type Log f = Log (Rep1 f)
 
+  -- | Defaults to 'tabulateRep'
   tabulate :: (Log f -> a) -> f a
   default tabulate
     :: (Generic1 f, Distributive (Rep1 f), Log f ~ Log (Rep1 f))
     => (Log f -> a) -> f a
-  tabulate = tabulateLogRep
+  tabulate = tabulateRep
   {-# inline tabulate #-}
 
+  -- | Defaults to 'indexRep'
   index :: f a -> Log f -> a
   default index
     :: (Generic1 f, Distributive (Rep1 f), Log f ~ Log (Rep1 f))
     => f a -> Log f -> a
-  index = indexLogRep
+  index = indexRep
   {-# inline index #-}
 
   -- | Scatter the contents of an 'FFunctor'. This admittedly complicated operation
@@ -184,20 +195,32 @@ class Functor f => Distributive f where
   -- @
   -- 'scatter' phi wg ≡ 'tabulate' \\x -> 'ffmap' (\\g -> 'Identity' '$' 'index' (phi g) x) wg
   -- @
+  --
+  -- Defaults to 'scatterRep'
   scatter :: FFunctor w => (w Identity -> r) -> (g ~> f) -> w g -> f r
   default scatter
     :: (Generic1 f, Distributive (Rep1 f), FFunctor w)
     => (w Identity -> r) -> (g ~> f) -> w g -> f r
-  scatter k phi = to1 . scatter k (from1 . phi)
+  scatter = scatterRep
   {-# inline scatter #-}
 
-tabulateLogRep :: (Distributive (Rep1 f), Generic1 f, Log f ~ Log (Rep1 f)) => (Log f -> a) -> f a
-tabulateLogRep = to1 . tabulate
-{-# inline tabulateLogRep #-}
+tabulateRep
+  :: (Distributive (Rep1 f), Generic1 f, Log f ~ Log (Rep1 f))
+  => (Log f -> a) -> f a
+tabulateRep = to1 . tabulate
+{-# inline tabulateRep #-}
 
-indexLogRep :: (Distributive (Rep1 f), Generic1 f, Log f ~ Log (Rep1 f)) => f a -> Log f -> a
-indexLogRep = index . from1
-{-# inline indexLogRep #-}
+indexRep
+  :: (Distributive (Rep1 f), Generic1 f, Log f ~ Log (Rep1 f))
+  => f a -> Log f -> a
+indexRep = index . from1
+{-# inline indexRep #-}
+
+scatterRep
+  :: (Distributive (Rep1 f), Generic1 f, FFunctor w)
+  => (w Identity -> r) -> (g ~> f) -> w g -> f r
+scatterRep k phi = to1 . scatter k (from1 . phi)
+{-# inline scatterRep #-}
 
 -- | A helper for the most common usage pattern when working with higher-kinded data.
 --
@@ -381,7 +404,8 @@ instance Distributive Complex where
 deriving newtype
   instance Distributive f => Distributive (IdentityT f)
 
-deriving via (((->) e) :.: f)
+-- this isntance flips out when I turn on PolyKinds
+deriving via ((((->) e) :.: f) :: Type -> Type)
   instance Distributive f => Distributive (ReaderT e f)
 
 -- * DerivingVia
