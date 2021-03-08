@@ -419,7 +419,7 @@ instance FFunctor w => FFunctor (AppCompose w g) where
 
 instance (Distributive f, Distributive g) => Distributive (f :.: g) where
   type Log (f :.: g) = (Log f, Log g)
-  scatter k phi wg = Comp1 $ scatter (scatter k (runIdentity #.# unComp1) .# runAppCompose) id (AppCompose (ffmap phi wg))
+  scatter k phi wg = Comp1 $ scatter (scatter k coerce .# runAppCompose) id (AppCompose (ffmap phi wg))
   index (Comp1 f) (x, y) = index (index f x) y
   tabulate f = Comp1 $ tabulate $ \i -> tabulate $ \j -> f (i, j)
   {-# inline scatter #-}
@@ -884,8 +884,4 @@ tabulateDistEndo = DistEndo #. tabulate
 (.#) f _ = coerce f
 {-# inline (.#) #-}
 
-(#.#) :: Coercible a c => (b -> c) -> (a -> b) -> a -> c
-_ #.# _ = coerce
-{-# inline (#.#) #-}
-
-infixr 9 #., .#, #.#
+infixr 9 #., .#
