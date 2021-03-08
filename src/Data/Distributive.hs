@@ -10,6 +10,7 @@
 {-# Language FlexibleInstances #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language MultiParamTypeClasses #-}
+{-# Language ScopedTypeVariables #-}
 {-# Language LambdaCase #-}
 {-# Language PatternSynonyms #-}
 {-# Language RankNTypes #-}
@@ -66,6 +67,8 @@ module Data.Distributive
   , cotraverse
   -- * Default definitions 
   , Dist(..)
+  -- * Functor
+  , fmapDist
   -- * Applicative
   , apDist
   , liftD2
@@ -77,14 +80,21 @@ module Data.Distributive
   -- * MonadFix
   , mfixDist
   -- * MonadZip
-  , mzipWithRep
+  , mzipWithDist
   -- * MonadReader
   , askDist
   -- * Comonad
   , extractDist, extractDistBy
   , extendDist, extendDistBy
   , duplicateDist, duplicateDistBy
+  -- * ComonadTrace
   , traceDist
+  -- * FunctorWithIndex
+  , imapDist
+  -- * FoldableWithIndex
+  , ifoldMapDist
+  -- * TraversableWithIndex
+  , itraverseDist
   -- * Tabulated endomorphisms
   , DistEndo(..)
   , tabulateDistEndo
@@ -106,6 +116,7 @@ import Control.Monad.Trans.Identity
 import Control.Monad.Zip
 import Data.Coerce
 import Data.Complex
+import Data.Foldable (fold)
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
@@ -189,7 +200,7 @@ distrib :: (Distributive f, FFunctor w) => w f -> (w Identity -> r) -> f r
 distrib w k = scatter k id w
 {-# inline distrib #-}
 
--- | implement 'scatter' in terms of 'tabulate' and 'index' by the law
+-- | Implements 'scatter' in terms of 'tabulate' and 'index' by the law
 -- that relates 'scatter' to its canonical implementation.
 --
 -- This might be useful if you define custom 'tabulate' and 'index' functions
@@ -365,6 +376,8 @@ deriving newtype
 deriving via (((->) e) :.: f)
   instance Distributive f => Distributive (ReaderT e f)
 
+-- * DerivingVia
+
 -- | Provides defaults definitions for other classes in terms of
 -- 'Distributive'. Supplied for use with @DerivingVia@
 newtype Dist f a = Dist { runDist :: f a }
@@ -383,6 +396,8 @@ instance Distributive f => Distributive (Dist f) where
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
+
+-- * Applicative
 
 instance Distributive f => Applicative (Dist f) where
   pure = pureDist
@@ -451,6 +466,7 @@ liftD5 :: Distributive f => (a -> b -> c -> d -> e -> x) -> f a -> f b -> f c ->
 liftD5 f fa fb fc fd fe = distrib (D5 fa fb fc fd fe) \(D5 a b c d e) -> coerce f a b c d e
 {-# inline liftD5 #-}
 
+-- * Monad
 
 data DBind x y f = DBind (f x) (x -> f y)
 instance FFunctor (DBind x y) where
@@ -465,6 +481,8 @@ instance Distributive f => Monad (Dist f) where
 bindDist :: Distributive f => f a -> (a -> f b) -> f b
 bindDist m f = distrib (DBind m f) \(DBind (Identity a) f') -> runIdentity (f' a)
 {-# inline bindDist #-}
+
+-- * MonadFix
 
 instance Distributive f => MonadFix (Dist f) where
   mfix = mfixDist
@@ -489,20 +507,22 @@ instance (Distributive f, e ~ Log f) => MonadReader e (Dist f) where
   reader = tabulate
   {-# inline reader #-}
 
+-- * MonadZip
+
 -- | A default definition for 'mzipWith' in terms of 'Distributive'
-mzipWithRep :: Distributive f => (a -> b -> c) -> f a -> f b -> f c
-mzipWithRep = liftD2
-{-# inline mzipWithRep #-}
+mzipWithDist :: Distributive f => (a -> b -> c) -> f a -> f b -> f c
+mzipWithDist = liftD2
+{-# inline mzipWithDist #-}
+
+-- * Comonad
   
 -- instance (Distributive f, Monoid (Log f)) => Comonad (Dist f) where
---  extract = extractRep
+--  extract = extractDist
 --  {-# inline extract #-}
 --  duplicate = duplicateDist
 --  {-# inline duplicate #-}
 --  extend = extendDist
 --  {-# inline extend #-}
-
--- * Comonads
 
 -- | A default definition for 'extract' from @Comonad@ in terms of 'Distributive'
 extractDist :: (Distributive f, Monoid (Log f)) => f a -> a
@@ -537,6 +557,8 @@ duplicateDistBy :: Distributive f => (Log f -> Log f -> Log f) -> f a -> f (f a)
 duplicateDistBy t f = tabulate \i -> tabulate \j -> index f (t i j)
 {-# inline duplicateDistBy #-}
 
+-- * MonadReader
+
 -- deriving via (f :.: ((->) e)) instance Distributive f => Distributive (TracedT e f)
 
 -- | A default definition for 'ask' from 'MonadReader' in terms of 'Distributive'
@@ -549,10 +571,38 @@ localDist :: Distributive f => (Log f -> Log f) -> f a -> f a
 localDist f m = tabulate (index m . f)
 {-# inline localDist #-}
 
+-- * ComonadTrace
+
 -- | A default definition for 'trace' from @ComonadTrace@ in terms of 'Distributive'
 traceDist :: Distributive f => Log f -> f a -> a
 traceDist = flip index
 {-# inline traceDist #-}
+
+-- * FunctorWithIndex
+
+-- | A default definition for 'imap' from @FunctorWithIndex@ in terms of 'Distributive'
+imapDist
+  :: Distributive f
+  => (Log f -> a -> b) -> f a -> f b
+imapDist f xs = tabulate (f <*> index xs)
+
+-- * FoldableWithIndex
+
+-- | A default definition for 'ifoldMap' from @FoldableWithIndex@ in terms of 'Distributive'
+ifoldMapDist
+  :: forall f m a.
+     (Distributive f, Foldable f, Monoid m)
+  => (Log f -> a -> m) -> f a -> m
+ifoldMapDist ix xs = fold (tabulate (\i -> ix i $ index xs i) :: f m)
+
+-- * TraversableWithIndex
+
+-- | A default definition for 'itraverse' from @TraversableWithIndex@ in terms of 'Distributive'
+itraverseDist
+  :: forall f m a b.
+     (Distributive f, Traversable f, Applicative m)
+  => (Log f -> a -> m b) -> f a -> m (f b)
+itraverseDist ix xs = sequenceA $ tabulate (ix <*> index xs)
 
 -- | Tabulated endomorphisms.
 --
