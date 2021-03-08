@@ -179,7 +179,7 @@ class Functor f => Distributive f where
   -- | Defaults to 'tabulateRep'
   tabulate :: (Log f -> a) -> f a
   default tabulate
-    :: (Generic1 f, Distributive (Rep1 f), Log f ~ Log (Rep1 f))
+    :: (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
     => (Log f -> a) -> f a
   tabulate = tabulateRep
   {-# inline tabulate #-}
@@ -187,7 +187,7 @@ class Functor f => Distributive f where
   -- | Defaults to 'indexRep'
   index :: f a -> Log f -> a
   default index
-    :: (Generic1 f, Distributive (Rep1 f), Log f ~ Log (Rep1 f))
+    :: (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
     => f a -> Log f -> a
   index = indexRep
   {-# inline index #-}
@@ -214,15 +214,18 @@ class Functor f => Distributive f where
   {-# inline scatter #-}
 
 tabulateRep
-  :: (Distributive (Rep1 f), Generic1 f, Log f ~ Log (Rep1 f))
+  :: forall f a.
+     (Distributive (Rep1 f), Generic1 f, Coercible (Log f) (Log (Rep1 f)))
   => (Log f -> a) -> f a
-tabulateRep = to1 . tabulate
+tabulateRep = coerce (to1 . tabulate :: (Log (Rep1 f) -> a) -> f a)
+
 {-# inline tabulateRep #-}
 
 indexRep
-  :: (Distributive (Rep1 f), Generic1 f, Log f ~ Log (Rep1 f))
+  :: forall f a.
+     (Distributive (Rep1 f), Generic1 f, Coercible (Log f) (Log (Rep1 f)))
   => f a -> Log f -> a
-indexRep = index . from1
+indexRep = coerce (index . from1 :: f a -> Log (Rep1 f) -> a)
 {-# inline indexRep #-}
 
 scatterRep
