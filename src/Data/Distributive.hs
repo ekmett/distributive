@@ -52,7 +52,7 @@
 --   
 -- instance Distributive (Moore a) where
 --   type Log (Moore a) = [a]
---   tabulate f = Moore (f []) (\x -> tabulate $ f . (x:))
+--   tabulate f = Moore (f []) (\\x -> tabulate $ f . (x:))
 --   index (Moore a _) [] = a
 --   index (Moore _ as) (x:xs) = index (as x) xs
 -- @
@@ -89,7 +89,7 @@ module Data.Distributive
   , DistEndo(..)
   , tabulateDistEndo
   , indexDistEndo
-  -- * "Flat" 'scatter' in terms of 'tabulate'/'index'
+  -- * Simple scattering
   , scatterDefault
   -- * Default choice of representation
   , Logarithm(..)
@@ -165,16 +165,13 @@ class Functor f => Distributive f where
   -- is necessary to get asymptotically optimal performance for 'Distributive' functors
   -- like Mealy and Moore machines that have many layers to them.
   --
-  -- 'scatter' is the central defining method in the class, rather than 'distrib'
-  -- because on one hand, we would not be able to use @GeneralizedNewtypeDeriving@
-  -- if we made the other choice, but also to allow us to fuse more operations
-  -- together in the 'Generic1'-driven default implementation of the class.
-  --
   -- If you have a 'Generic1' instance for your 'Functor', this should be able to be
-  -- generated automatically
+  -- generated automatically. Otherwise if you must, you can use 'scatterDefault' as
+  -- a fallback in terms of 'tabulate' and 'index', which is offered in terms of the 
+  -- law relating 'scatter' to 'tabulate' and 'index':
   --
   -- @
-  -- 'scatter' phi wg = 'tabulate' \x -> 'ffmap' (\g -> 'Identity' $ 'index' (phi g) x) wg
+  -- 'scatter' phi wg ≡ 'tabulate' \\x -> 'ffmap' (\\g -> 'Identity' '$' 'index' (phi g) x) wg
   -- @
   scatter :: FFunctor w => (w Identity -> r) -> (g ~> f) -> w g -> f r
   default scatter
@@ -183,6 +180,11 @@ class Functor f => Distributive f where
   scatter k phi = to1 . scatter k (from1 . phi)
   {-# inline scatter #-}
 
+-- | A helper for the most common usage pattern when working with higher-kinded data.
+--
+-- @
+-- 'distrib' w k ≡ 'scatter' k id w
+-- @
 distrib :: (Distributive f, FFunctor w) => w f -> (w Identity -> r) -> f r
 distrib w k = scatter k id w
 {-# inline distrib #-}
@@ -424,8 +426,7 @@ instance FFunctor (D3 a b c) where
   ffmap f (D3 a b c) = D3 (f a) (f b) (f c)
   {-# inline ffmap #-}
 
--- | An implementation of 'liftA3' in terms of 'Distributive'. Offered for
--- convenience rather than as a default.
+-- | An implementation of 'liftA3' in terms of 'Distributive'.
 liftD3 :: Distributive f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
 liftD3 f fa fb fc = distrib (D3 fa fb fc) \(D3 a b c) -> coerce f a b c
 {-# inline liftD3 #-}
@@ -435,8 +436,7 @@ instance FFunctor (D4 a b c d) where
   ffmap f (D4 a b c d) = D4 (f a) (f b) (f c) (f d)
   {-# inline ffmap #-}
 
--- | An implementation of 'liftA4' in terms of 'Distributive'. Offered for
--- convenience rather than as a default.
+-- | An implementation of 'liftA4' in terms of 'Distributive'.
 liftD4 :: Distributive f => (a -> b -> c -> d -> e) -> f a -> f b -> f c -> f d -> f e
 liftD4 f fa fb fc fd = distrib (D4 fa fb fc fd) \(D4 a b c d) -> coerce f a b c d
 {-# inline liftD4 #-}
@@ -446,8 +446,7 @@ instance FFunctor (D5 a b c d e) where
   ffmap f (D5 a b c d e) = D5 (f a) (f b) (f c) (f d) (f e)
   {-# inline ffmap #-}
 
--- | An implementation of 'liftA4' in terms of 'Distributive'. Offered for
--- convenience rather than as a default.
+-- | An implementation of 'liftA5' in terms of 'Distributive'.
 liftD5 :: Distributive f => (a -> b -> c -> d -> e -> x) -> f a -> f b -> f c -> f d -> f e -> f x
 liftD5 f fa fb fc fd fe = distrib (D5 fa fb fc fd fe) \(D5 a b c d e) -> coerce f a b c d e
 {-# inline liftD5 #-}
