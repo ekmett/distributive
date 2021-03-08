@@ -3,8 +3,12 @@
 {-# Language DeriveAnyClass #-}
 {-# Language DeriveGeneric #-}
 {-# Language DeriveTraversable #-}
+#if __GLASGOW_HASKELL__ >= 802
 {-# Language DerivingStrategies #-}
+#endif
+#if __GLASGOW_HASKELL__ >= 806
 {-# Language DerivingVia #-}
+#endif
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
 {-# Language GeneralizedNewtypeDeriving #-}
@@ -126,14 +130,26 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
+#if __GLASGOW_HASKELL__ >= 806
 import Data.Kind
+#endif
 import qualified Data.Monoid as Monoid
 import qualified Data.Semigroup as Semigroup
 import Data.HKD
-import Data.Ord (Down)
+import Data.Ord (Down(..))
+import Data.Orphans ()
 import Data.Proxy
 import Data.Void
+import Generics.Deriving.Instances ()
 import GHC.Generics
+
+#if __GLASGOW_HASKELL__ < 800
+import Data.Monoid (Monoid(..))
+#endif
+
+#if __GLASGOW_HASKELL__ < 804
+import Data.Semigroup (Semigroup(..))
+#endif
 
 -- import Control.Comonad
 -- import Control.Comonad.Traced (TracedT(..))
@@ -370,14 +386,96 @@ instance Distributive ((->) x) where
   {-# inline tabulate #-}
   {-# inline index #-}
 
+#if MIN_VERSION_base(4,12,0)
 instance Distributive Down
 instance Distributive Monoid.Product
 instance Distributive Monoid.Sum
+#else
+-- accessor isn't included in the newtype until base 4.14
+getDown :: Down a -> a
+getDown (Down x) = x
+
+instance Distributive Down where
+  type Log Down = ()
+  scatter k f = Down #. (k .  ffmap ((Identity . getDown) #. f))
+  index x () = getDown x
+  tabulate f = Down $ f ()
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
+
+instance Distributive Monoid.Product where
+  type Log Monoid.Product = ()
+  scatter k f = Monoid.Product #. (k .  ffmap ((Identity . Monoid.getProduct) #. f))
+  index x () = Monoid.getProduct x
+  tabulate f = Monoid.Product $ f ()
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
+
+instance Distributive Monoid.Sum where
+  type Log Monoid.Sum = ()
+  scatter k f = Monoid.Sum #. (k .  ffmap ((Identity . Monoid.getSum) #. f))
+  index x () = Monoid.getSum x
+  tabulate f = Monoid.Sum $ f ()
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
+#endif
+
+#if __GLASGOW_HASKELL__ >= 806
 deriving newtype instance Distributive f => Distributive (Backwards f)
 deriving newtype instance Distributive f => Distributive (Reverse f)
 deriving newtype instance Distributive f => Distributive (Monoid.Alt f)
 deriving newtype instance Distributive f => Distributive (Monoid.Ap f)
 instance Distributive Monoid.Dual
+#else
+instance Distributive f => Distributive (Backwards f) where
+  type Log (Backwards f) = Log f
+  scatter k f = Backwards #. scatter k (forwards #. f)
+  index = index .# forwards
+  tabulate = Backwards #. tabulate
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
+
+instance Distributive f => Distributive (Reverse f) where
+  type Log (Reverse f) = Log f
+  scatter k f = Reverse #. scatter k (getReverse #. f)
+  index = index .# getReverse
+  tabulate = Reverse #. tabulate
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
+
+#if MIN_VERSION_base(4,8,0)
+instance Distributive f => Distributive (Monoid.Alt f) where
+  type Log (Monoid.Alt f) = Log f
+  scatter k f = Monoid.Alt #. scatter k (Monoid.getAlt #. f)
+  index = index .# Monoid.getAlt
+  tabulate = Monoid.Alt #. tabulate
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
+
+
+#endif
+
+#if MIN_VERSION_base(4,12,0)
+instance Distributive f => Distributive (Monoid.Ap f) where
+  type Log (Monoid.Ap f) = Log f
+  scatter k f = Monoid.Ap #. scatter k (Monoid.getAp #. f)
+  index = index .# Monoid.getAp
+  tabulate = Monoid.Ap #. tabulate
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
+#endif
+
+instance Distributive Monoid.Dual
+
+#endif
+
 instance Distributive Semigroup.First
 instance Distributive Semigroup.Last
 instance Distributive Semigroup.Min
@@ -400,17 +498,36 @@ instance Distributive Complex where
     True -> i
   {-# inline index #-}
 
-deriving newtype
-  instance Distributive f => Distributive (IdentityT f)
+#if __GLASGOW_HASKELL__ >= 802
+deriving newtype instance Distributive f => Distributive (IdentityT f)
+#else
+instance Distributive f => Distributive (IdentityT f) where
+  type Log (IdentityT f) = Log f
+  type Log (IdentityT f) = Log f
+  scatter k f = IdentityT #. scatter k (runIdentityT #. f)
+  index = index .# runIdentityT
+  tabulate = IdentityT #. tabulate
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
+#endif
 
+#if __GLASGOW_HASKELL__ >= 806
 -- this isntance flips out when I turn on PolyKinds
 deriving via ((((->) e) :.: f) :: Type -> Type)
   instance Distributive f => Distributive (ReaderT e f)
+#else
+instance Distributive f => Distributive (ReaderT e f) where
+  type Log (ReaderT e f) = (e, Log f)
+  scatter k f = (ReaderT . unComp1) #. scatter k ((Comp1 . runReaderT) #. f)
+  tabulate = (ReaderT . unComp1) #. tabulate
+  index = index .# (Comp1 . runReaderT)
+#endif
 
 -- * DerivingVia
 
 -- | Provides defaults definitions for other classes in terms of
--- 'Distributive'. Supplied for use with @DerivingVia@
+-- 'Distributive'. Supplied for use with @DerivingVia@ in GHC 8.6+
 newtype Dist f a = Dist { runDist :: f a }
 
 instance Distributive f => Functor (Dist f) where
@@ -432,15 +549,17 @@ instance Distributive f => Distributive (Dist f) where
 
 instance Distributive f => Applicative (Dist f) where
   pure = pureDist
-  liftA2 = liftD2
-  (<*>) = apDist
-  _ *> m = m
-  (<*) = const
   {-# inline pure #-}
-  {-# inline liftA2 #-}
+  (<*>) = apDist
   {-# inline (<*>) #-}
+  _ *> m = m
   {-# inline (*>) #-}
+  (<*) = const
   {-# inline (<*) #-}
+#if MIN_VERSION_base(4,10,0)
+  liftA2 = liftD2
+  {-# inline liftA2 #-}
+#endif
 
 -- | A default definition for 'fmap' from 'Functor' in terms of 'Distributive'
 fmapDist :: Distributive f => (a -> b) -> f a -> f b
@@ -645,6 +764,10 @@ instance Distributive f => Semigroup (DistEndo f) where
   {-# inline (<>) #-}
 
 instance Distributive f => Monoid (DistEndo f) where
+#if __GLASGOW_HASKELL__ < 804
+  DistEndo f `mappend` DistEndo g = DistEndo $ tabulate $ \x -> index f (index g x)
+  {-# inline mappend #-}
+#endif
   mempty = DistEndo askDist
   {-# inline mempty #-}
 

@@ -13,7 +13,9 @@ copyright:     Copyright (C) 2011-2021 Edward A. Kmett, (C) 2018 Aaron Vargo
 synopsis:      Distributive functors -- Dual to Traversable
 description:   Distributive functors -- Dual to @Traversable@
 build-type:    Simple
-tested-with:   GHC == 8.10.3
+tested-with:
+  GHC == 8.0.2,
+  GHC == 8.10.3
 extra-source-files:
   .hlint.yaml
   .vim.custom
@@ -25,6 +27,14 @@ source-repository head
   type: git
   location: git://github.com/ekmett/distributive.git
 
+flag semigroups
+  manual: True
+  default: True
+  description:
+    You can disable the use of the `semigroups` package using `-f-semigroups` when compiling on versions of GHC < 8.0.
+    .
+    Disabling this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
+
 flag tagged
   manual: True
   default: True
@@ -35,17 +45,25 @@ flag tagged
 
 library
   build-depends:
-    base                >= 4.14 && < 5,
-    base-orphans        >= 0.5.2 && < 1,
-    hkd                 >= 0.1 && < 0.2,
-    mtl                 >= 2.2 && < 2.3,
-    transformers        >= 0.3 && < 0.6
+    base         >= 4.9 && < 5,
+    base-orphans >= 0.5.2 && < 1,
+    generic-deriving >= 1.14 && < 1.15,
+    hkd          >= 0.1 && < 0.2,
+    mtl          >= 2.2 && < 2.3,
+    transformers >= 0.3 && < 0.6
 
   hs-source-dirs:  src
   exposed-modules: Data.Distributive
 
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1
+
+  if impl(ghc>=7.2 && < 7.6)
+    build-depends: ghc-prim
+
+  if impl(ghc < 8.0)
+    if flag(semigroups)
+      build-depends: semigroups >= 0.13 && < 1
 
   ghc-options: -Wall
 
