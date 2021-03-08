@@ -50,7 +50,7 @@
 -- data Moore a b = Moore b (a -> Moore a b)
 --   deriving stock Functor
 --   deriving (Comonad, Applicative, Monad, MonadFix, MonadZip) via Dist (Moore a)
---   
+--
 -- instance Distributive (Moore a) where
 --   type Log (Moore a) = [a]
 --   tabulate f = Moore (f []) (\\x -> tabulate $ f . (x:))
@@ -59,13 +59,11 @@
 -- @
 module Data.Distributive
   ( Distributive(..)
-
-
   , distrib
   , distribute
   , collect
   , cotraverse
-  -- * Default definitions 
+  -- * Default definitions
   , Dist(..)
   -- * Functor
   , fmapDist
@@ -101,7 +99,7 @@ module Data.Distributive
   , indexDistEndo
   -- * Simple scattering
   , scatterDefault
-  -- * Default choice of representation
+  -- * Always a valid choice of representation
   , Logarithm(..)
   , tabulateLogarithm
   , indexLogarithm
@@ -145,7 +143,7 @@ import Data.Tagged
 -- This is a fancy way of saying @f@ is isomorphic to @(->) x@ for some x.
 -- We use the name @Log f@ for @x@.
 --
--- 
+--
 -- @
 -- 'tabulate' '.' 'index' ≡ 'id'
 -- 'index' '.' 'tabulate' ≡ 'id'
@@ -157,19 +155,21 @@ import Data.Tagged
 -- cardinality, fixed sized vectors, infinite streams, functions, etc.
 -- and no extra information to try to merge together.
 class Functor f => Distributive f where
-  -- If the user doesn't specify a meaning for 'Log', we default to 'Logarithm'
-  -- from the @hkd@ package.
   type Log f
-  type Log f = Logarithm f
+  type Log f = Log (Rep1 f)
 
   tabulate :: (Log f -> a) -> f a
-  default tabulate :: (Log f ~ Logarithm f) => (Log f -> a) -> f a
-  tabulate = tabulateLogarithm
+  default tabulate
+    :: (Generic1 f, Distributive (Rep1 f), Log f ~ Log (Rep1 f))
+    => (Log f -> a) -> f a
+  tabulate = tabulateLogRep
   {-# inline tabulate #-}
 
   index :: f a -> Log f -> a
-  default index :: (Log f ~ Logarithm f) => f a -> Log f -> a
-  index = indexLogarithm
+  default index
+    :: (Generic1 f, Distributive (Rep1 f), Log f ~ Log (Rep1 f))
+    => f a -> Log f -> a
+  index = indexLogRep
   {-# inline index #-}
 
   -- | Scatter the contents of an 'FFunctor'. This admittedly complicated operation
@@ -177,8 +177,8 @@ class Functor f => Distributive f where
   -- like Mealy and Moore machines that have many layers to them.
   --
   -- If you have a 'Generic1' instance for your 'Functor', this should be able to be
-  -- generated automatically. Otherwise if you must, you can use 'scatterDefault' as
-  -- a fallback in terms of 'tabulate' and 'index', which is offered in terms of the 
+  -- generated automatically. Otherwise, if you must, you can use 'scatterDefault' as
+  -- a fallback in terms of 'tabulate' and 'index', which is offered in terms of the
   -- law relating 'scatter' to 'tabulate' and 'index':
   --
   -- @
@@ -190,6 +190,14 @@ class Functor f => Distributive f where
     => (w Identity -> r) -> (g ~> f) -> w g -> f r
   scatter k phi = to1 . scatter k (from1 . phi)
   {-# inline scatter #-}
+
+tabulateLogRep :: (Distributive (Rep1 f), Generic1 f, Log f ~ Log (Rep1 f)) => (Log f -> a) -> f a
+tabulateLogRep = to1 . tabulate
+{-# inline tabulateLogRep #-}
+
+indexLogRep :: (Distributive (Rep1 f), Generic1 f, Log f ~ Log (Rep1 f)) => f a -> Log f -> a
+indexLogRep = index . from1
+{-# inline indexLogRep #-}
 
 -- | A helper for the most common usage pattern when working with higher-kinded data.
 --
@@ -390,7 +398,7 @@ instance Distributive f => Functor (Dist f) where
 
 instance Distributive f => Distributive (Dist f) where
   type Log (Dist f) = Log f
-  scatter k f = Dist #. scatter k (runDist #. f) 
+  scatter k f = Dist #. scatter k (runDist #. f)
   tabulate = Dist #. tabulate
   index = index .# runDist
   {-# inline scatter #-}
@@ -515,7 +523,7 @@ mzipWithDist = liftD2
 {-# inline mzipWithDist #-}
 
 -- * Comonad
-  
+
 -- instance (Distributive f, Monoid (Log f)) => Comonad (Dist f) where
 --  extract = extractDist
 --  {-# inline extract #-}
@@ -617,7 +625,7 @@ instance Distributive f => Monoid (DistEndo f) where
   mempty = DistEndo askDist
   {-# inline mempty #-}
 
-indexDistEndo :: Distributive f => DistEndo f -> Log f -> Log f 
+indexDistEndo :: Distributive f => DistEndo f -> Log f -> Log f
 indexDistEndo = index .# runDistEndo
 {-# inline indexDistEndo #-}
 
