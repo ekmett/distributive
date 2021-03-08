@@ -102,7 +102,6 @@ import Control.Monad.Trans.Identity
 import Control.Monad.Zip
 import Data.Coerce
 import Data.Complex
-import Data.Functor
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
@@ -173,15 +172,15 @@ class Functor f => Distributive (f :: Type -> Type) where
   -- @
   -- 'scatter' phi wg = 'tabulate' \x -> 'ffmap' (\g -> 'Identity' $ 'index' (phi g) x) wg
   -- @
-  scatter :: FFunctor w => (g ~> f) -> w g -> f (w Identity)
+  scatter :: FFunctor w => (w Identity -> r) -> (g ~> f) -> w g -> f r
   default scatter
     :: (Generic1 f, Distributive (Rep1 f), FFunctor w)
-    => (g ~> f) -> w g -> f (w Identity)
-  scatter phi = to1 . scatter (from1 . phi)
+    => (w Identity -> r) -> (g ~> f) -> w g -> f r
+  scatter k phi = to1 . scatter k (from1 . phi)
   {-# inline scatter #-}
 
-distrib :: (Distributive f, FFunctor w) => w f -> f (w Identity)
-distrib = scatter id
+distrib :: (Distributive f, FFunctor w) => w f -> (w Identity -> r) -> f r
+distrib w k = scatter k id w
 {-# inline distrib #-}
 
 -- | implement 'scatter' in terms of 'tabulate' and 'index' by the law
@@ -191,8 +190,8 @@ distrib = scatter id
 -- but do not need to carefully peel apart your structure layer by layer and
 -- for some reason you are unable to define 'Generic1' and so canot simply use
 -- 'DeriveAnyClass'.
-scatterDefault :: (Distributive f, FFunctor w) => (g ~> f) -> w g -> f (w Identity)
-scatterDefault phi wg = tabulate \x -> ffmap (\g -> Identity $ index (phi g) x) wg
+scatterDefault :: (Distributive f, FFunctor w) => (w Identity -> r) -> (g ~> f) -> w g -> f r
+scatterDefault k phi wg = tabulate \x -> k $ ffmap (\g -> Identity $ index (phi g) x) wg
 {-# inline scatterDefault #-}
 
 -- | Default definition for 'tabulate' in when 'Log f' = 'Logarithm f'. Can be used
@@ -200,7 +199,7 @@ scatterDefault phi wg = tabulate \x -> ffmap (\g -> Identity $ index (phi g) x) 
 -- functor.
 tabulateLogarithm :: Distributive f => (Logarithm f -> a) -> f a
 tabulateLogarithm f =
-  distrib (Tab f) <&> \(Tab f') -> f' (Logarithm runIdentity)
+  distrib (Tab f) \(Tab f') -> f' (Logarithm runIdentity)
 {-# inline tabulateLogarithm #-}
 
 newtype DX a f g = DX { runDX :: f (g a) }
@@ -218,7 +217,7 @@ instance Functor f => FFunctor (DX a f) where
 -- 'distribute' . 'distribute' = 'id'
 -- @
 distribute :: (Functor f, Distributive g) => f (g a) -> g (f a)
-distribute f = distrib (DX f) <&> \(DX f') -> runIdentity <$> f'
+distribute f = distrib (DX f) \(DX f') -> runIdentity <$> f'
 {-# inline distribute #-}
 
 -- |
@@ -228,7 +227,7 @@ distribute f = distrib (DX f) <&> \(DX f') -> runIdentity <$> f'
 -- 'fmap' 'distribute' . 'collect' f = 'getCompose' . 'collect' ('Compose' . f)
 -- @
 collect :: (Functor f, Distributive g) => (a -> g b) -> f a -> g (f b)
-collect f fa = distrib (DX f) <&> \(DX f') -> coerce f' <$> fa
+collect f fa = distrib (DX f) \(DX f') -> coerce f' <$> fa
 {-# inline collect #-}
 
 -- | The dual of 'Data.Traversable.traverse'
@@ -237,14 +236,14 @@ collect f fa = distrib (DX f) <&> \(DX f') -> coerce f' <$> fa
 -- 'cotraverse' f = 'fmap' f . 'distribute'
 -- @
 cotraverse :: (Functor f, Distributive g) => (f a -> b) -> f (g a) -> g b
-cotraverse fab fga = distrib (DX fga) <&> \(DX f') -> fab (runIdentity <$> f')
+cotraverse fab fga = distrib (DX fga) \(DX f') -> fab (runIdentity <$> f')
 {-# inline cotraverse #-}
 
 instance (Distributive f, Distributive g) => Distributive (f :*: g) where
   type Log (f :*: g) = Either (Log f) (Log g)
-  scatter f (ffmap f -> w)
-      = scatter (\(l :*: _) -> l) w
-    :*: scatter (\(_ :*: r) -> r) w
+  scatter k f (ffmap f -> w)
+      = scatter k (\(l :*: _) -> l) w
+    :*: scatter k (\(_ :*: r) -> r) w
   tabulate f = tabulate (f . Left) :*: tabulate (f . Right)
   index (f :*: _) (Left x) = index f x
   index (_ :*: g) (Right y) = index g y
@@ -254,7 +253,7 @@ instance (Distributive f, Distributive g) => Distributive (f :*: g) where
 
 instance Distributive f => Distributive (M1 i c f) where
   type Log (M1 i c f) = Log f
-  scatter f = M1 #. scatter (unM1 #. f)
+  scatter k f = M1 #. scatter k (unM1 #. f)
   index = index .# unM1
   tabulate = M1 #. tabulate
   {-# inline scatter #-}
@@ -263,7 +262,7 @@ instance Distributive f => Distributive (M1 i c f) where
 
 instance Distributive U1 where
   type Log U1 = Void
-  scatter _ _ = U1
+  scatter _ _ _ = U1
   tabulate _ = U1
   index _ = absurd
   {-# inline scatter #-}
@@ -272,7 +271,7 @@ instance Distributive U1 where
 
 instance Distributive f => Distributive (Rec1 f) where
   type Log (Rec1 f) = Log f
-  scatter f = Rec1 #. scatter (unRec1 #. f)
+  scatter k f = Rec1 #. scatter k (unRec1 #. f)
   index = index .# unRec1
   tabulate = Rec1 #. tabulate
   {-# inline scatter #-}
@@ -281,7 +280,7 @@ instance Distributive f => Distributive (Rec1 f) where
 
 instance Distributive Par1 where
   type Log Par1 = ()
-  scatter f = Par1 #. ffmap ((Identity . unPar1) #. f)
+  scatter k f = Par1 #. (k .  ffmap ((Identity . unPar1) #. f))
   index x () = unPar1 x
   tabulate f = Par1 $ f ()
   {-# inline scatter #-}
@@ -305,7 +304,7 @@ instance Distributive Proxy
 instance Distributive Identity
 instance Distributive ((->) x) where
   type Log ((->) x) = x
-  scatter phi wg x = ffmap (\g -> Identity $ phi g x) wg
+  scatter k phi wg x = k $ ffmap (\g -> Identity $ phi g x) wg
   tabulate = id
   index = id
   {-# inline scatter #-}
@@ -351,11 +350,16 @@ deriving via (((->) e) :.: f)
 -- | Provides defaults definitions for other classes in terms of
 -- 'Distributive'. Supplied for use with @DerivingVia@
 newtype Dist f a = Dist { runDist :: f a }
-  deriving stock Functor
+
+instance Distributive f => Functor (Dist f) where
+  fmap = fmapDist
+  {-# inline fmap #-}
+  a <$ _ = pure a
+  {-# inline (<$) #-}
 
 instance Distributive f => Distributive (Dist f) where
   type Log (Dist f) = Log f
-  scatter f = Dist #. scatter (runDist #. f) 
+  scatter k f = Dist #. scatter k (runDist #. f) 
   tabulate = Dist #. tabulate
   index = index .# runDist
   {-# inline scatter #-}
@@ -379,16 +383,20 @@ instance Distributive f => Applicative (Dist f) where
   {-# inline (*>) #-}
   {-# inline (<*) #-}
 
+fmapDist :: Distributive f => (a -> b) -> f a -> f b
+fmapDist f fa = distrib (Element fa) \(Element (Identity a)) -> f a
+{-# inline fmapDist #-}
+
 pureDist :: Distributive f => a -> f a
 pureDist = tabulate . const
 {-# inline pureDist #-}
 
 apDist :: Distributive f => f (a -> b) -> f a -> f b
-apDist fab fa = distrib (DAp fab fa) <&> \(DAp ab a) -> coerce ab a
+apDist fab fa = distrib (DAp fab fa) \(DAp ab a) -> coerce ab a
 {-# inline apDist #-}
 
 liftD2 :: Distributive f => (a -> b -> c) -> f a -> f b -> f c
-liftD2 f fa fb = distrib (DAp fa fb) <&> \(DAp a b) -> coerce f a b
+liftD2 f fa fb = distrib (DAp fa fb) \(DAp a b) -> coerce f a b
 {-# inline liftD2 #-}
 
 data DAp3 x y z f = DAp3 (f x) (f y) (f z)
@@ -397,7 +405,7 @@ instance FFunctor (DAp3 x y z) where
   {-# inline ffmap #-}
 
 liftD3 :: Distributive f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
-liftD3 f fa fb fc = distrib (DAp3 fa fb fc) <&> \(DAp3 a b c) -> coerce f a b c
+liftD3 f fa fb fc = distrib (DAp3 fa fb fc) \(DAp3 a b c) -> coerce f a b c
 {-# inline liftD3 #-}
 
 data DBind x y f = DBind (f x) (x -> f y)
@@ -410,7 +418,7 @@ instance Distributive f => Monad (Dist f) where
   {-# inline (>>=) #-}
 
 bindDist :: Distributive f => f a -> (a -> f b) -> f b
-bindDist m f = distrib (DBind m f) <&> \(DBind (Identity a) f') -> runIdentity (f' a)
+bindDist m f = distrib (DBind m f) \(DBind (Identity a) f') -> runIdentity (f' a)
 {-# inline bindDist #-}
 
 instance Distributive f => MonadFix (Dist f) where
@@ -418,7 +426,7 @@ instance Distributive f => MonadFix (Dist f) where
   {-# inline mfix #-}
 
 mfixDist :: Distributive f => (a -> f a) -> f a
-mfixDist ama = distrib (DX ama) <&> fix . coerce
+mfixDist ama = distrib (DX ama) (fix . coerce)
 {-# inline mfixDist #-}
 
 instance Distributive f => MonadZip (Dist f) where
