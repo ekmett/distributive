@@ -19,6 +19,7 @@
 {-# Language TypeOperators #-}
 {-# Language UndecidableInstances #-}
 {-# Language ViewPatterns #-}
+{-# Language Trustworthy #-}
 -- |
 -- Module      : Data.Distributive
 -- Copyright   : (C) 2011-2021 Edward Kmett, (c) 2018 Aaron Vargo
@@ -110,7 +111,6 @@ import Data.Functor.Reverse
 import qualified Data.Monoid as Monoid
 import qualified Data.Semigroup as Semigroup
 import Data.HKD
-import Data.Kind
 import Data.Ord (Down)
 import Data.Proxy
 import Data.Void
@@ -143,10 +143,10 @@ import Data.Tagged
 -- means that the holes in all values of that type, must have the same
 -- cardinality, fixed sized vectors, infinite streams, functions, etc.
 -- and no extra information to try to merge together.
-class Functor f => Distributive (f :: Type -> Type) where
+class Functor f => Distributive f where
   -- If the user doesn't specify a meaning for 'Log', we default to 'Logarithm'
   -- from the @hkd@ package.
-  type Log f :: Type
+  type Log f
   type Log f = Logarithm f
 
   tabulate :: (Log f -> a) -> f a
