@@ -339,10 +339,10 @@ instance Distributive U1 where
   {-# inline index #-}
 
 instance Distributive f => Distributive (Rec1 f) where
-  type Log (Rec1 f) = Log f
+  type Log (Rec1 f) = Logarithm f
   scatter k f = Rec1 #. scatter k (unRec1 #. f)
-  index = index .# unRec1
-  tabulate = Rec1 #. tabulate
+  index = indexLogarithm .# unRec1
+  tabulate = Rec1 #. tabulateLogarithm
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
