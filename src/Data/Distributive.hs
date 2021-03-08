@@ -31,7 +31,7 @@
 --
 -- Maintainer  : Edward Kmett <ekmett@gmail.com>
 -- Stability   : provisional
--- Portability : non-portable
+-- Portability : non-portable (ghc 8.0+)
 --
 -- Examples:
 --
