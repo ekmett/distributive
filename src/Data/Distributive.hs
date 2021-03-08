@@ -176,6 +176,7 @@ import Data.Tagged
 -- cardinality, fixed sized vectors, infinite streams, functions, etc.
 -- and no extra information to try to merge together.
 class Functor f => Distributive f where
+  -- | Defaults to @'Log' ('Rep1' f)@ when type is non-recursive, otherwise to 'Logarithm'.
   type Log f
   type Log f = DefaultLog (ContainsRec1 (Rep1 f)) f
 
@@ -400,7 +401,7 @@ instance Distributive f => Distributive (Rec1 f) where
 
 instance Distributive Par1 where
   type Log Par1 = ()
-  scatter k f = Par1 #. (k .  ffmap ((Identity . unPar1) #. f))
+  scatter k f = coerce $ k .  ffmap ((Identity . unPar1) #. f)
   index x () = unPar1 x
   tabulate f = Par1 $ f ()
   {-# inline scatter #-}
@@ -436,18 +437,20 @@ instance Distributive ((->) x) where
   {-# inline index #-}
 
 #if MIN_VERSION_base(4,12,0)
+
 instance Distributive Down
 instance Distributive Monoid.Product
 instance Distributive Monoid.Sum
 
 #else
+
 -- accessor isn't included in the newtype until base 4.14
 getDown :: Down a -> a
 getDown (Down x) = x
 
 instance Distributive Down where
   type Log Down = ()
-  scatter k f = Down #. (k .  ffmap ((Identity . getDown) #. f))
+  scatter k f = coerce $ k . ffmap ((Identity . getDown) #. f)
   index x () = getDown x
   tabulate f = Down $ f ()
   {-# inline scatter #-}
@@ -456,7 +459,7 @@ instance Distributive Down where
 
 instance Distributive Monoid.Product where
   type Log Monoid.Product = ()
-  scatter k f = Monoid.Product #. (k .  ffmap ((Identity . Monoid.getProduct) #. f))
+  scatter k f = coerce $ k .  ffmap ((Identity . Monoid.getProduct) #. f)
   index x () = Monoid.getProduct x
   tabulate f = Monoid.Product $ f ()
   {-# inline scatter #-}
@@ -465,24 +468,28 @@ instance Distributive Monoid.Product where
 
 instance Distributive Monoid.Sum where
   type Log Monoid.Sum = ()
-  scatter k f = Monoid.Sum #. (k .  ffmap ((Identity . Monoid.getSum) #. f))
+  scatter k f = coerce $ (k .  ffmap ((Identity . Monoid.getSum) #. f))
   index x () = Monoid.getSum x
   tabulate f = Monoid.Sum $ f ()
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
+
 #endif
 
 #if __GLASGOW_HASKELL__ >= 806
+
 deriving newtype instance Distributive f => Distributive (Backwards f)
 deriving newtype instance Distributive f => Distributive (Reverse f)
 deriving newtype instance Distributive f => Distributive (Monoid.Alt f)
 deriving newtype instance Distributive f => Distributive (Monoid.Ap f)
 instance Distributive Monoid.Dual
+
 #else
+
 instance Distributive f => Distributive (Backwards f) where
   type Log (Backwards f) = Log f
-  scatter k f = Backwards #. scatter k (forwards #. f)
+  scatter k f = coerce $ scatter k (forwards #. f)
   index = index .# forwards
   tabulate = Backwards #. tabulate
   {-# inline scatter #-}
@@ -491,7 +498,7 @@ instance Distributive f => Distributive (Backwards f) where
 
 instance Distributive f => Distributive (Reverse f) where
   type Log (Reverse f) = Log f
-  scatter k f = Reverse #. scatter k (getReverse #. f)
+  scatter k f = coerce $ scatter k (getReverse #. f)
   index = index .# getReverse
   tabulate = Reverse #. tabulate
   {-# inline scatter #-}
@@ -500,7 +507,7 @@ instance Distributive f => Distributive (Reverse f) where
 
 instance Distributive f => Distributive (Monoid.Alt f) where
   type Log (Monoid.Alt f) = Log f
-  scatter k f = Monoid.Alt #. scatter k (Monoid.getAlt #. f)
+  scatter k f = coerce $ scatter k (Monoid.getAlt #. f)
   index = index .# Monoid.getAlt
   tabulate = Monoid.Alt #. tabulate
   {-# inline scatter #-}
@@ -510,7 +517,7 @@ instance Distributive f => Distributive (Monoid.Alt f) where
 #if MIN_VERSION_base(4,12,0)
 instance Distributive f => Distributive (Monoid.Ap f) where
   type Log (Monoid.Ap f) = Log f
-  scatter k f = Monoid.Ap #. scatter k (Monoid.getAp #. f)
+  scatter k f = coerce $ scatter k (Monoid.getAp #. f)
   index = index .# Monoid.getAp
   tabulate = Monoid.Ap #. tabulate
   {-# inline scatter #-}
@@ -520,12 +527,13 @@ instance Distributive f => Distributive (Monoid.Ap f) where
 
 instance Distributive Monoid.Dual where
   type Log Monoid.Dual = ()
-  scatter k f = Monoid.Dual #. (k .  ffmap ((Identity . Monoid.getDual) #. f))
+  scatter k f = coerce $ k .  ffmap ((Identity . Monoid.getDual) #. f)
   index x () = Monoid.getDual x
   tabulate f = Monoid.Dual $ f ()
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
+
 #endif
 
 instance Distributive Semigroup.First
@@ -535,16 +543,20 @@ instance Distributive Semigroup.Max
 instance (Distributive f, Monad f) => Distributive (WrappedMonad f)
 
 #if MIN_VERSION_base(4,14,0)
+
 instance Distributive f => Distributive (Kleisli f a)
+
 #else
+
 instance Distributive f => Distributive (Kleisli f a) where
   type Log (Kleisli f a) = (a, Log f)
-  scatter k f = (Kleisli . unComp1) #. scatter k ((Comp1 . runKleisli) #. f)
+  scatter k f = coerce $ scatter k ((Comp1 . runKleisli) #. f)
   tabulate = (Kleisli . unComp1) #. tabulate
   index = index .# (Comp1 . runKleisli)
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
+
 #endif
 
 -- instance Distributive f => Distributive (Cokleisli f a)
@@ -563,29 +575,36 @@ instance Distributive Complex where
   {-# inline index #-}
 
 #if __GLASGOW_HASKELL__ >= 802
+
 deriving newtype instance Distributive f => Distributive (IdentityT f)
+
 #else
+
 instance Distributive f => Distributive (IdentityT f) where
   type Log (IdentityT f) = Log f
   type Log (IdentityT f) = Log f
-  scatter k f = IdentityT #. scatter k (runIdentityT #. f)
+  scatter k f = coerce $ scatter k (runIdentityT #. f)
   index = index .# runIdentityT
   tabulate = IdentityT #. tabulate
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
+
 #endif
 
 #if __GLASGOW_HASKELL__ >= 806
--- this isntance flips out when I turn on PolyKinds
+
 deriving via ((((->) e) :.: f) :: Type -> Type)
   instance Distributive f => Distributive (ReaderT e f)
+
 #else
+
 instance Distributive f => Distributive (ReaderT e f) where
   type Log (ReaderT e f) = (e, Log f)
-  scatter k f = (ReaderT . unComp1) #. scatter k ((Comp1 . runReaderT) #. f)
+  scatter k f = coerce $ scatter k ((Comp1 . runReaderT) #. f)
   tabulate = (ReaderT . unComp1) #. tabulate
   index = index .# (Comp1 . runReaderT)
+
 #endif
 
 -- * DerivingVia
