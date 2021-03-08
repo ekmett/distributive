@@ -1,4 +1,5 @@
 {-# Language CPP #-}
+{-# Language ConstraintKinds #-}
 {-# Language DataKinds #-}
 {-# Language DefaultSignatures #-}
 {-# Language DeriveAnyClass #-}
@@ -176,22 +177,22 @@ import Data.Tagged
 -- cardinality, fixed sized vectors, infinite streams, functions, etc.
 -- and no extra information to try to merge together.
 class Functor f => Distributive f where
-  -- | Defaults to @'Log' ('Rep1' f)@ when type is non-recursive, otherwise to 'Logarithm'.
+  -- | Defaults to @'Log' ('Rep1' f)@ when @f@ is non-recursive, otherwise to 'Logarithm'.
   type Log f
-  type Log f = DefaultLog (ContainsRec1 (Rep1 f)) f
+  type Log f = DefaultLog f
 
-  -- | Defaults to 'tabulateRep' when type is non-recursive, otherwise to 'tabulateLogarithm'.
+  -- | Defaults to 'tabulateRep' when @f@ is non-recursive, otherwise to 'tabulateLogarithm'.
   tabulate :: (Log f -> a) -> f a
   default tabulate
-    :: (Generic1 f, DefaultTabulate (ContainsRec1 (Rep1 f)) f)
+    :: (Generic1 f, DefaultTabulate f)
     => (Log f -> a) -> f a
   tabulate = defaultTabulate (Proxy :: Proxy (ContainsRec1 (Rep1 f)))
   {-# inline tabulate #-}
 
-  -- | Defaults to 'indexRep when type is non-recursive, otherwise to 'indexLogarithm'.
+  -- | Defaults to 'indexRep when @f@ is non-recursive, otherwise to 'indexLogarithm'.
   index :: f a -> Log f -> a
   default index
-     :: (Generic1 f, DefaultIndex (ContainsRec1 (Rep1 f )) f)
+     :: (Generic1 f, DefaultIndex f)
      => f a -> Log f -> a
   index = defaultIndex (Proxy :: Proxy (ContainsRec1 (Rep1 f)))
   {-# inline index #-}
@@ -222,7 +223,6 @@ tabulateRep
      (Distributive (Rep1 f), Generic1 f, Coercible (Log f) (Log (Rep1 f)))
   => (Log f -> a) -> f a
 tabulateRep = coerce (to1 . tabulate :: (Log (Rep1 f) -> a) -> f a)
-
 {-# inline tabulateRep #-}
 
 indexRep
@@ -238,9 +238,9 @@ scatterRep
 scatterRep k phi = to1 . scatter k (from1 . phi)
 {-# inline scatterRep #-}
 
--- Generic derivation
+-- * Generic derivation
 
--- Whether Generic Rep has 'Rec1'.
+-- Does Generic Rep contain 'Rec1'?
 type family ContainsRec1 (f :: Type -> Type) :: Bool where
   ContainsRec1 (K1 _ _)   = 'False
   ContainsRec1 (M1 _ _ f) = ContainsRec1 f
@@ -252,36 +252,40 @@ type family ContainsRec1 (f :: Type -> Type) :: Bool where
   ContainsRec1 (f :+: g)  = ContainsRec1 f || ContainsRec1 g
   ContainsRec1 (f :.: g)  = ContainsRec1 f || ContainsRec1 g
 
-type family DefaultLog (containsRec1 :: Bool) f :: Type where
-  DefaultLog 'True  f = Logarithm f
-  DefaultLog 'False f = Log (Rep1 f)
+type family DefaultLog' (containsRec1 :: Bool) f :: Type where
+  DefaultLog' 'True  f = Logarithm f
+  DefaultLog' 'False f = Log (Rep1 f)
 
 type family DefaultImplC (containsRec1 :: Bool) f :: Constraint where
   DefaultImplC 'True  f = (Distributive f, Log f ~ Logarithm f)
   DefaultImplC 'False f = (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
 
 -- individual type classes, so there is GHC needs to less work
-class DefaultImplC containsRec1 f => DefaultTabulate (containsRec1 :: Bool) f where
+class DefaultImplC containsRec1 f => DefaultTabulate' (containsRec1 :: Bool) f where
   defaultTabulate :: Proxy containsRec1 -> (Log f -> a) -> f a
 
-instance DefaultImplC 'True f => DefaultTabulate 'True f where
+instance DefaultImplC 'True f => DefaultTabulate' 'True f where
   defaultTabulate _ = tabulateLogarithm
   {-# inline defaultTabulate #-}
 
-instance DefaultImplC 'False f => DefaultTabulate 'False f where
+instance DefaultImplC 'False f => DefaultTabulate' 'False f where
   defaultTabulate _ = tabulateRep
   {-# inline defaultTabulate #-}
 
-class DefaultImplC containsRec1 f => DefaultIndex (containsRec1 :: Bool) f where
+class DefaultImplC containsRec1 f => DefaultIndex' (containsRec1 :: Bool) f where
   defaultIndex :: Proxy containsRec1 -> f a -> Log f -> a
 
-instance DefaultImplC 'True f => DefaultIndex 'True f where
+instance DefaultImplC 'True f => DefaultIndex' 'True f where
   defaultIndex _ = indexLogarithm
   {-# inline defaultIndex #-}
 
-instance DefaultImplC 'False f => DefaultIndex 'False f where
+instance DefaultImplC 'False f => DefaultIndex' 'False f where
   defaultIndex _ = indexRep
   {-# inline defaultIndex #-}
+
+type DefaultLog f = DefaultLog' (ContainsRec1 (Rep1 f)) f
+type DefaultTabulate f = DefaultTabulate' (ContainsRec1 (Rep1 f)) f
+type DefaultIndex f = DefaultIndex' (ContainsRec1 (Rep1 f)) f
 
 -- | A helper for the most common usage pattern when working with higher-kinded data.
 --
