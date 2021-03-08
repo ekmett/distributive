@@ -6,6 +6,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE TypeOperators  #-}
 -- {-# LANGUAGE DerivingStrategies #-}
 -----------------------------------------------------------------------------
 -- |
@@ -23,6 +24,7 @@ module GenericsSpec (main, spec) where
 import Test.Hspec
 
 import Data.Distributive
+import Data.Type.Equality
 import GHC.Generics
 
 main :: IO ()
@@ -46,11 +48,17 @@ newtype Id a = Id { runId :: a }
 idExample :: Id (Id Int)
 idExample = Id (Id 42)
 
+_logId :: Log Id :~: ()
+_logId = Refl
+
 data Stream a = (:>) { shead :: a, stail :: Stream a }
   deriving (Generic1, Functor, Distributive)
 
 streamExample :: Id (Stream Int)
 streamExample = Id $ let s = 0 :> fmap (+1) s in s
+
+_logStream :: Log Stream :~: Logarithm Stream
+_logStream = Refl
 
 data PolyRec a = PolyRec { pinit :: Id (PolyRec a), plast :: a }
   deriving (Generic1, Functor, Distributive)
@@ -58,3 +66,5 @@ data PolyRec a = PolyRec { pinit :: Id (PolyRec a), plast :: a }
 polyRecExample :: Id (PolyRec Int)
 polyRecExample = Id $ let p = PolyRec (Id $ fmap (+1) p) 0 in p
 
+_logPolyRec :: Log PolyRec :~: Logarithm PolyRec
+_logPolyRec = Refl

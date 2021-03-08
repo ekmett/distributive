@@ -1,4 +1,5 @@
 {-# Language CPP #-}
+{-# Language DataKinds #-}
 {-# Language DefaultSignatures #-}
 {-# Language DeriveAnyClass #-}
 {-# Language DeriveGeneric #-}
@@ -11,9 +12,9 @@
 #endif
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
+{-# Language FunctionalDependencies #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language LambdaCase #-}
-{-# Language MultiParamTypeClasses #-}
 {-# Language PatternSynonyms #-}
 {-# Language PolyKinds #-}
 {-# Language RankNTypes #-}
@@ -23,6 +24,7 @@
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
 {-# Language UndecidableInstances #-}
+{-# Language UndecidableSuperClasses #-}
 {-# Language ViewPatterns #-}
 -- |
 -- Module      : Data.Distributive
@@ -140,6 +142,7 @@ import Data.Orphans ()
 import Data.Proxy
 import Data.Void
 import GHC.Generics
+import Data.Type.Bool (type (||))
 
 #if __GLASGOW_HASKELL__ < 804
 import Data.Semigroup (Semigroup(..))
@@ -174,22 +177,22 @@ import Data.Tagged
 -- and no extra information to try to merge together.
 class Functor f => Distributive f where
   type Log f
-  type Log f = Log (Rep1 f)
+  type Log f = DefaultLog (ContainsRec1 (Rep1 f)) f
 
-  -- | Defaults to 'tabulateRep'
+  -- | Defaults to 'tabulateRep' when type is non-recursive, otherwise to 'tabulateLogarithm'.
   tabulate :: (Log f -> a) -> f a
   default tabulate
-    :: (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
+    :: (Generic1 f, DefaultTabulate (ContainsRec1 (Rep1 f)) f)
     => (Log f -> a) -> f a
-  tabulate = tabulateRep
+  tabulate = defaultTabulate (Proxy :: Proxy (ContainsRec1 (Rep1 f)))
   {-# inline tabulate #-}
 
-  -- | Defaults to 'indexRep'
+  -- | Defaults to 'indexRep when type is non-recursive, otherwise to 'indexLogarithm'.
   index :: f a -> Log f -> a
   default index
-    :: (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
-    => f a -> Log f -> a
-  index = indexRep
+     :: (Generic1 f, DefaultIndex (ContainsRec1 (Rep1 f )) f)
+     => f a -> Log f -> a
+  index = defaultIndex (Proxy :: Proxy (ContainsRec1 (Rep1 f)))
   {-# inline index #-}
 
   -- | Scatter the contents of an 'FFunctor'. This admittedly complicated operation
@@ -233,6 +236,51 @@ scatterRep
   => (w Identity -> r) -> (g ~> f) -> w g -> f r
 scatterRep k phi = to1 . scatter k (from1 . phi)
 {-# inline scatterRep #-}
+
+-- Generic derivation
+
+-- Whether Generic Rep has 'Rec1'.
+type family ContainsRec1 (f :: Type -> Type) :: Bool where
+  ContainsRec1 (K1 _ _)   = 'False
+  ContainsRec1 (M1 _ _ f) = ContainsRec1 f
+  ContainsRec1 U1         = 'False
+  ContainsRec1 V1         = 'False
+  ContainsRec1 (Rec1 _)   = 'True
+  ContainsRec1 Par1       = 'False
+  ContainsRec1 (f :*: g)  = ContainsRec1 f || ContainsRec1 g
+  ContainsRec1 (f :+: g)  = ContainsRec1 f || ContainsRec1 g
+  ContainsRec1 (f :.: g)  = ContainsRec1 f || ContainsRec1 g
+
+type family DefaultLog (containsRec1 :: Bool) f :: Type where
+  DefaultLog 'True  f = Logarithm f
+  DefaultLog 'False f = Log (Rep1 f)
+
+type family DefaultImplC (containsRec1 :: Bool) f :: Constraint where
+  DefaultImplC 'True  f = (Distributive f, Log f ~ Logarithm f)
+  DefaultImplC 'False f = (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
+
+-- individual type classes, so there is GHC needs to less work
+class DefaultImplC containsRec1 f => DefaultTabulate (containsRec1 :: Bool) f where
+  defaultTabulate :: Proxy containsRec1 -> (Log f -> a) -> f a
+
+instance DefaultImplC 'True f => DefaultTabulate 'True f where
+  defaultTabulate _ = tabulateLogarithm
+  {-# inline defaultTabulate #-}
+
+instance DefaultImplC 'False f => DefaultTabulate 'False f where
+  defaultTabulate _ = tabulateRep
+  {-# inline defaultTabulate #-}
+
+class DefaultImplC containsRec1 f => DefaultIndex (containsRec1 :: Bool) f where
+  defaultIndex :: Proxy containsRec1 -> f a -> Log f -> a
+
+instance DefaultImplC 'True f => DefaultIndex 'True f where
+  defaultIndex _ = indexLogarithm
+  {-# inline defaultIndex #-}
+
+instance DefaultImplC 'False f => DefaultIndex 'False f where
+  defaultIndex _ = indexRep
+  {-# inline defaultIndex #-}
 
 -- | A helper for the most common usage pattern when working with higher-kinded data.
 --
