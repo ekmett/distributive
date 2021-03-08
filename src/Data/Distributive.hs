@@ -163,7 +163,7 @@ import Data.Tagged
 -- Categorically every 'Distributive' functor is actually a right adjoint,
 -- and so it must be 'Representable' endofunctor and preserve all limits.
 -- This is a fancy way of saying @f@ is isomorphic to @(->) x@ for some x.
--- We use the name @Log f@ for @x@.
+-- We use the name @'Log' f@ for @x@.
 --
 --
 -- @
@@ -519,6 +519,7 @@ instance Distributive f => Distributive (Monoid.Alt f) where
   {-# inline index #-}
 
 #if MIN_VERSION_base(4,12,0)
+
 instance Distributive f => Distributive (Monoid.Ap f) where
   type Log (Monoid.Ap f) = Log f
   scatter k f = coerce $ scatter k (Monoid.getAp #. f)
@@ -527,6 +528,7 @@ instance Distributive f => Distributive (Monoid.Ap f) where
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
+
 #endif
 
 instance Distributive Monoid.Dual where
@@ -608,6 +610,9 @@ instance Distributive f => Distributive (ReaderT e f) where
   scatter k f = coerce $ scatter k ((Comp1 . runReaderT) #. f)
   tabulate = (ReaderT . unComp1) #. tabulate
   index = index .# (Comp1 . runReaderT)
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
 
 #endif
 
@@ -822,6 +827,7 @@ imapDist
   :: Distributive f
   => (Log f -> a -> b) -> f a -> f b
 imapDist f xs = tabulate (f <*> index xs)
+{-# inline imapDist #-}
 
 -- * FoldableWithIndex
 
@@ -831,6 +837,7 @@ ifoldMapDist
      (Distributive f, Foldable f, Monoid m)
   => (Log f -> a -> m) -> f a -> m
 ifoldMapDist ix xs = fold (tabulate (\i -> ix i $ index xs i) :: f m)
+{-# inline ifoldMapDist #-}
 
 -- * TraversableWithIndex
 
@@ -840,6 +847,7 @@ itraverseDist
      (Distributive f, Traversable f, Applicative m)
   => (Log f -> a -> m b) -> f a -> m (f b)
 itraverseDist ix xs = sequenceA $ tabulate (ix <*> index xs)
+{-# inline itraverseDist #-}
 
 -- | Tabulated endomorphisms.
 --
