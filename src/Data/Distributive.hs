@@ -140,7 +140,6 @@ import Data.Ord (Down(..))
 import Data.Orphans ()
 import Data.Proxy
 import Data.Void
-import Generics.Deriving.Instances ()
 import GHC.Generics
 
 #if __GLASGOW_HASKELL__ < 800
@@ -373,10 +372,9 @@ instance (Distributive f, Distributive g) => Distributive (f :.: g) where
 
 instance (Distributive f, Distributive g) => Distributive (Compose f g)
 instance (Distributive f, Distributive g) => Distributive (Product f g)
-
 instance Distributive Proxy
-
 instance Distributive Identity
+
 instance Distributive ((->) x) where
   type Log ((->) x) = x
   scatter k phi wg x = k $ ffmap (\g -> Identity $ phi g x) wg
@@ -390,6 +388,7 @@ instance Distributive ((->) x) where
 instance Distributive Down
 instance Distributive Monoid.Product
 instance Distributive Monoid.Sum
+
 #else
 -- accessor isn't included in the newtype until base 4.14
 getDown :: Down a -> a
@@ -457,8 +456,6 @@ instance Distributive f => Distributive (Monoid.Alt f) where
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
-
-
 #endif
 
 #if MIN_VERSION_base(4,12,0)
@@ -472,8 +469,14 @@ instance Distributive f => Distributive (Monoid.Ap f) where
   {-# inline index #-}
 #endif
 
-instance Distributive Monoid.Dual
-
+instance Distributive Monoid.Dual where
+  type Log Monoid.Dual = ()
+  scatter k f = Monoid.Dual #. (k .  ffmap ((Identity . Monoid.getDual) #. f))
+  index x () = Monoid.getDual x
+  tabulate f = Monoid.Dual $ f ()
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
 #endif
 
 instance Distributive Semigroup.First
@@ -481,7 +484,19 @@ instance Distributive Semigroup.Last
 instance Distributive Semigroup.Min
 instance Distributive Semigroup.Max
 instance (Distributive f, Monad f) => Distributive (WrappedMonad f)
+
+#if MIN_VERSION_base(4,14,0)
 instance Distributive f => Distributive (Kleisli f a)
+#else
+instance Distributive f => Distributive (Kleisli f a) where
+  type Log (Kleisli f a) = (a, Log f)
+  scatter k f = (Kleisli . unComp1) #. scatter k ((Comp1 . runKleisli) #. f)
+  tabulate = (Kleisli . unComp1) #. tabulate
+  index = index .# (Comp1 . runKleisli)
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
+#endif
 
 -- instance Distributive f => Distributive (Cokleisli f a)
 

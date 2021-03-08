@@ -47,7 +47,6 @@ library
   build-depends:
     base         >= 4.9 && < 5,
     base-orphans >= 0.5.2 && < 1,
-    generic-deriving >= 1.14 && < 1.15,
     hkd          >= 0.1 && < 0.2,
     mtl          >= 2.2 && < 2.3,
     transformers >= 0.3 && < 0.6
