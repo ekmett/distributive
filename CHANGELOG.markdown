@@ -1,3 +1,8 @@
+1 [unreleased]
+--------------
+* Rebuilt on top of Aaron Vargo's suggestion to use distribution over a higher-kinded
+  data type to improve the asymptotic performance of recursive distributive instances.
+
 0.6.2.1 [2020.12.30]
 --------------------
 * The build-type has been changed from `Custom` to `Simple`.
