@@ -12,19 +12,18 @@
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
 {-# Language GeneralizedNewtypeDeriving #-}
-{-# Language MultiParamTypeClasses #-}
-{-# Language ScopedTypeVariables #-}
 {-# Language LambdaCase #-}
+{-# Language MultiParamTypeClasses #-}
 {-# Language PatternSynonyms #-}
 {-# Language PolyKinds #-}
 {-# Language RankNTypes #-}
+{-# Language ScopedTypeVariables #-}
 {-# Language StandaloneDeriving #-}
-{-# Language TypeApplications #-}
+{-# Language Trustworthy #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
 {-# Language UndecidableInstances #-}
 {-# Language ViewPatterns #-}
-{-# Language Trustworthy #-}
 -- |
 -- Module      : Data.Distributive
 -- Copyright   : (C) 2011-2021 Edward Kmett, (c) 2018 Aaron Vargo
@@ -141,10 +140,6 @@ import Data.Orphans ()
 import Data.Proxy
 import Data.Void
 import GHC.Generics
-
-#if __GLASGOW_HASKELL__ < 800
-import Data.Monoid (Monoid(..))
-#endif
 
 #if __GLASGOW_HASKELL__ < 804
 import Data.Semigroup (Semigroup(..))
@@ -447,7 +442,6 @@ instance Distributive f => Distributive (Reverse f) where
   {-# inline tabulate #-}
   {-# inline index #-}
 
-#if MIN_VERSION_base(4,8,0)
 instance Distributive f => Distributive (Monoid.Alt f) where
   type Log (Monoid.Alt f) = Log f
   scatter k f = Monoid.Alt #. scatter k (Monoid.getAlt #. f)
@@ -456,7 +450,6 @@ instance Distributive f => Distributive (Monoid.Alt f) where
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
-#endif
 
 #if MIN_VERSION_base(4,12,0)
 instance Distributive f => Distributive (Monoid.Ap f) where
