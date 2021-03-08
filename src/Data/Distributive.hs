@@ -1,5 +1,4 @@
 {-# Language CPP #-}
-{-# Language BlockArguments #-}
 {-# Language DefaultSignatures #-}
 {-# Language DeriveAnyClass #-}
 {-# Language DeriveGeneric #-}
@@ -193,7 +192,7 @@ class Functor f => Distributive f where
   -- law relating 'scatter' to 'tabulate' and 'index':
   --
   -- @
-  -- 'scatter' phi wg ≡ 'tabulate' \\x -> 'ffmap' (\\g -> 'Identity' '$' 'index' (phi g) x) wg
+  -- 'scatter' phi wg ≡ 'tabulate' $ \\x -> 'ffmap' (\\g -> 'Identity' '$' 'index' (phi g) x) wg
   -- @
   --
   -- Defaults to 'scatterRep'
@@ -243,7 +242,7 @@ scatterDefault
   => (w Identity -> r)
   -> (g ~> f)
   -> w g -> f r
-scatterDefault k phi wg = tabulate \x -> k $ ffmap (\g -> Identity $ index (phi g) x) wg
+scatterDefault k phi wg = tabulate $ \x -> k $ ffmap (\g -> Identity $ index (phi g) x) wg
 {-# inline scatterDefault #-}
 
 -- | Default definition for 'tabulate' in when 'Log f' = 'Logarithm f'. Can be used
@@ -251,7 +250,7 @@ scatterDefault k phi wg = tabulate \x -> k $ ffmap (\g -> Identity $ index (phi 
 -- functor.
 tabulateLogarithm :: Distributive f => (Logarithm f -> a) -> f a
 tabulateLogarithm f =
-  distrib (Tab f) \(Tab f') -> f' (Logarithm runIdentity)
+  distrib (Tab f) $ \(Tab f') -> f' (Logarithm runIdentity)
 {-# inline tabulateLogarithm #-}
 
 newtype DCompose a f g = DCompose { runDCompose :: f (g a) }
@@ -271,7 +270,7 @@ instance Functor f => FFunctor (DCompose a f) where
 distribute
   :: (Functor f, Distributive g)
   => f (g a) -> g (f a)
-distribute f = distrib (DCompose f) \(DCompose f') -> runIdentity <$> f'
+distribute f = distrib (DCompose f) $ \(DCompose f') -> runIdentity <$> f'
 {-# inline distribute #-}
 
 -- |
@@ -284,7 +283,7 @@ collect
   :: (Functor f, Distributive g)
   => (a -> g b)
   -> f a -> g (f b)
-collect f fa = distrib (DCompose f) \(DCompose f') -> coerce f' <$> fa
+collect f fa = distrib (DCompose f) $ \(DCompose f') -> coerce f' <$> fa
 {-# inline collect #-}
 
 -- | The dual of 'Data.Traversable.traverse'
@@ -296,7 +295,7 @@ cotraverse
   :: (Functor f, Distributive g)
   => (f a -> b)
   -> f (g a) -> g b
-cotraverse fab fga = distrib (DCompose fga) \(DCompose f') -> fab (runIdentity <$> f')
+cotraverse fab fga = distrib (DCompose fga) $ \(DCompose f') -> fab (runIdentity <$> f')
 {-# inline cotraverse #-}
 
 instance (Distributive f, Distributive g) => Distributive (f :*: g) where
@@ -351,7 +350,7 @@ instance (Distributive f, Distributive g) => Distributive (f :.: g) where
   type Log (f :.: g) = (Log f, Log g)
   scatter = scatterDefault
   index (Comp1 f) (x, y) = index (index f x) y
-  tabulate f = Comp1 $ tabulate \i -> tabulate \j -> f (i, j)
+  tabulate f = Comp1 $ tabulate $ \i -> tabulate $ \j -> f (i, j)
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
@@ -445,7 +444,7 @@ instance Distributive f => Applicative (Dist f) where
 
 -- | A default definition for 'fmap' from 'Functor' in terms of 'Distributive'
 fmapDist :: Distributive f => (a -> b) -> f a -> f b
-fmapDist f fa = distrib (Element fa) \(Element (Identity a)) -> f a
+fmapDist f fa = distrib (Element fa) $ \(Element (Identity a)) -> f a
 {-# inline fmapDist #-}
 
 -- | A default definition for 'pure' from 'Applicative' in terms of 'Distributive'
@@ -460,12 +459,12 @@ instance FFunctor (D2 a b) where
 
 -- | A default definition for '(<*>)' from 'Applicative' in terms of 'Distributive'
 apDist :: Distributive f => f (a -> b) -> f a -> f b
-apDist fab fa = distrib (D2 fab fa) \(D2 ab a) -> coerce ab a
+apDist fab fa = distrib (D2 fab fa) $ \(D2 ab a) -> coerce ab a
 {-# inline apDist #-}
 
 -- | A default definition 'liftA2' from 'Applicative' in terms of 'Distributive'
 liftD2 :: Distributive f => (a -> b -> c) -> f a -> f b -> f c
-liftD2 f fa fb = distrib (D2 fa fb) \(D2 a b) -> coerce f a b
+liftD2 f fa fb = distrib (D2 fa fb) $ \(D2 a b) -> coerce f a b
 {-# inline liftD2 #-}
 
 data D3 a b c f = D3 (f a) (f b) (f c)
@@ -475,7 +474,7 @@ instance FFunctor (D3 a b c) where
 
 -- | An implementation of 'liftA3' in terms of 'Distributive'.
 liftD3 :: Distributive f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
-liftD3 f fa fb fc = distrib (D3 fa fb fc) \(D3 a b c) -> coerce f a b c
+liftD3 f fa fb fc = distrib (D3 fa fb fc) $ \(D3 a b c) -> coerce f a b c
 {-# inline liftD3 #-}
 
 data D4 a b c d f = D4 (f a) (f b) (f c) (f d)
@@ -485,7 +484,7 @@ instance FFunctor (D4 a b c d) where
 
 -- | An implementation of 'liftA4' in terms of 'Distributive'.
 liftD4 :: Distributive f => (a -> b -> c -> d -> e) -> f a -> f b -> f c -> f d -> f e
-liftD4 f fa fb fc fd = distrib (D4 fa fb fc fd) \(D4 a b c d) -> coerce f a b c d
+liftD4 f fa fb fc fd = distrib (D4 fa fb fc fd) $ \(D4 a b c d) -> coerce f a b c d
 {-# inline liftD4 #-}
 
 data D5 a b c d e f = D5 (f a) (f b) (f c) (f d) (f e)
@@ -495,7 +494,7 @@ instance FFunctor (D5 a b c d e) where
 
 -- | An implementation of 'liftA5' in terms of 'Distributive'.
 liftD5 :: Distributive f => (a -> b -> c -> d -> e -> x) -> f a -> f b -> f c -> f d -> f e -> f x
-liftD5 f fa fb fc fd fe = distrib (D5 fa fb fc fd fe) \(D5 a b c d e) -> coerce f a b c d e
+liftD5 f fa fb fc fd fe = distrib (D5 fa fb fc fd fe) $ \(D5 a b c d e) -> coerce f a b c d e
 {-# inline liftD5 #-}
 
 -- * Monad
@@ -511,7 +510,7 @@ instance Distributive f => Monad (Dist f) where
 
 -- | A default implementation of '(>>=)' in terms of 'Distributive'
 bindDist :: Distributive f => f a -> (a -> f b) -> f b
-bindDist m f = distrib (DBind m f) \(DBind (Identity a) f') -> runIdentity (f' a)
+bindDist m f = distrib (DBind m f) $ \(DBind (Identity a) f') -> runIdentity (f' a)
 {-# inline bindDist #-}
 
 -- * MonadFix
@@ -563,12 +562,12 @@ extractDist = flip index mempty
 
 -- | A default definition for 'extend' from @Comonad@ in terms of 'Distributive'
 extendDist :: (Distributive f, Semigroup (Log f)) => (f a -> b) -> f a -> f b
-extendDist f g = tabulate \i -> f $ tabulate \j -> index g (i <> j)
+extendDist f g = tabulate $ \i -> f $ tabulate $ \j -> index g (i <> j)
 {-# inline extendDist #-}
 
 -- | A default definition for 'duplicate' from @Comonad@ in terms of 'Distributive'
 duplicateDist :: (Distributive f, Semigroup (Log f)) => f a -> f (f a)
-duplicateDist f = tabulate \i -> tabulate \j -> index f (i <> j)
+duplicateDist f = tabulate $ \i -> tabulate $ \j -> index f (i <> j)
 {-# inline duplicateDist #-}
 
 -- | A default definition for 'extract' from @Comonad@ in terms of 'Distributive'
@@ -580,13 +579,13 @@ extractDistBy = flip index
 -- | A default definition for 'extend' from @Comonad@ in terms of 'Distributive'
 -- where the user chooses to supply a semigroup on logarithms other than '<>'
 extendDistBy :: Distributive f => (Log f -> Log f -> Log f) -> (f a -> b) -> f a -> f b
-extendDistBy t f g = tabulate \i -> f $ tabulate \j -> index g (t i j)
+extendDistBy t f g = tabulate $ \i -> f $ tabulate $ \j -> index g (t i j)
 
 {-# inline extendDistBy #-}
 -- | A default definition for 'duplicate' from @Comonad@ in terms of 'Distributive'
 -- where the user chooses to supply an semigroup on logarithms other than '<>'
 duplicateDistBy :: Distributive f => (Log f -> Log f -> Log f) -> f a -> f (f a)
-duplicateDistBy t f = tabulate \i -> tabulate \j -> index f (t i j)
+duplicateDistBy t f = tabulate $ \i -> tabulate $ \j -> index f (t i j)
 {-# inline duplicateDistBy #-}
 
 -- * MonadReader
@@ -642,7 +641,7 @@ itraverseDist ix xs = sequenceA $ tabulate (ix <*> index xs)
 newtype DistEndo f = DistEndo { runDistEndo :: f (Log f) }
 
 instance Distributive f => Semigroup (DistEndo f) where
-  DistEndo f <> DistEndo g = DistEndo $ tabulate \x -> index f (index g x)
+  DistEndo f <> DistEndo g = DistEndo $ tabulate $ \x -> index f (index g x)
   {-# inline (<>) #-}
 
 instance Distributive f => Monoid (DistEndo f) where
