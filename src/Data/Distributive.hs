@@ -95,6 +95,7 @@ module Data.Distributive
   ) where
 
 import Control.Applicative
+import Control.Applicative.Backwards
 import Control.Arrow
 import Control.Monad.Fix
 import Control.Monad.Reader
@@ -105,6 +106,7 @@ import Data.Complex
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
+import Data.Functor.Reverse
 import qualified Data.Monoid as Monoid
 import qualified Data.Semigroup as Semigroup
 import Data.HKD
@@ -326,8 +328,10 @@ instance Distributive ((->) x) where
 instance Distributive Down
 instance Distributive Monoid.Product
 instance Distributive Monoid.Sum
-instance Distributive f => Distributive (Monoid.Alt f)
-instance Distributive f => Distributive (Monoid.Ap f)
+deriving newtype instance Distributive f => Distributive (Backwards f)
+deriving newtype instance Distributive f => Distributive (Reverse f)
+deriving newtype instance Distributive f => Distributive (Monoid.Alt f)
+deriving newtype instance Distributive f => Distributive (Monoid.Ap f)
 instance Distributive Monoid.Dual
 instance Distributive Semigroup.First
 instance Distributive Semigroup.Last
