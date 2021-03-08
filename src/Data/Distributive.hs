@@ -190,7 +190,11 @@ distrib w k = scatter k id w
 -- but do not need to carefully peel apart your structure layer by layer and
 -- for some reason you are unable to define 'Generic1' and so canot simply use
 -- 'DeriveAnyClass'.
-scatterDefault :: (Distributive f, FFunctor w) => (w Identity -> r) -> (g ~> f) -> w g -> f r
+scatterDefault
+  :: (Distributive f, FFunctor w)
+  => (w Identity -> r)
+  -> (g ~> f)
+  -> w g -> f r
 scatterDefault k phi wg = tabulate \x -> k $ ffmap (\g -> Identity $ index (phi g) x) wg
 {-# inline scatterDefault #-}
 
@@ -202,9 +206,9 @@ tabulateLogarithm f =
   distrib (Tab f) \(Tab f') -> f' (Logarithm runIdentity)
 {-# inline tabulateLogarithm #-}
 
-newtype DX a f g = DX { runDX :: f (g a) }
-instance Functor f => FFunctor (DX a f) where
-  ffmap f = DX #. (fmap f .# runDX)
+newtype DCompose a f g = DCompose { runDCompose :: f (g a) }
+instance Functor f => FFunctor (DCompose a f) where
+  ffmap f = DCompose #. (fmap f .# runDCompose)
   {-# inline ffmap #-}
 
 -- | The dual of 'Data.Traversable.sequenceA'
@@ -216,8 +220,10 @@ instance Functor f => FFunctor (DX a f) where
 -- 'distribute' = 'collect' 'id'
 -- 'distribute' . 'distribute' = 'id'
 -- @
-distribute :: (Functor f, Distributive g) => f (g a) -> g (f a)
-distribute f = distrib (DX f) \(DX f') -> runIdentity <$> f'
+distribute
+  :: (Functor f, Distributive g)
+  => f (g a) -> g (f a)
+distribute f = distrib (DCompose f) \(DCompose f') -> runIdentity <$> f'
 {-# inline distribute #-}
 
 -- |
@@ -226,8 +232,11 @@ distribute f = distrib (DX f) \(DX f') -> runIdentity <$> f'
 -- 'fmap' f = 'runIdentity' . 'collect' ('Identity' . f)
 -- 'fmap' 'distribute' . 'collect' f = 'getCompose' . 'collect' ('Compose' . f)
 -- @
-collect :: (Functor f, Distributive g) => (a -> g b) -> f a -> g (f b)
-collect f fa = distrib (DX f) \(DX f') -> coerce f' <$> fa
+collect
+  :: (Functor f, Distributive g)
+  => (a -> g b)
+  -> f a -> g (f b)
+collect f fa = distrib (DCompose f) \(DCompose f') -> coerce f' <$> fa
 {-# inline collect #-}
 
 -- | The dual of 'Data.Traversable.traverse'
@@ -235,8 +244,11 @@ collect f fa = distrib (DX f) \(DX f') -> coerce f' <$> fa
 -- @
 -- 'cotraverse' f = 'fmap' f . 'distribute'
 -- @
-cotraverse :: (Functor f, Distributive g) => (f a -> b) -> f (g a) -> g b
-cotraverse fab fga = distrib (DX fga) \(DX f') -> fab (runIdentity <$> f')
+cotraverse
+  :: (Functor f, Distributive g)
+  => (f a -> b)
+  -> f (g a) -> g b
+cotraverse fab fga = distrib (DCompose fga) \(DCompose f') -> fab (runIdentity <$> f')
 {-# inline cotraverse #-}
 
 instance (Distributive f, Distributive g) => Distributive (f :*: g) where
@@ -324,9 +336,7 @@ instance Distributive Semigroup.Max
 instance (Distributive f, Monad f) => Distributive (WrappedMonad f)
 instance Distributive f => Distributive (Kleisli f a)
 
-#ifdef MIN_VERSION_comonad
-instance Distributive f => Distributive (Cokleisli f a)
-#endif
+-- instance Distributive f => Distributive (Cokleisli f a)
 
 #ifdef MIN_VERSION_tagged
 instance Distributive (Tagged r)
@@ -426,7 +436,7 @@ instance Distributive f => MonadFix (Dist f) where
   {-# inline mfix #-}
 
 mfixDist :: Distributive f => (a -> f a) -> f a
-mfixDist ama = distrib (DX ama) (fix . coerce)
+mfixDist ama = distrib (DCompose ama) (fix . coerce)
 {-# inline mfixDist #-}
 
 instance Distributive f => MonadZip (Dist f) where
