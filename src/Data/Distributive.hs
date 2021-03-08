@@ -28,7 +28,9 @@
 {-# Language ViewPatterns #-}
 -- |
 -- Module      : Data.Distributive
--- Copyright   : (C) 2011-2021 Edward Kmett, (c) 2018 Aaron Vargo
+-- Copyright   : (C) 2011-2021 Edward Kmett,
+--               (c) 2018 Aaron Vargo,
+--               (c) 2021 Oleg Grenrus
 -- License     : BSD-style (see the file LICENSE)
 --
 -- Maintainer  : Edward Kmett <ekmett@gmail.com>
