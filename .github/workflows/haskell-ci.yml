@@ -53,6 +53,16 @@ jobs:
         include:
           - ghc: 8.10.3
             allow-failure: false
+          - ghc: 8.8.4
+            allow-failure: false
+          - ghc: 8.6.5
+            allow-failure: false
+          - ghc: 8.4.4
+            allow-failure: false
+          - ghc: 8.2.2
+            allow-failure: false
+          - ghc: 8.0.2
+            allow-failure: false
       fail-fast: false
     steps:
       - name: apt
@@ -157,8 +167,8 @@ jobs:
           touch cabal.project
           touch cabal.project.local
           echo "packages: ${PKGDIR_distributive}" >> cabal.project
-          echo "package distributive" >> cabal.project
-          echo "    ghc-options: -Werror=missing-methods" >> cabal.project
+          if [ $((HCNUMVER >= 80200)) -ne 0 ] ; then echo "package distributive" >> cabal.project ; fi
+          if [ $((HCNUMVER >= 80200)) -ne 0 ] ; then echo "    ghc-options: -Werror=missing-methods" >> cabal.project ; fi
           cat >> cabal.project <<EOF
           EOF
           $HCPKG list --simple-output --names-only | perl -ne 'for (split /\s+/) { print "constraints: $_ installed\n" unless /^(distributive)$/; }' >> cabal.project.local
