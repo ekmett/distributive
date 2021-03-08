@@ -131,9 +131,7 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
-#if __GLASGOW_HASKELL__ >= 806
 import Data.Kind
-#endif
 import qualified Data.Monoid as Monoid
 import qualified Data.Semigroup as Semigroup
 import Data.HKD
