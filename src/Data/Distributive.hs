@@ -117,10 +117,6 @@ module Data.Distributive
   -- *** As right adjoints
   , leftAdjunctDist
   , rightAdjunctDist
-  -- * Tabulated endomorphisms
-  , DistEndo(..)
-  , tabulateDistEndo
-  , indexDistEndo
   ) where
 
 import Control.Applicative
@@ -825,29 +821,3 @@ leftAdjunctDist f a = tabulate (\s -> f (a,s))
 rightAdjunctDist :: Distributive u => (a -> u b) -> (a, Log u) -> b
 rightAdjunctDist f ~(a, k) = f a `index` k
 {-# inline rightAdjunctDist #-}
-
--- | Tabulated endomorphisms.
---
--- Many representable functors can be used to memoize functions.
-newtype DistEndo f = DistEndo { runDistEndo :: f (Log f) }
-
-instance Distributive f => Semigroup (DistEndo f) where
-  DistEndo f <> DistEndo g = DistEndo $ tabulate $ \x -> index f (index g x)
-  {-# inline (<>) #-}
-
-instance Distributive f => Monoid (DistEndo f) where
-#if __GLASGOW_HASKELL__ < 804
-  DistEndo f `mappend` DistEndo g = DistEndo $ tabulate $ \x -> index f (index g x)
-  {-# inline mappend #-}
-#endif
-  mempty = DistEndo askDist
-  {-# inline mempty #-}
-
-indexDistEndo :: Distributive f => DistEndo f -> Log f -> Log f
-indexDistEndo = index .# runDistEndo
-{-# inline indexDistEndo #-}
-
-tabulateDistEndo :: Distributive f => (Log f -> Log f) -> DistEndo f
-tabulateDistEndo = DistEndo #. tabulate
-{-# inline tabulateDistEndo #-}
-

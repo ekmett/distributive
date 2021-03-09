@@ -60,6 +60,7 @@ library
   hs-source-dirs:  src
   other-modules:   Data.Distributive.Util
   exposed-modules: Data.Distributive
+                   Data.Distributive.Endo
                    Control.Monad.Distributive.Reader
                    Control.Monad.Distributive.State
 
