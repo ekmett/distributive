@@ -59,6 +59,8 @@ library
 
   hs-source-dirs:  src
   exposed-modules: Data.Distributive
+                   Control.Monad.Representable.Reader
+                   Control.Monad.Representable.State
 
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1
