@@ -3,6 +3,8 @@
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
 {-# Language MultiParamTypeClasses #-}
+{-# Language PatternSynonyms #-}
+{-# Language ViewPatterns #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
 {-# Language TypeSynonymInstances #-}
@@ -26,10 +28,15 @@ module Control.Monad.Distributive.Reader
   (
   -- * Distributive functor monad
     Reader
+  , pattern Reader
   , runReader
   -- * Monad Transformer
-  , ReaderT(..), readerT, runReaderT
-  , MonadReader(..)
+#if __GLASGOW_HASKELL__ >= 802
+  , ReaderT(.., ReaderT, runReaderT)
+#else
+  , ReaderT(.., ReaderT)
+  , runReaderT
+#endif
 ) where
 
 import Control.Monad.Reader.Class
@@ -44,57 +51,77 @@ import GHC.Generics
 
 type Reader f = ReaderT f Identity
 
-runReader :: Distributive f => Reader f b -> Log f -> b
+pattern Reader :: Distributive f => (Log f -> a) -> Reader f a
+#if __GLASGOW_HASKELL__ >= 802
+
+pattern Reader { runReader } <- ReaderDistT (fmap runIdentity . index -> runReader) where
+  Reader f = ReaderDistT (tabulate (coerce f))
+
+#else
+
+pattern Reader f <- ReaderDistT (fmap runIdentity . index -> f) where
+  Reader f = ReaderDistT (tabulate (coerce f))
+
+runReader :: Distributive f => Reader f a -> Log f -> a
 runReader = fmap runIdentity . runReaderT
+#endif
 
 -- | This 'representable monad transformer' transforms any monad @m@ with a 'Distributive' 'Monad'.
 -- This monad in turn is also representable if @m@ is 'Distributive'.
-newtype ReaderT f m b = ReaderT { getReaderT :: f (m b) }
+newtype ReaderT f m b = ReaderDistT { runReaderDistT :: f (m b) }
 
-readerT :: Distributive f => (Log f -> m b) -> ReaderT f m b
-readerT = ReaderT #. tabulate
+pattern ReaderT :: Distributive f => (Log f -> m a) -> ReaderT f m a
+#if __GLASGOW_HASKELL__ >= 802
+
+pattern ReaderT { runReaderT } <- ReaderDistT (index -> runReaderT) where
+  ReaderT f = ReaderDistT (tabulate f)
+
+#else
+pattern ReaderT f <- (runReaderT -> f) where
+  ReaderT f = ReaderDistT (tabulate f)
 
 runReaderT :: Distributive f => ReaderT f m b -> Log f -> m b
-runReaderT = index .# getReaderT
+runReaderT = index .# runReaderDistT
+#endif
 
 instance (Functor f, Functor m) => Functor (ReaderT f m) where
-  fmap f = ReaderT #. fmap (fmap f) .# getReaderT
+  fmap f = ReaderDistT #. fmap (fmap f) .# runReaderDistT
 
 instance (Distributive f, Distributive m) => Distributive (ReaderT f m) where
   type Log (ReaderT f m) = (Log f, Log m)
-  scatter k f = coerce $ scatter k ((Comp1 . getReaderT) #. f)
-  index (ReaderT f) (x, y) = index (index f x) y
-  tabulate f = ReaderT $ tabulate $ \i -> tabulate $ \j -> f (i, j)
+  scatter k f = coerce $ scatter k ((Comp1 . runReaderDistT) #. f)
+  index (ReaderDistT f) (x, y) = index (index f x) y
+  tabulate f = ReaderDistT $ tabulate $ \i -> tabulate $ \j -> f (i, j)
   {-# inline tabulate #-}
   {-# inline index #-}
 
 instance (Distributive f, Applicative m) => Applicative (ReaderT f m) where
-  pure = ReaderT #. (pureDist . pure)
-  ReaderT ff <*> ReaderT fa = ReaderT $ liftD2 (<*>) ff fa
-  ReaderT fa *> ReaderT fb = ReaderT $ liftD2 (*>) fa fb
-  ReaderT fa <* ReaderT fb = ReaderT $ liftD2 (<*) fa fb
+  pure = ReaderDistT #. (pureDist . pure)
+  ReaderDistT ff <*> ReaderDistT fa = ReaderDistT $ liftD2 (<*>) ff fa
+  ReaderDistT fa *> ReaderDistT fb = ReaderDistT $ liftD2 (*>) fa fb
+  ReaderDistT fa <* ReaderDistT fb = ReaderDistT $ liftD2 (<*) fa fb
 
 instance (Distributive f, Monad m) => Monad (ReaderT f m) where
-  ReaderT fm >>= f = ReaderT $ liftD2 (>>=) fm $ distribute (getReaderT . f)
+  ReaderDistT fm >>= f = ReaderDistT $ liftD2 (>>=) fm $ distribute (runReaderDistT . f)
 
 instance (Distributive f, Monad m, Log f ~ e) => MonadReader e (ReaderT f m) where
-  ask = ReaderT $ tabulate pure
-  local f m = readerT $ \r -> runReaderT m (f r)
-  reader = readerT . fmap return
+  ask = ReaderDistT $ tabulate pure
+  local f m = ReaderT $ \r -> runReaderT m (f r)
+  reader = ReaderT . fmap pure
 
 instance Distributive f => MonadTrans (ReaderT f) where
-  lift = ReaderT #. pureDist
+  lift = ReaderDistT #. pureDist
 
 instance (Distributive f, MonadIO m) => MonadIO (ReaderT f m) where
   liftIO = lift . liftIO
 
 instance (Distributive f, MonadWriter w m) => MonadWriter w (ReaderT f m) where
   tell = lift . tell
-  listen = ReaderT #. fmap listen .# getReaderT
-  pass = ReaderT #. fmap pass .# getReaderT
+  listen = ReaderDistT #. fmap listen .# runReaderDistT
+  pass = ReaderDistT #. fmap pass .# runReaderDistT
 
 instance (Foldable f, Foldable m) => Foldable (ReaderT f m) where
-  foldMap f = foldMap (foldMap f) .# getReaderT
+  foldMap f = foldMap (foldMap f) .# runReaderDistT
 
 instance (Traversable f, Traversable m) => Traversable (ReaderT f m) where
-  traverse f = fmap ReaderT . traverse (traverse f) .# getReaderT
+  traverse f = fmap ReaderDistT . traverse (traverse f) .# runReaderDistT

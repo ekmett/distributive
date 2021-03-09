@@ -34,7 +34,6 @@ module Control.Monad.Distributive.State
   , mapStateT
   , liftCallCC
   , liftCallCC'
-  , MonadState(..)
   ) where
 
 import Control.Monad
