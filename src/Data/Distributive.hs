@@ -114,6 +114,9 @@ module Data.Distributive
   , ifoldMapDist
   -- *** TraversableWithIndex
   , itraverseDist
+  -- *** As right adjoints
+  , leftAdjunctDist
+  , rightAdjunctDist
   -- * Tabulated endomorphisms
   , DistEndo(..)
   , tabulateDistEndo
@@ -129,6 +132,7 @@ import Control.Monad.Trans.Identity
 import Control.Monad.Zip
 import Data.Coerce
 import Data.Complex
+import Data.Distributive.Util
 import Data.Foldable (fold)
 import Data.Functor.Compose
 import Data.Functor.Identity
@@ -319,11 +323,6 @@ tabulateLogarithm f =
   distrib (Tab f) $ \(Tab f') -> f' (Logarithm runIdentity)
 {-# inline tabulateLogarithm #-}
 
-newtype DCompose a f g = DCompose { runDCompose :: f (g a) }
-instance Functor f => FFunctor (DCompose a f) where
-  ffmap f = DCompose #. (fmap f .# runDCompose)
-  {-# inline ffmap #-}
-
 -- | The dual of 'Data.Traversable.sequenceA'
 --
 -- >>> distribute [(+1),(+2)] 1
@@ -411,11 +410,6 @@ instance Distributive Par1 where
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
-
-newtype AppCompose w g f = AppCompose { runAppCompose :: w (f :.: g) }
-instance FFunctor w => FFunctor (AppCompose w g) where
-  ffmap f = AppCompose #. ffmap (Comp1 #. f .# unComp1) .# runAppCompose
-  {-# inline ffmap #-}
 
 instance (Distributive f, Distributive g) => Distributive (f :.: g) where
   type Log (f :.: g) = (Log f, Log g)
@@ -663,11 +657,6 @@ pureDist :: Distributive f => a -> f a
 pureDist = tabulate . const
 {-# inline pureDist #-}
 
-data D2 a b f = D2 (f a) (f b)
-instance FFunctor (D2 a b) where
-  ffmap f (D2 a b) = D2 (f a) (f b)
-  {-# inline ffmap #-}
-
 -- | A default definition for '(<*>)' from 'Applicative' in terms of 'Distributive'
 apDist :: Distributive f => f (a -> b) -> f a -> f b
 apDist fab fa = distrib (D2 fab fa) $ \(D2 ab a) -> coerce ab a
@@ -678,30 +667,15 @@ liftD2 :: Distributive f => (a -> b -> c) -> f a -> f b -> f c
 liftD2 f fa fb = distrib (D2 fa fb) $ \(D2 a b) -> coerce f a b
 {-# inline liftD2 #-}
 
-data D3 a b c f = D3 (f a) (f b) (f c)
-instance FFunctor (D3 a b c) where
-  ffmap f (D3 a b c) = D3 (f a) (f b) (f c)
-  {-# inline ffmap #-}
-
 -- | An implementation of 'liftA3' in terms of 'Distributive'.
 liftD3 :: Distributive f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
 liftD3 f fa fb fc = distrib (D3 fa fb fc) $ \(D3 a b c) -> coerce f a b c
 {-# inline liftD3 #-}
 
-data D4 a b c d f = D4 (f a) (f b) (f c) (f d)
-instance FFunctor (D4 a b c d) where
-  ffmap f (D4 a b c d) = D4 (f a) (f b) (f c) (f d)
-  {-# inline ffmap #-}
-
 -- | An implementation of 'liftA4' in terms of 'Distributive'.
 liftD4 :: Distributive f => (a -> b -> c -> d -> e) -> f a -> f b -> f c -> f d -> f e
 liftD4 f fa fb fc fd = distrib (D4 fa fb fc fd) $ \(D4 a b c d) -> coerce f a b c d
 {-# inline liftD4 #-}
-
-data D5 a b c d e f = D5 (f a) (f b) (f c) (f d) (f e)
-instance FFunctor (D5 a b c d e) where
-  ffmap f (D5 a b c d e) = D5 (f a) (f b) (f c) (f d) (f e)
-  {-# inline ffmap #-}
 
 -- | An implementation of 'liftA5' in terms of 'Distributive'.
 liftD5 :: Distributive f => (a -> b -> c -> d -> e -> x) -> f a -> f b -> f c -> f d -> f e -> f x
@@ -709,11 +683,6 @@ liftD5 f fa fb fc fd fe = distrib (D5 fa fb fc fd fe) $ \(D5 a b c d e) -> coerc
 {-# inline liftD5 #-}
 
 -- * Monad
-
-data DBind x y f = DBind (f x) (x -> f y)
-instance FFunctor (DBind x y) where
-  ffmap f (DBind l r) = DBind (f l) (f . r)
-  {-# inline ffmap #-}
 
 instance Distributive f => Monad (Dist f) where
   (>>=) = bindDist
@@ -849,6 +818,14 @@ itraverseDist
 itraverseDist ix xs = sequenceA $ tabulate (ix <*> index xs)
 {-# inline itraverseDist #-}
 
+leftAdjunctDist :: Distributive u => ((a, Log u) -> b) -> a -> u b
+leftAdjunctDist f a = tabulate (\s -> f (a,s))
+{-# inline leftAdjunctDist #-}
+
+rightAdjunctDist :: Distributive u => (a -> u b) -> (a, Log u) -> b
+rightAdjunctDist f ~(a, k) = f a `index` k
+{-# inline rightAdjunctDist #-}
+
 -- | Tabulated endomorphisms.
 --
 -- Many representable functors can be used to memoize functions.
@@ -874,14 +851,3 @@ tabulateDistEndo :: Distributive f => (Log f -> Log f) -> DistEndo f
 tabulateDistEndo = DistEndo #. tabulate
 {-# inline tabulateDistEndo #-}
 
--- * Utilities
-
-(#.) :: Coercible b c => (b -> c) -> (a -> b) -> a -> c
-(#.) _ = coerce
-{-# inline (#.) #-}
-
-(.#) :: Coercible a b => (b -> c) -> (a -> b) -> a -> c
-(.#) f _ = coerce f
-{-# inline (.#) #-}
-
-infixr 9 #., .#

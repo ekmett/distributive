@@ -58,9 +58,10 @@ library
     transformers >= 0.3 && < 0.6
 
   hs-source-dirs:  src
+  other-modules:   Data.Distributive.Util
   exposed-modules: Data.Distributive
-                   Control.Monad.Representable.Reader
-                   Control.Monad.Representable.State
+                   Control.Monad.Distributive.Reader
+                   Control.Monad.Distributive.State
 
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1
