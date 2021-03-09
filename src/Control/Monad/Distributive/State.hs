@@ -25,10 +25,12 @@ module Control.Monad.Distributive.State
   , evalState
   , execState
   , mapState
-  , StateT(StateDistT)
-  , pattern StateT
-
+#if __GLASGOW_HASKELL__ >= 802
+  , StateT(.., StateT, runStateT)
+#else
+  , StateT(.., StateT)
   , runStateT
+#endif
   , evalStateT
   , execStateT
   , mapStateT
@@ -53,6 +55,15 @@ import Data.Distributive.Util
 -- the first computation as the initial state of the second.
 type State g = StateT g Identity
 
+pattern State :: Distributive g => (Log g -> (a, Log g)) -> State g a
+#if __GLASGOW_HASKELL__ >= 802
+pattern State { runState } <- StateT (fmap runIdentity -> runState) where
+  State f = state f
+#else
+
+pattern State f <- StateT (fmap runIdentity -> f) where
+  State f = state f
+
 -- | Unwrap a state monad computation as a function.
 -- (The inverse of 'state'.)
 runState
@@ -62,9 +73,7 @@ runState
   -> (a, Log g)  -- ^ return value and final state
 runState m = runIdentity . runStateT m
 
-pattern State :: Distributive g => (Log g -> (a, Log g)) -> State g a
-pattern State f <- (runState -> f) where
-  State f = state f
+#endif
 
 -- | Evaluate a state computation with the given initial state
 -- and return the final value, discarding the final state.
@@ -114,11 +123,16 @@ newtype StateT g m a = StateDistT
 
 -- | Emulate a traditional state monad
 pattern StateT :: Distributive g => (Log g -> m (a, Log g)) -> StateT g m a
+#if __GLASGOW_HASKELL__ >= 702
+pattern StateT { runStateT } <- StateDistT (index -> runStateT) where
+  StateT f = StateDistT (tabulate f)
+#else
 pattern StateT f <- StateDistT (index -> f) where
   StateT f = StateDistT (tabulate f)
 
 runStateT :: Distributive g => StateT g m a -> Log g -> m (a, Log g)
 runStateT = index .# runStateDistT
+#endif
 
 mapStateT :: Functor g => (m (a, Log g) -> n (b, Log g)) -> StateT g m a -> StateT g n b
 mapStateT f = StateDistT #. fmap f .# runStateDistT
@@ -126,7 +140,7 @@ mapStateT f = StateDistT #. fmap f .# runStateDistT
 -- | Evaluate a state computation with the given initial state
 -- and return the final value, discarding the final state.
 --
--- * @'evalStateDistT m s = 'liftM' 'fst' ('runStateDistT m s)@
+-- * @'evalStateT' m s = 'liftM' 'fst' ('runStateT' m s)@
 evalStateT :: (Distributive g, Monad m) => StateT g m a -> Log g -> m a
 evalStateT m s = do
   (a, _) <- runStateT m s
@@ -135,7 +149,7 @@ evalStateT m s = do
 -- | Evaluate a state computation with the given initial state
 -- and return the final state, discarding the final value.
 --
--- * @'execStateDistT m s = 'liftM' 'snd' ('runStateDistT m s)@
+-- * @'execStateT' m s = 'liftM' 'snd' ('runStateT' m s)@
 execStateT :: (Distributive g, Monad m) => StateT g m a -> Log g -> m (Log g)
 execStateT m s = do
   (_, s') <- runStateT m s
