@@ -186,7 +186,7 @@ class Functor f => Distributive f where
   default tabulate
     :: (Generic1 f, DefaultTabulate f)
     => (Log f -> a) -> f a
-  tabulate = defaultTabulate (Proxy :: Proxy (ContainsRec1 (Rep1 f)))
+  tabulate = defaultTabulate (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) f))
   {-# inline tabulate #-}
 
   -- | Defaults to 'indexRep when @f@ is non-recursive, otherwise to 'indexLogarithm'.
@@ -194,7 +194,7 @@ class Functor f => Distributive f where
   default index
      :: (Generic1 f, DefaultIndex f)
      => f a -> Log f -> a
-  index = defaultIndex (Proxy :: Proxy (ContainsRec1 (Rep1 f)))
+  index = defaultIndex (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) f))
   {-# inline index #-}
 
   -- | Scatter the contents of an 'FFunctor'. This admittedly complicated operation
@@ -241,16 +241,17 @@ scatterRep k phi = to1 . scatter k (from1 . phi)
 -- * Generic derivation
 
 -- Does Generic Rep contain 'Rec1'?
-type family ContainsRec1 (f :: Type -> Type) :: Bool where
-  ContainsRec1 (K1 _ _)   = 'False
-  ContainsRec1 (M1 _ _ f) = ContainsRec1 f
-  ContainsRec1 U1         = 'False
-  ContainsRec1 V1         = 'False
-  ContainsRec1 (Rec1 _)   = 'True
-  ContainsRec1 Par1       = 'False
-  ContainsRec1 (f :*: g)  = ContainsRec1 f || ContainsRec1 g
-  ContainsRec1 (f :+: g)  = ContainsRec1 f || ContainsRec1 g
-  ContainsRec1 (f :.: g)  = ContainsRec1 f || ContainsRec1 g
+type family ContainsSelfRec1 (r :: Type -> Type) (f :: Type -> Type) :: Bool where
+  ContainsSelfRec1 (K1 _ _)   f = 'False
+  ContainsSelfRec1 (M1 _ _ r) f = ContainsSelfRec1 r f
+  ContainsSelfRec1 U1         f = 'False
+  ContainsSelfRec1 V1         f = 'False
+  ContainsSelfRec1 Par1       _ = 'False
+  ContainsSelfRec1 (r :*: s)  f = ContainsSelfRec1 r f || ContainsSelfRec1 s f
+  ContainsSelfRec1 (r :+: s)  f = ContainsSelfRec1 r f || ContainsSelfRec1 s f
+  ContainsSelfRec1 (r :.: s)  f = ContainsSelfRec1 r f || ContainsSelfRec1 s f
+  ContainsSelfRec1 (Rec1 f)   f = 'True
+  ContainsSelfRec1 (Rec1 _)   _ = 'False
 
 type family DefaultLog' (containsRec1 :: Bool) f :: Type where
   DefaultLog' 'True  f = Logarithm f
@@ -283,9 +284,9 @@ instance DefaultImplC 'False f => DefaultIndex' 'False f where
   defaultIndex _ = indexRep
   {-# inline defaultIndex #-}
 
-type DefaultLog f = DefaultLog' (ContainsRec1 (Rep1 f)) f
-type DefaultTabulate f = DefaultTabulate' (ContainsRec1 (Rep1 f)) f
-type DefaultIndex f = DefaultIndex' (ContainsRec1 (Rep1 f)) f
+type DefaultLog f = DefaultLog' (ContainsSelfRec1 (Rep1 f) f) f
+type DefaultTabulate f = DefaultTabulate' (ContainsSelfRec1 (Rep1 f) f) f
+type DefaultIndex f = DefaultIndex' (ContainsSelfRec1 (Rep1 f) f) f
 
 -- | A helper for the most common usage pattern when working with higher-kinded data.
 --
@@ -416,8 +417,19 @@ instance (Distributive f, Distributive g) => Distributive (f :.: g) where
   {-# inline tabulate #-}
   {-# inline index #-}
 
-instance (Distributive f, Distributive g) => Distributive (Compose f g)
-instance (Distributive f, Distributive g) => Distributive (Product f g)
+instance (Distributive f, Distributive g) => Distributive (Compose f g) where
+  type Log (Compose f g) = Log (Rep1 (Compose f g))
+  index = indexRep
+  tabulate = tabulateRep
+  {-# inline tabulate #-}
+  {-# inline index #-}
+
+instance (Distributive f, Distributive g) => Distributive (Product f g) where
+  type Log (Product f g) = Log (Rep1 (Product f g))
+  index = indexRep
+  tabulate = tabulateRep
+  {-# inline tabulate #-}
+
 instance Distributive Proxy
 instance Distributive Identity
 
@@ -536,7 +548,19 @@ instance Distributive Semigroup.First
 instance Distributive Semigroup.Last
 instance Distributive Semigroup.Min
 instance Distributive Semigroup.Max
-instance (Distributive f, Monad f) => Distributive (WrappedMonad f)
+
+#if __GLASGOW_HASKELL__ >= 806
+deriving newtype instance (Distributive f, Monad f) => Distributive (WrappedMonad f)
+#else
+instance (Distributive f, Monad f) => Distributive (WrappedMonad f) where
+  type Log (WrappedMonad f) = Log f
+  scatter k f = coerce $ scatter k (unwrapMonad #. f)
+  index = index .# unwrapMonad
+  tabulate = WrapMonad #. tabulate
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
+#endif
 
 #if MIN_VERSION_base(4,14,0)
 

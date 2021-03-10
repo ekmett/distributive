@@ -68,3 +68,10 @@ polyRecExample = Id $ let p = PolyRec (Id $ fmap (+1) p) 0 in p
 
 _logPolyRec :: Log PolyRec :~: Logarithm PolyRec
 _logPolyRec = Refl
+
+data Id2 a = Id2 (Id a) (Id a)
+  deriving (Generic1, Functor, Distributive)
+
+-- TODO: This is still not good. We don't get Either () ()...
+_logId2 :: Log Id2 :~: Either (Logarithm Id) (Logarithm Id)
+_logId2 = Refl
