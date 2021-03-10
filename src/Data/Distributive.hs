@@ -562,12 +562,6 @@ instance (Distributive f, Monad f) => Distributive (WrappedMonad f) where
   {-# inline index #-}
 #endif
 
-#if MIN_VERSION_base(4,14,0)
-
-instance Distributive f => Distributive (Kleisli f a)
-
-#else
-
 instance Distributive f => Distributive (Kleisli f a) where
   type Log (Kleisli f a) = (a, Log f)
   scatter k f = coerce $ scatter k ((Comp1 . runKleisli) #. f)
@@ -576,8 +570,6 @@ instance Distributive f => Distributive (Kleisli f a) where
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
-
-#endif
 
 -- instance Distributive f => Distributive (Cokleisli f a)
 
