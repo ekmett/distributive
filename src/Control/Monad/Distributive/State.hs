@@ -7,6 +7,7 @@
 {-# Language TypeSynonymInstances #-}
 {-# Language UndecidableInstances #-}
 {-# Language ViewPatterns #-}
+{-# Language Safe #-}
 -- |
 -- Module      :  Control.Monad.Distributive.State
 -- Copyright   :  (c) Edward Kmett 2011-2021

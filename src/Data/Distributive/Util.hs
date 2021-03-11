@@ -1,4 +1,5 @@
 {-# Language TypeOperators #-}
+{-# Language Trustworthy #-}
 -- |
 -- Module      : Data.Distributive.Util
 -- Copyright   : (C) 2021 Edward Kmett

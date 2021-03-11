@@ -1,4 +1,5 @@
-{-# LANGUAGE CPP #-}
+{-# Language CPP #-}
+{-# Language Safe #-}
 -- |
 -- Copyright   : (C) 2021 Edward Kmett
 -- License     : BSD-style (see the file LICENSE)

@@ -9,6 +9,7 @@
 {-# Language TypeOperators #-}
 {-# Language TypeSynonymInstances #-}
 {-# Language UndecidableInstances #-}
+{-# Language Trustworthy #-}
 {-# OPTIONS_GHC -fenable-rewrite-rules -fno-warn-orphans #-}
 ----------------------------------------------------------------------
 -- |

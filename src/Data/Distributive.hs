@@ -391,10 +391,10 @@ instance Distributive U1 where
   {-# inline index #-}
 
 instance Distributive f => Distributive (Rec1 f) where
-  type Log (Rec1 f) = Logarithm f
+  type Log (Rec1 f) = Log f
   scatter k f = Rec1 #. scatter k (unRec1 #. f)
-  index = indexLogarithm .# unRec1
-  tabulate = Rec1 #. tabulateLogarithm
+  index = index .# unRec1
+  tabulate = Rec1 #. tabulate
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
@@ -702,7 +702,7 @@ instance Distributive f => Monad (Dist f) where
 
 -- | A default implementation of '(>>=)' in terms of 'Distributive'
 bindDist :: Distributive f => f a -> (a -> f b) -> f b
-bindDist m f = distrib (DBind m f) $ \(DBind (Identity a) f') -> runIdentity (f' a)
+bindDist m f = distrib (DBind m f) $ \(DBind a f') -> coerce f' a
 {-# inline bindDist #-}
 
 -- * MonadFix
