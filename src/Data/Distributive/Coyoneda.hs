@@ -10,11 +10,7 @@
 {-# Language ViewPatterns #-}
 {-# Language Safe #-}
 module Data.Distributive.Coyoneda
-#if __GLAGGOW_HASKELL__ >= 802
   ( Coyoneda(CoyonedaDist, Coyoneda)
-#else
-  ( Coyoneda(CoyonedaDist)
-#endif
   , liftCoyonedaDist
   , liftCoyoneda
   , lowerCoyoneda
@@ -35,13 +31,11 @@ import Text.Read hiding (lift)
 data Coyoneda f a where
   CoyonedaDist :: Distributive g => g a -> f (Log g) -> Coyoneda f a 
 
-#if __GLAGGOW_HASKELL__ >= 802
 -- I'm not sure whether this pattern can be made work on GHC-8.0,
 -- or it's unworkaroundable bug
 pattern Coyoneda :: (b -> a) -> f b -> Coyoneda f a
 pattern Coyoneda ga flg <- CoyonedaDist (index -> ga) flg where
   Coyoneda ga flg = CoyonedaDist ga flg
-#endif
 
 instance (Show1 f, Functor f) => Show1 (Coyoneda f) where
   liftShowsPrec sp sl d (CoyonedaDist f a) =
@@ -89,11 +83,9 @@ instance Applicative f => Applicative (Coyoneda f) where
   pure a = CoyonedaDist (Identity a) (pure ())
   {-# inline pure #-}
 
-#if MIN_VERSION_base(4,10,0)
   liftA2 abc (CoyonedaDist ga flg) (CoyonedaDist hb flh) = 
     CoyonedaDist (Compose $ fmap (\a -> fmap (abc a) hb) ga) (liftA2 (,) flg flh)
   {-# inline liftA2 #-}
-#endif
 
   CoyonedaDist gab flg <*> CoyonedaDist ha flh =
     CoyonedaDist (Compose $ fmap (\ab -> fmap ab ha) gab) (liftA2 (,) flg flh)

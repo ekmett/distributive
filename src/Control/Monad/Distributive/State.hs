@@ -26,12 +26,7 @@ module Control.Monad.Distributive.State
   , evalState
   , execState
   , mapState
-#if __GLASGOW_HASKELL__ >= 802
   , StateT(.., StateT, runStateT)
-#else
-  , StateT(.., StateT)
-  , runStateT
-#endif
   , evalStateT
   , execStateT
   , mapStateT
@@ -57,24 +52,8 @@ import Data.Distributive.Util
 type State g = StateT g Identity
 
 pattern State :: Distributive g => (Log g -> (a, Log g)) -> State g a
-#if __GLASGOW_HASKELL__ >= 802
 pattern State { runState } <- StateT (fmap runIdentity -> runState) where
   State f = state f
-#else
-
-pattern State f <- StateT (fmap runIdentity -> f) where
-  State f = state f
-
--- | Unwrap a state monad computation as a function.
--- (The inverse of 'state'.)
-runState
-  :: Distributive g
-  => State g a   -- ^ state-passing computation to execute
-  -> Log g       -- ^ initial state
-  -> (a, Log g)  -- ^ return value and final state
-runState m = runIdentity . runStateT m
-
-#endif
 
 -- | Evaluate a state computation with the given initial state
 -- and return the final value, discarding the final state.
@@ -124,16 +103,8 @@ newtype StateT g m a = StateDistT
 
 -- | Emulate a traditional state monad
 pattern StateT :: Distributive g => (Log g -> m (a, Log g)) -> StateT g m a
-#if __GLASGOW_HASKELL__ >= 702
 pattern StateT { runStateT } <- StateDistT (index -> runStateT) where
   StateT f = StateDistT (tabulate f)
-#else
-pattern StateT f <- StateDistT (index -> f) where
-  StateT f = StateDistT (tabulate f)
-
-runStateT :: Distributive g => StateT g m a -> Log g -> m (a, Log g)
-runStateT = index .# runStateDistT
-#endif
 
 mapStateT :: Functor g => (m (a, Log g) -> n (b, Log g)) -> StateT g m a -> StateT g n b
 mapStateT f = StateDistT #. fmap f .# runStateDistT

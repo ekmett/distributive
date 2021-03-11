@@ -5,9 +5,7 @@
 {-# Language DeriveAnyClass #-}
 {-# Language DeriveGeneric #-}
 {-# Language DeriveTraversable #-}
-#if __GLASGOW_HASKELL__ >= 802
 {-# Language DerivingStrategies #-}
-#endif
 #if __GLASGOW_HASKELL__ >= 806
 {-# Language DerivingVia #-}
 #endif
@@ -594,23 +592,7 @@ instance Distributive Complex where
     True -> i
   {-# inline index #-}
 
-#if __GLASGOW_HASKELL__ >= 802
-
 deriving newtype instance Distributive f => Distributive (IdentityT f)
-
-#else
-
-instance Distributive f => Distributive (IdentityT f) where
-  type Log (IdentityT f) = Log f
-  type Log (IdentityT f) = Log f
-  scatter k f = coerce $ scatter k (runIdentityT #. f)
-  index = index .# runIdentityT
-  tabulate = IdentityT #. tabulate
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
-
-#endif
 
 #if __GLASGOW_HASKELL__ >= 806
 
@@ -662,10 +644,8 @@ instance Distributive f => Applicative (Dist f) where
   {-# inline (*>) #-}
   (<*) = const
   {-# inline (<*) #-}
-#if MIN_VERSION_base(4,10,0)
   liftA2 = liftD2
   {-# inline liftA2 #-}
-#endif
 
 -- | A default definition for 'fmap' from 'Functor' in terms of 'Distributive'
 fmapDist :: Distributive f => (a -> b) -> f a -> f b

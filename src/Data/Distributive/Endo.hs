@@ -12,19 +12,10 @@
 --
 -- Tabulated endomorphisms
 module Data.Distributive.Endo 
-  (
-#if __GLASGOW_HASKELL__ >= 802
-    Endo(.., Endo, appEndo)
-#else
-    Endo(.., Endo)
-  , appEndo
-#endif
+  ( Endo(.., Endo, appEndo)
   ) where
 
 import Data.Distributive
-#if __GLASGOW_HASKELL__ < 802
-import Data.Distributive.Util
-#endif
 
 #if __GLASGOW_HASKELL__ < 804
 import Data.Semigroup (Semigroup(..))
@@ -36,17 +27,8 @@ import Data.Semigroup (Semigroup(..))
 newtype Endo f = EndoDist { runEndoDist :: f (Log f) }
 
 pattern Endo :: Distributive f => (Log f -> Log f) -> Endo f
-#if __GLASGOW_HASKELL__ >= 802
 pattern Endo { appEndo } <- EndoDist (index -> appEndo) where
   Endo f = EndoDist (tabulate f)
-#else
-pattern Endo f <- EndoDist (index -> f) where
-  Endo f = EndoDist (tabulate f)
-
-appEndo :: Distributive f => Endo f -> Log f -> Log f
-appEndo = index .# runEndoDist
-{-# inline getEndo #-}
-#endif
 
 instance Distributive f => Semigroup (Endo f) where
   EndoDist f <> EndoDist g = EndoDist $ tabulate $ \x -> index f (index g x)

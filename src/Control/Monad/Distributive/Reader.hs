@@ -32,12 +32,7 @@ module Control.Monad.Distributive.Reader
   , pattern Reader
   , runReader
   -- * Monad Transformer
-#if __GLASGOW_HASKELL__ >= 802
   , ReaderT(.., ReaderT, runReaderT)
-#else
-  , ReaderT(.., ReaderT)
-  , runReaderT
-#endif
 ) where
 
 import Control.Monad.Reader.Class
@@ -53,37 +48,16 @@ import GHC.Generics
 type Reader f = ReaderT f Identity
 
 pattern Reader :: Distributive f => (Log f -> a) -> Reader f a
-#if __GLASGOW_HASKELL__ >= 802
-
 pattern Reader { runReader } <- ReaderDistT (fmap runIdentity . index -> runReader) where
   Reader f = ReaderDistT (tabulate (coerce f))
-
-#else
-
-pattern Reader f <- ReaderDistT (fmap runIdentity . index -> f) where
-  Reader f = ReaderDistT (tabulate (coerce f))
-
-runReader :: Distributive f => Reader f a -> Log f -> a
-runReader = fmap runIdentity . runReaderT
-#endif
 
 -- | This 'representable monad transformer' transforms any monad @m@ with a 'Distributive' 'Monad'.
 -- This monad in turn is also representable if @m@ is 'Distributive'.
 newtype ReaderT f m b = ReaderDistT { runReaderDistT :: f (m b) }
 
 pattern ReaderT :: Distributive f => (Log f -> m a) -> ReaderT f m a
-#if __GLASGOW_HASKELL__ >= 802
-
 pattern ReaderT { runReaderT } <- ReaderDistT (index -> runReaderT) where
   ReaderT f = ReaderDistT (tabulate f)
-
-#else
-pattern ReaderT f <- (runReaderT -> f) where
-  ReaderT f = ReaderDistT (tabulate f)
-
-runReaderT :: Distributive f => ReaderT f m b -> Log f -> m b
-runReaderT = index .# runReaderDistT
-#endif
 
 instance (Functor f, Functor m) => Functor (ReaderT f m) where
   fmap f = ReaderDistT #. fmap (fmap f) .# runReaderDistT
