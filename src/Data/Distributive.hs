@@ -144,6 +144,7 @@ import Data.Proxy
 import Data.Void
 import GHC.Generics
 import Data.Type.Bool (type (||))
+import GHC.TypeLits (Nat, type (-))
 
 #if __GLASGOW_HASKELL__ < 804
 import Data.Semigroup (Semigroup(..))
@@ -186,7 +187,7 @@ class Functor f => Distributive f where
   default tabulate
     :: (Generic1 f, DefaultTabulate f)
     => (Log f -> a) -> f a
-  tabulate = defaultTabulate (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) f))
+  tabulate = defaultTabulate (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) 3))
   {-# inline tabulate #-}
 
   -- | Defaults to 'indexRep when @f@ is non-recursive, otherwise to 'indexLogarithm'.
@@ -194,7 +195,7 @@ class Functor f => Distributive f where
   default index
      :: (Generic1 f, DefaultIndex f)
      => f a -> Log f -> a
-  index = defaultIndex (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) f))
+  index = defaultIndex (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) 3))
   {-# inline index #-}
 
   -- | Scatter the contents of an 'FFunctor'. This admittedly complicated operation
@@ -241,17 +242,24 @@ scatterRep k phi = to1 . scatter k (from1 . phi)
 -- * Generic derivation
 
 -- Does Generic Rep contain 'Rec1'?
-type family ContainsSelfRec1 (r :: Type -> Type) (f :: Type -> Type) :: Bool where
-  ContainsSelfRec1 (K1 _ _)   f = 'False
-  ContainsSelfRec1 (M1 _ _ r) f = ContainsSelfRec1 r f
-  ContainsSelfRec1 U1         f = 'False
-  ContainsSelfRec1 V1         f = 'False
+--
+-- This is a Hack. If we loop i (= 3) times we declared we are recursive.
+type family ContainsSelfRec1 (f :: Type -> Type) (i :: Nat) :: Bool where
+  ContainsSelfRec1 _          0 = 'True
+  ContainsSelfRec1 (K1 _ _)   i = 'False
+  ContainsSelfRec1 (M1 _ _ f) i = ContainsSelfRec1 f i
+  ContainsSelfRec1 U1         i = 'False
+  ContainsSelfRec1 V1         i = 'False
   ContainsSelfRec1 Par1       _ = 'False
-  ContainsSelfRec1 (r :*: s)  f = ContainsSelfRec1 r f || ContainsSelfRec1 s f
-  ContainsSelfRec1 (r :+: s)  f = ContainsSelfRec1 r f || ContainsSelfRec1 s f
-  ContainsSelfRec1 (r :.: s)  f = ContainsSelfRec1 r f || ContainsSelfRec1 s f
-  ContainsSelfRec1 (Rec1 f)   f = 'True
-  ContainsSelfRec1 (Rec1 _)   _ = 'False
+  ContainsSelfRec1 (f :*: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
+  ContainsSelfRec1 (f :+: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
+  ContainsSelfRec1 (f :.: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
+
+  -- this clause is a hack. If pieces @f@ is built from are not 'Generic1',
+  -- this will get stuck.
+  --
+  -- An alternative with non-linear match is suboptimal in other ways
+  ContainsSelfRec1 (Rec1 f)   i = ContainsSelfRec1 (Rep1 f) (i - 1)
 
 type family DefaultLog' (containsRec1 :: Bool) f :: Type where
   DefaultLog' 'True  f = Logarithm f
@@ -284,9 +292,9 @@ instance DefaultImplC 'False f => DefaultIndex' 'False f where
   defaultIndex _ = indexRep
   {-# inline defaultIndex #-}
 
-type DefaultLog f = DefaultLog' (ContainsSelfRec1 (Rep1 f) f) f
-type DefaultTabulate f = DefaultTabulate' (ContainsSelfRec1 (Rep1 f) f) f
-type DefaultIndex f = DefaultIndex' (ContainsSelfRec1 (Rep1 f) f) f
+type DefaultLog f = DefaultLog' (ContainsSelfRec1 (Rep1 f) 3) f
+type DefaultTabulate f = DefaultTabulate' (ContainsSelfRec1 (Rep1 f) 3) f
+type DefaultIndex f = DefaultIndex' (ContainsSelfRec1 (Rep1 f) 3) f
 
 -- | A helper for the most common usage pattern when working with higher-kinded data.
 --
