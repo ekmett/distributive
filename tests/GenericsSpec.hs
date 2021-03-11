@@ -74,3 +74,9 @@ data Id2 a = Id2 (Id a) (Id a)
 
 _logId2 :: Log Id2 :~: Either () ()
 _logId2 = Refl
+
+-- something is derived
+newtype Mealy a b = Mealy (a -> Moore a b)
+  deriving (Functor, Generic1, Distributive)
+data Moore a b = Moore b (a -> Mealy a b)
+  deriving (Functor, Generic1, Distributive)
