@@ -1,3 +1,4 @@
+{-# Language CPP #-}
 {-# Language AllowAmbiguousTypes #-}
 {-# Language GADTs #-}
 {-# Language PatternSynonyms #-}
@@ -79,9 +80,11 @@ instance Applicative f => Applicative (Coyoneda f) where
   pure a = CoyonedaDist (Identity a) (pure ())
   {-# inline pure #-}
 
+#if MIN_VERSION_base(4,10,0)
   liftA2 abc (CoyonedaDist ga flg) (CoyonedaDist hb flh) = 
     CoyonedaDist (Compose $ fmap (\a -> fmap (abc a) hb) ga) (liftA2 (,) flg flh)
   {-# inline liftA2 #-}
+#endif
 
   CoyonedaDist gab flg <*> CoyonedaDist ha flh =
     CoyonedaDist (Compose $ fmap (\ab -> fmap ab ha) gab) (liftA2 (,) flg flh)

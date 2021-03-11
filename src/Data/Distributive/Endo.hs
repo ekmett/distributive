@@ -1,5 +1,7 @@
 {-# Language CPP #-}
 {-# Language Safe #-}
+{-# Language PatternSynonyms #-}
+{-# Language ViewPatterns #-}
 -- |
 -- Copyright   : (C) 2021 Edward Kmett
 -- License     : BSD-style (see the file LICENSE)
@@ -11,13 +13,18 @@
 -- Tabulated endomorphisms
 module Data.Distributive.Endo 
   (
-    DistEndo(..)
-  , tabulateDistEndo
-  , indexDistEndo
+#if __GLASGOW_HASKELL__ >= 802
+    Endo(.., Endo, appEndo)
+#else
+    Endo(.., Endo)
+  , appEndo
+#endif
   ) where
 
 import Data.Distributive
+#if __GLASGOW_HASKELL__ < 802
 import Data.Distributive.Util
+#endif
 
 #if __GLASGOW_HASKELL__ < 804
 import Data.Semigroup (Semigroup(..))
@@ -26,25 +33,30 @@ import Data.Semigroup (Semigroup(..))
 -- | Tabulated endomorphisms.
 --
 -- Many representable functors can be used to memoize functions.
-newtype DistEndo f = DistEndo { runDistEndo :: f (Log f) }
+newtype Endo f = EndoDist { runEndoDist :: f (Log f) }
 
-instance Distributive f => Semigroup (DistEndo f) where
-  DistEndo f <> DistEndo g = DistEndo $ tabulate $ \x -> index f (index g x)
+pattern Endo :: Distributive f => (Log f -> Log f) -> Endo f
+#if __GLASGOW_HASKELL__ >= 802
+pattern Endo { appEndo } <- EndoDist (index -> appEndo) where
+  Endo f = EndoDist (tabulate f)
+#else
+pattern Endo f <- EndoDist (index -> f) where
+  Endo f = EndoDist (tabulate f)
+
+appEndo :: Distributive f => Endo f -> Log f -> Log f
+appEndo = index .# runEndoDist
+{-# inline getEndo #-}
+#endif
+
+instance Distributive f => Semigroup (Endo f) where
+  EndoDist f <> EndoDist g = EndoDist $ tabulate $ \x -> index f (index g x)
   {-# inline (<>) #-}
 
-instance Distributive f => Monoid (DistEndo f) where
+instance Distributive f => Monoid (Endo f) where
 #if __GLASGOW_HASKELL__ < 804
-  DistEndo f `mappend` DistEndo g = DistEndo $ tabulate $ \x -> index f (index g x)
+  EndoDist f `mappend` EndoDist g = EndoDist $ tabulate $ \x -> index f (index g x)
   {-# inline mappend #-}
 #endif
-  mempty = DistEndo askDist
+  mempty = EndoDist askDist
   {-# inline mempty #-}
-
-indexDistEndo :: Distributive f => DistEndo f -> Log f -> Log f
-indexDistEndo = index .# runDistEndo
-{-# inline indexDistEndo #-}
-
-tabulateDistEndo :: Distributive f => (Log f -> Log f) -> DistEndo f
-tabulateDistEndo = DistEndo #. tabulate
-{-# inline tabulateDistEndo #-}
 
