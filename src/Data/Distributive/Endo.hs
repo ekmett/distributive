@@ -27,8 +27,7 @@ import Data.Semigroup (Semigroup(..))
 newtype Endo f = EndoDist { runEndoDist :: f (Log f) }
 
 pattern Endo :: Distributive f => (Log f -> Log f) -> Endo f
-pattern Endo { appEndo } <- EndoDist (index -> appEndo) where
-  Endo f = EndoDist (tabulate f)
+pattern Endo { appEndo } = EndoDist (Tabulate appEndo)
 
 instance Distributive f => Semigroup (Endo f) where
   EndoDist f <> EndoDist g = EndoDist $ tabulate $ \x -> index f (index g x)

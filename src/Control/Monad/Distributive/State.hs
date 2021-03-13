@@ -40,9 +40,9 @@ import Control.Monad.Cont.Class
 import Control.Monad.Reader.Class
 import Control.Monad.Writer.Class
 import Control.Monad.Trans.Class
-import Data.Functor.Identity
 import Data.Distributive
 import Data.Distributive.Util
+import Data.Functor.Identity
 
 -- | A memoized state monad parameterized by a 'Distributive' functor @g@, where
 -- 'Log' g is the state to carry.
@@ -52,8 +52,7 @@ import Data.Distributive.Util
 type State g = StateT g Identity
 
 pattern State :: Distributive g => (Log g -> (a, Log g)) -> State g a
-pattern State { runState } <- StateT (fmap runIdentity -> runState) where
-  State f = state f
+pattern State { runState } <- StateT (Coerce runState)
 
 -- | Evaluate a state computation with the given initial state
 -- and return the final value, discarding the final state.
@@ -103,8 +102,7 @@ newtype StateT g m a = StateDistT
 
 -- | Emulate a traditional state monad
 pattern StateT :: Distributive g => (Log g -> m (a, Log g)) -> StateT g m a
-pattern StateT { runStateT } <- StateDistT (index -> runStateT) where
-  StateT f = StateDistT (tabulate f)
+pattern StateT { runStateT } = StateDistT (Tabulate runStateT) 
 
 mapStateT :: Functor g => (m (a, Log g) -> n (b, Log g)) -> StateT g m a -> StateT g n b
 mapStateT f = StateDistT #. fmap f .# runStateDistT

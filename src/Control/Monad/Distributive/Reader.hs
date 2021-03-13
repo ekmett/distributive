@@ -4,12 +4,12 @@
 {-# Language FlexibleInstances #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language PatternSynonyms #-}
-{-# Language ViewPatterns #-}
+{-# Language Trustworthy #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
 {-# Language TypeSynonymInstances #-}
 {-# Language UndecidableInstances #-}
-{-# Language Trustworthy #-}
+{-# Language ViewPatterns #-}
 {-# OPTIONS_GHC -fenable-rewrite-rules -fno-warn-orphans #-}
 ----------------------------------------------------------------------
 -- |
@@ -48,16 +48,14 @@ import GHC.Generics
 type Reader f = ReaderT f Identity
 
 pattern Reader :: Distributive f => (Log f -> a) -> Reader f a
-pattern Reader { runReader } <- ReaderDistT (fmap runIdentity . index -> runReader) where
-  Reader f = ReaderDistT (tabulate (coerce f))
+pattern Reader { runReader } <- ReaderT (Coerce runReader)
 
 -- | This 'representable monad transformer' transforms any monad @m@ with a 'Distributive' 'Monad'.
 -- This monad in turn is also representable if @m@ is 'Distributive'.
 newtype ReaderT f m b = ReaderDistT { runReaderDistT :: f (m b) }
 
 pattern ReaderT :: Distributive f => (Log f -> m a) -> ReaderT f m a
-pattern ReaderT { runReaderT } <- ReaderDistT (index -> runReaderT) where
-  ReaderT f = ReaderDistT (tabulate f)
+pattern ReaderT { runReaderT } = ReaderDistT (Tabulate runReaderT)
 
 instance (Functor f, Functor m) => Functor (ReaderT f m) where
   fmap f = ReaderDistT #. fmap (fmap f) .# runReaderDistT

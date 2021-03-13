@@ -1,5 +1,7 @@
+{-# Language PatternSynonyms #-}
 {-# Language TypeOperators #-}
 {-# Language Trustworthy #-}
+{-# Language ViewPatterns #-}
 -- |
 -- Module      : Data.Distributive.Util
 -- Copyright   : (C) 2021 Edward Kmett
@@ -23,6 +25,10 @@ import GHC.Generics
 {-# inline (.#) #-}
 
 infixr 9 #., .#
+
+pattern Coerce :: Coercible a b => a -> b
+pattern Coerce x <- (coerce -> x) where
+  Coerce x = coerce x
 
 newtype DCompose a f g = DCompose { runDCompose :: f (g a) }
 instance Functor f => FFunctor (DCompose a f) where

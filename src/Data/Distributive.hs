@@ -20,11 +20,13 @@
 {-# Language ScopedTypeVariables #-}
 {-# Language StandaloneDeriving #-}
 {-# Language Trustworthy #-}
+{-# Language TupleSections #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
 {-# Language UndecidableInstances #-}
 {-# Language UndecidableSuperClasses #-}
 {-# Language ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 -- |
 -- Module      : Data.Distributive
 -- Copyright   : (C) 2011-2021 Edward Kmett,
@@ -43,15 +45,23 @@
 --
 -- @
 -- data V3 a = V3 a a a
---   deriving stock (Functor, Generic1)
+--   deriving stock (Functor, Foldable, Traversable, Generic1)
 --   deriving anyclass Distributive
---   deriving (Applicative, Monad, MonadFix, MonadZip) via Dist V3
+--   deriving ( Applicative, Monad, MonadFix, MonadZip
+--              MonadReader (Logarithm V3)
+--            , FunctorWithIndex (Logarithm V3)
+--            , FoldableWithIndex (Logarithm V3)
+--            , TraversableWithIndex (Logarithm V3)
+--            ) via Dist V3
+--   deriving (Num, Fractional, Floating) via Dist V3 a
 -- @
 --
 -- If you want a special form for the 'Log' of your functor you can
 -- implement tabulate and index directly, `Dist` can still be used.
 --
 -- @
+--
+-- Moore a b = [a] -> b
 --
 -- data Moore a b = Moore b (a -> Moore a b)
 --   deriving stock Functor
@@ -69,6 +79,7 @@ module Data.Distributive
   , distribute
   , collect
   , cotraverse
+  , pattern Tabulate
   -- * Default definitions
   -- ** via Generics
   , tabulateRep
@@ -80,6 +91,10 @@ module Data.Distributive
   , Logarithm(..)
   , tabulateLogarithm
   , indexLogarithm
+  , _logarithm
+  , logFromLogarithm
+  , logToLogarithm
+  , _log
   -- ** via DerivingVia
   , Dist(..)
   -- ** for other classes
@@ -128,6 +143,8 @@ import Data.Coerce
 import Data.Complex
 import Data.Distributive.Util
 import Data.Foldable (fold)
+import Data.Function (on)
+import Data.Functor
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
@@ -140,9 +157,10 @@ import Data.Ord (Down(..))
 import Data.Orphans ()
 import Data.Proxy
 import Data.Void
-import GHC.Generics
 import Data.Type.Bool (type (||))
+import GHC.Generics
 import GHC.TypeLits (Nat, type (-))
+import Numeric
 
 #if __GLASGOW_HASKELL__ < 804
 import Data.Semigroup (Semigroup(..))
@@ -236,6 +254,10 @@ scatterRep
   => (w Identity -> r) -> (g ~> f) -> w g -> f r
 scatterRep k phi = to1 . scatter k (from1 . phi)
 {-# inline scatterRep #-}
+
+pattern Tabulate :: Distributive f => (Log f -> a) -> f a
+pattern Tabulate i <- (index -> i) where
+  Tabulate i = tabulate i
 
 -- * Generic derivation
 
@@ -649,7 +671,7 @@ instance Distributive f => Applicative (Dist f) where
 
 -- | A default definition for 'fmap' from 'Functor' in terms of 'Distributive'
 fmapDist :: Distributive f => (a -> b) -> f a -> f b
-fmapDist f fa = distrib (Element fa) $ \(Element (Identity a)) -> f a
+fmapDist f fa = distrib (Element fa) $ \(Element a) -> coerce f a
 {-# inline fmapDist #-}
 
 -- | A default definition for 'pure' from 'Applicative' in terms of 'Distributive'
@@ -717,6 +739,76 @@ instance (Distributive f, e ~ Log f) => MonadReader e (Dist f) where
   {-# inline local #-}
   reader = tabulate
   {-# inline reader #-}
+
+instance (Distributive f, Num a) => Num (Dist f a) where
+  (+) = liftA2 (+)
+  (-) = liftA2 (-)
+  (*) = liftA2 (*)
+  negate = fmap negate
+  abs = fmap abs
+  signum = fmap signum
+  fromInteger = pure . fromInteger
+  {-# inline (+) #-}
+  {-# inline (-) #-}
+  {-# inline (*) #-}
+  {-# inline negate #-}
+  {-# inline abs #-}
+  {-# inline signum #-}
+  {-# inline fromInteger #-}
+
+instance (Distributive f, Fractional a) => Fractional (Dist f a) where
+  (/) = liftA2 (/)
+  recip = fmap recip
+  fromRational = pure . fromRational
+  {-# inline (/) #-}
+  {-# inline recip #-}
+  {-# inline fromRational #-}
+
+instance (Distributive f, Floating a) => Floating (Dist f a) where
+  pi = pure pi
+  exp = fmap exp
+  log = fmap log
+  sqrt = fmap sqrt
+  (**) = liftA2 (**)
+  logBase = liftA2 logBase
+  sin = fmap sin
+  cos = fmap cos
+  tan = fmap tan
+  asin = fmap asin
+  acos = fmap acos
+  atan = fmap atan
+  sinh = fmap sinh
+  cosh = fmap cosh
+  tanh = fmap tanh
+  asinh = fmap asinh
+  acosh = fmap acosh
+  atanh = fmap atanh
+  log1p = fmap log1p
+  expm1 = fmap expm1
+  log1pexp = fmap log1pexp
+  log1mexp = fmap log1mexp
+  {-# inline pi #-}
+  {-# inline exp #-}
+  {-# inline log #-}
+  {-# inline sqrt #-}
+  {-# inline (**) #-}
+  {-# inline logBase #-}
+  {-# inline sin #-}
+  {-# inline cos #-}
+  {-# inline tan #-}
+  {-# inline asin #-}
+  {-# inline acos #-}
+  {-# inline atan #-}
+  {-# inline sinh #-}
+  {-# inline cosh #-}
+  {-# inline tanh #-}
+  {-# inline asinh #-}
+  {-# inline acosh #-}
+  {-# inline atanh #-}
+  {-# inline log1p #-}
+  {-# inline expm1 #-}
+  {-# inline log1pexp #-}
+  {-# inline log1mexp #-}
 
 -- * MonadZip
 
@@ -825,3 +917,89 @@ leftAdjunctDist f a = tabulate (\s -> f (a,s))
 rightAdjunctDist :: Distributive u => (a -> u b) -> (a, Log u) -> b
 rightAdjunctDist f ~(a, k) = f a `index` k
 {-# inline rightAdjunctDist #-}
+
+data Path = End | L Path | R Path deriving (Eq, Ord, Show, Read)
+
+newtype Trail a = Trail { runTrail :: (Path -> Path) -> a }
+  deriving Functor
+
+instance Applicative Trail where
+  pure = Trail . const
+  {-# inline pure #-}
+  fab <*> fa = Trail $ \k -> runTrail fab (k . L) $ runTrail fa (k . R)
+  {-# inline (<*>) #-}
+
+end :: Trail Path
+end = Trail $ \k -> k End
+{-# inline end #-}
+
+logPath :: (Distributive f, Traversable f) => Logarithm f -> Path
+logPath (Logarithm f) = f $ runTrail (traverse id $ pureDist end) id
+{-# inline logPath #-}
+
+-- unfortunate orphans, caused by having @hkd@ export the data type
+-- rather than making it up here.
+instance (Distributive f, Traversable f) => Eq (Logarithm f) where
+  (==) = on (==) logPath
+  {-# inline (==) #-}
+
+instance (Distributive f, Traversable f) => Ord (Logarithm f) where
+  (<) = on (<) logPath
+  (<=) = on (<=) logPath
+  (>=) = on (>=) logPath
+  (>) = on (>) logPath
+  compare = on compare logPath
+  {-# inline compare #-}
+  {-# inline (<) #-}
+  {-# inline (<=) #-}
+  {-# inline (>=) #-}
+  {-# inline (>) #-}
+
+type Lens' s a = forall f. Functor f => (a -> f a) -> s -> f s
+
+data Evil a = Evil a (Path -> a)
+  deriving Functor
+
+instance Applicative Evil where
+  pure a = Evil a $ \_ -> a
+  {-# inline pure #-}
+  ~(Evil mb mg) <*> ~(Evil nb ng) = Evil (mb nb) $ \case
+    L xs -> mg xs nb
+    R xs -> mb (ng xs)
+    End -> undefined
+  {-# inline (<*>) #-}
+
+runEvil :: Evil a -> Path -> a
+runEvil (Evil _ mg) p = mg p
+{-# inline runEvil #-}
+
+_logarithm :: Traversable f => Logarithm f -> Lens' (f a) a
+_logarithm (Logarithm f) a2ga fa = case f $ runTrail (traverse (\a -> (a,) <$> end) fa) id of
+  (a, p) -> a2ga a <&> \a' -> runEvil (traverse (\a'' -> Evil a'' (const a')) fa) p
+{-# inline _logarithm #-}
+
+logFromLogarithm :: Distributive f => Logarithm f -> Log f 
+logFromLogarithm (Logarithm f) = f askDist
+{-# inline logFromLogarithm #-}
+
+logToLogarithm :: Distributive f => Log f -> Logarithm f
+logToLogarithm f = Logarithm (traceDist f)
+{-# inline logToLogarithm #-}
+
+_log :: (Traversable f, Distributive f) => Log f -> Lens' (f a) a
+_log f = _logarithm (logToLogarithm f)
+{-# inline _log #-}
+
+{-
+data Stream a = a :- Stream a
+  deriving stock (Functor, Foldable, Traversable, Generic1, Show, Eq, Ord)
+  deriving anyclass Distributive
+  deriving ( Applicative
+           , Monad
+           , MonadFix
+           , MonadZip
+           , MonadReader (Logarithm Stream)
+           ) via Dist Stream
+  deriving (Num, Fractional, Floating) via Dist Stream a
+infixr 5 :-
+-}

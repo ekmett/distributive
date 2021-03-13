@@ -34,7 +34,7 @@ data Coyoneda f a where
 -- I'm not sure whether this pattern can be made work on GHC-8.0,
 -- or it's unworkaroundable bug
 pattern Coyoneda :: (b -> a) -> f b -> Coyoneda f a
-pattern Coyoneda ga flg <- CoyonedaDist (index -> ga) flg where
+pattern Coyoneda ga flg <- CoyonedaDist (Tabulate ga) flg where
   Coyoneda ga flg = CoyonedaDist ga flg
 
 instance (Show1 f, Functor f) => Show1 (Coyoneda f) where
