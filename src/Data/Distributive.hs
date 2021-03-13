@@ -58,21 +58,6 @@
 --
 -- If you want a special form for the 'Log' of your functor you can
 -- implement tabulate and index directly, `Dist` can still be used.
---
--- @
---
--- Moore a b = [a] -> b
---
--- data Moore a b = Moore b (a -> Moore a b)
---   deriving stock Functor
---   deriving (Comonad, Applicative, Monad, MonadFix, MonadZip) via Dist (Moore a)
---
--- instance Distributive (Moore a) where
---   type Log (Moore a) = [a]
---   tabulate f = Moore (f []) (\\x -> tabulate $ f . (x:))
---   index (Moore a _) [] = a
---   index (Moore _ as) (x:xs) = index (as x) xs
--- @
 module Data.Distributive
   ( Distributive(..)
   , distrib
@@ -145,6 +130,7 @@ import Data.Distributive.Util
 import Data.Foldable (fold)
 import Data.Function (on)
 import Data.Functor
+import Data.Functor.Classes
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
@@ -638,7 +624,11 @@ instance Distributive f => Distributive (ReaderT e f) where
 
 -- | Provides defaults definitions for other classes in terms of
 -- 'Distributive'. Supplied for use with @DerivingVia@ in GHC 8.6+
+--
+-- Deriving 'Distributive', 'Foldable', or 'Traversable' via 'Dist' f leads to non-termination
+-- but all other instances are fine for use and are defined in terms of these three.
 newtype Dist f a = Dist { runDist :: f a }
+  deriving stock (Foldable, Traversable)
 
 instance Distributive f => Functor (Dist f) where
   fmap = fmapDist
@@ -810,6 +800,24 @@ instance (Distributive f, Floating a) => Floating (Dist f a) where
   {-# inline log1pexp #-}
   {-# inline log1mexp #-}
 
+instance (Distributive f, Foldable f, Eq a) => Eq (Dist f a) where
+  xs == ys = Monoid.getAll $ fold $ liftA2 (\x y -> Monoid.All (x == y)) xs ys
+  {-# inline (==) #-}
+  xs /= ys = Monoid.getAny $ fold $ liftA2 (\x y -> Monoid.Any (x /= y)) xs ys
+  {-# inline (/=) #-}
+
+instance (Distributive f, Foldable f, Ord a) => Ord (Dist f a) where
+  compare xs ys = fold $ liftA2 compare xs ys
+  {-# inline compare #-}
+
+instance (Distributive f, Foldable f) => Eq1 (Dist f) where
+  liftEq f xs ys = Monoid.getAll $ fold $ liftA2 (\x y -> Monoid.All (f x y)) xs ys
+  {-# inline liftEq #-}
+
+instance (Distributive f, Foldable f) => Ord1 (Dist f) where
+  liftCompare f xs ys = fold $ liftA2 f xs ys
+  {-# inline liftCompare #-}
+
 -- * MonadZip
 
 -- | A default definition for 'mzipWith' in terms of 'Distributive'
@@ -920,6 +928,8 @@ rightAdjunctDist f ~(a, k) = f a `index` k
 
 data Path = End | L Path | R Path deriving (Eq, Ord, Show, Read)
 
+-- This is not a legal 'Applicative', but it is used towards legal ends.
+
 newtype Trail a = Trail { runTrail :: (Path -> Path) -> a }
   deriving Functor
 
@@ -957,6 +967,8 @@ instance (Distributive f, Traversable f) => Ord (Logarithm f) where
 
 type Lens' s a = forall f. Functor f => (a -> f a) -> s -> f s
 
+-- This is also not a legal 'Applicative', but it is used towards legal ends.
+
 data Evil a = Evil a (Path -> a)
   deriving Functor
 
@@ -973,33 +985,53 @@ runEvil :: Evil a -> Path -> a
 runEvil (Evil _ mg) p = mg p
 {-# inline runEvil #-}
 
+-- | For any 'Traversable', each logarithm identifies a 'Lens'.
 _logarithm :: Traversable f => Logarithm f -> Lens' (f a) a
 _logarithm (Logarithm f) a2ga fa = case f $ runTrail (traverse (\a -> (a,) <$> end) fa) id of
   (a, p) -> a2ga a <&> \a' -> runEvil (traverse (\a'' -> Evil a'' (const a')) fa) p
 {-# inline _logarithm #-}
 
-logFromLogarithm :: Distributive f => Logarithm f -> Log f 
+-- | We can convert a 'Logarithm' of a 'Distributive' functor to any choice of 'Log', as the two forms are canonically isomorphic.
+--
+-- @
+-- 'index' f . 'logFromLogarithm' ≡ 'indexLogarithm' f
+-- 'tabulate' (f . 'logFromLogarithm') ≡ 'tabulateLogarithm' f
+-- 'logFromLogarithm' '.' 'logToLogarithm' ≡ 'id'
+-- 'logToLogarithm' '.' 'logFromLogarithm' ≡ 'id'
+-- @
+logFromLogarithm :: Distributive f => Logarithm f -> Log f
 logFromLogarithm (Logarithm f) = f askDist
 {-# inline logFromLogarithm #-}
 
+-- | We can convert any 'Log' to a 'Logarithm' as the two types are canonically isomorphic.
+--
+-- @
+-- 'indexLogarithm' f . 'logToLogarithm' ≡ 'index' f
+-- 'tabulateLogarithm' (f . 'logToLogarithm') ≡ 'tabulate' f
+-- 'logFromLogarithm' '.' 'logToLogarithm' ≡ 'id'
+-- 'logToLogarithm' '.' 'logFromLogarithm' ≡ 'id'
+-- @
 logToLogarithm :: Distributive f => Log f -> Logarithm f
 logToLogarithm f = Logarithm (traceDist f)
 {-# inline logToLogarithm #-}
 
+-- | For any 'Traversable' 'Distributive' each 'Log' determines a 'Lens'.
 _log :: (Traversable f, Distributive f) => Log f -> Lens' (f a) a
 _log f = _logarithm (logToLogarithm f)
 {-# inline _log #-}
 
+_logEq :: (Distributive f, Eq (Log f)) => Log f -> Lens' (f a) a
+_logEq i a2ga fa = a2ga (index fa i) <&> \a' -> imapDist (\j a -> if i == j then a' else a) fa
+{-# inline _logEq #-}
+
 {-
 data Stream a = a :- Stream a
-  deriving stock (Functor, Foldable, Traversable, Generic1, Show, Eq, Ord)
+  deriving stock (Functor, Foldable, Traversable, Generic, Generic1, Show)
   deriving anyclass Distributive
-  deriving ( Applicative
-           , Monad
-           , MonadFix
-           , MonadZip
-           , MonadReader (Logarithm Stream)
+  deriving ( Eq1, Ord1
+           , Applicative
+           , Monad, MonadFix, MonadZip, MonadReader (Logarithm Stream)
            ) via Dist Stream
-  deriving (Num, Fractional, Floating) via Dist Stream a
+  deriving ( Eq, Ord, Num, Fractional, Floating ) via Dist Stream a
 infixr 5 :-
 -}
