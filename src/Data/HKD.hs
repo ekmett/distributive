@@ -129,7 +129,13 @@ instance (FFunctor f, FFunctor g) => FFunctor (Sum f g) where
 
 #if MIN_VERSION_base(4,10,0)
 instance FFunctor (K1 i a) where
-  ffmap _ (K1 a) = K1 a
+  ffmap _ = coerce
+
+instance FFunctor f => FFunctor (M1 i c f) where
+  ffmap f = M1 #. ffmap f .# unM1
+
+instance FFunctor f => FFunctor (Rec1 f) where
+  ffmap f = Rec1 #. ffmap f .# unRec1
 
 instance FFunctor U1 where
   ffmap _ U1 = U1
@@ -201,6 +207,14 @@ instance FFoldable (K1 i a) where
   ffoldMap _ = mempty
   flengthAcc = const
 
+instance FFoldable f => FFoldable (M1 i c f) where
+  ffoldMap f = ffoldMap f .# unM1
+  flengthAcc n = flengthAcc n .# unM1
+
+instance FFoldable f => FFoldable (Rec1 f) where
+  ffoldMap f = ffoldMap f .# unRec1
+  flengthAcc n = flengthAcc n .# unRec1
+
 instance FFoldable U1 where
   ffoldMap _ = mempty
   flengthAcc = const
@@ -265,6 +279,12 @@ instance FTraversable V1 where
   ftraverse _ = \case
 #endif
 
+instance FTraversable f => FTraversable (M1 i c f) where
+  ftraverse f = fmap M1 . ftraverse f .# unM1
+
+instance FTraversable f => FTraversable (Rec1 f) where
+  ftraverse f = fmap Rec1 . ftraverse f .# unRec1
+
 instance FTraversable (K1 i a) where
   ftraverse _ = pure .# (K1 . unK1)
 
@@ -284,34 +304,34 @@ instance (FTraversable f, FTraversable g) => FTraversable (f :+: g) where
 -------------------------------------------------------------------------------
 
 class FFunctor t => FZip t where
-    fzipWith :: (forall x. f x -> g x -> h x) -> t f -> t g -> t h
+  fzipWith :: (forall x. f x -> g x -> h x) -> t f -> t g -> t h
 
 class FZip t => FRepeat t where
-    frepeat :: (forall x. f x) -> t f
+  frepeat :: (forall x. f x) -> t f
 
 instance FZip Proxy where
-    fzipWith _ _ _ = Proxy
+  fzipWith _ _ _ = Proxy
 
 instance FRepeat Proxy where
-    frepeat _ = Proxy
+  frepeat _ = Proxy
 
 instance FZip (Element a) where
-    fzipWith f (Element x) (Element y) = Element (f x y)
+  fzipWith f (Element x) (Element y) = Element (f x y)
 
 instance FRepeat (Element a) where
-    frepeat x = Element x
+  frepeat x = Element x
 
 instance FZip (NT f) where
-    fzipWith f (NT g) (NT h) = NT $ \x -> f (g x) (h x)
+  fzipWith f (NT g) (NT h) = NT $ \x -> f (g x) (h x)
 
 instance FRepeat (NT a) where
-    frepeat x = NT $ \_ -> x
+  frepeat x = NT $ \_ -> x
 
 instance FZip Limit where
-    fzipWith f (Limit x) (Limit y) = Limit (f x y)
+  fzipWith f (Limit x) (Limit y) = Limit (f x y)
 
 instance FRepeat Limit where
-    frepeat x = Limit x
+  frepeat x = Limit x
 
 #if MIN_VERSION_base(4,9,0)
 instance Data.Semigroup.Semigroup a => FZip (Const a) where
@@ -344,11 +364,23 @@ instance FRepeat U1 where
 instance FZip V1 where
   fzipWith _ x _ = case x of
 
+instance FZip f => FZip (M1 i c f) where
+  fzipWith f (M1 x) (M1 y) = M1 $ fzipWith f x y
+
+instance FZip f => FZip (Rec1 f) where
+  fzipWith f (Rec1 x) (Rec1 y) = Rec1 $ fzipWith f x y
+
 instance Data.Semigroup.Semigroup a => FZip (K1 i a) where
   fzipWith _ (K1 a) (K1 b) = K1 (a <> b)
 
 instance (Monoid a, Semigroup a) => FRepeat (K1 i a) where
   frepeat _ = K1 mempty
+
+instance FRepeat f => FRepeat (M1 i c f) where
+  frepeat x = M1 $ frepeat x
+
+instance FRepeat f => FRepeat (Rec1 f) where
+  frepeat x = Rec1 $ frepeat x
 
 instance (FZip f, FZip g) => FZip (f :*: g) where
   fzipWith f (x :*: y) (x' :*: y') = fzipWith f x x' :*: fzipWith f y y'
@@ -363,7 +395,6 @@ instance (Applicative f, FZip g) => FZip (f :.: g) where
 instance (Applicative f, FRepeat g) => FRepeat (f :.: g) where
   frepeat x = Comp1 (pure (frepeat x))
 #endif
-
 
 -------------------------------------------------------------------------------
 -- FContravariant
@@ -392,8 +423,13 @@ instance (FContravariant f, FContravariant g) => FContravariant (Sum f g) where
 
 #if MIN_VERSION_base(4,10,0)
 instance FContravariant (K1 i a) where
-  fcontramap _ (K1 a) = K1 a
+  fcontramap _ = coerce
 
+instance FContravariant f => FContravariant (M1 i c f) where
+  fcontramap f = M1 #. fcontramap f .# unM1
+
+instance FContravariant f => FContravariant (Rec1 f) where
+  fcontramap f = Rec1 #. fcontramap f .# unRec1
 
 instance FContravariant U1 where
   fcontramap _ U1 = U1
