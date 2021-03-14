@@ -284,6 +284,11 @@ deriving newtype instance FDistributive f => FDistributive (Monoid.Ap f)
 #endif
 
 newtype FDist f a = FDist { runFDist :: f a }
+  deriving newtype (FFoldable)
+
+instance (FDistributive f, FTraversable f) => FTraversable (FDist f) where
+  ftraverse f = fmap FDist . ftraverse f .# runFDist
+  {-# inline ftraverse #-}
 
 deriving newtype instance FDistributive f => FDistributive (FDist f)
 
