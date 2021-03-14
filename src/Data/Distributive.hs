@@ -579,6 +579,11 @@ instance Distributive f => Functor (Dist f) where
   a <$ _ = pure a
   {-# inline (<$) #-}
 
+-- | A default definition for 'fmap' from 'Functor' in terms of 'Distributive'
+fmapDist :: Distributive f => (a -> b) -> f a -> f b
+fmapDist f fa = distrib (Element fa) $ \(Element a) -> coerce f a
+{-# inline fmapDist #-}
+
 instance Distributive f => Distributive (Dist f) where
   type Log (Dist f) = Log f
   scatter k f = Dist #. scatter k (runDist #. f)
@@ -602,14 +607,11 @@ instance Distributive f => Applicative (Dist f) where
   liftA2 = liftD2
   {-# inline liftA2 #-}
 
--- | A default definition for 'fmap' from 'Functor' in terms of 'Distributive'
-fmapDist :: Distributive f => (a -> b) -> f a -> f b
-fmapDist f fa = distrib (Element fa) $ \(Element a) -> coerce f a
-{-# inline fmapDist #-}
 
 -- | A default definition for 'pure' from 'Applicative' in terms of 'Distributive'
 pureDist :: Distributive f => a -> f a
-pureDist = tabulate . const
+pureDist = scatter getConst id .# Const
+-- pureDist = distrib Proxy . const
 {-# inline pureDist #-}
 
 -- | A default definition for '(<*>)' from 'Applicative' in terms of 'Distributive'
@@ -879,6 +881,7 @@ newtype Trail a = Trail { runTrail :: (Path -> Path) -> a }
 instance Applicative Trail where
   pure = Trail . const
   {-# inline pure #-}
+
   fab <*> fa = Trail $ \k -> runTrail fab (k . L) $ runTrail fa (k . R)
   {-# inline (<*>) #-}
 

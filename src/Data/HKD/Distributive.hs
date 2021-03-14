@@ -21,7 +21,24 @@
 {-# Language UndecidableSuperClasses #-}
 {-# Language ViewPatterns #-}
 
-module Data.HKD.Distributive where
+module Data.HKD.Distributive
+  ( type (%)
+  , FLogarithm(..)
+  , FTab(..)
+  , findexLogarithm
+  , ftabulateLogarithm
+  , ftabulateRep
+  , findexRep
+  , fscatterRep
+  , fdistrib
+  , fdistribute
+  , fcollect
+  , fcotraverse
+  , pattern FTabulate
+
+  , FDist(..)
+  , ffmapDist
+  ) where
 
 import Control.Applicative
 import Control.Applicative.Backwards
@@ -267,3 +284,31 @@ deriving newtype instance FDistributive f => FDistributive (Monoid.Ap f)
 #endif
 
 newtype FDist f a = FDist { runFDist :: f a }
+
+deriving newtype instance FDistributive f => FDistributive (FDist f)
+
+-- | A default definition for 'ffmap' from 'FFunctor' in terms of 'FDistributive'
+ffmapDist :: FDistributive f => (a ~> b) -> f a -> f b
+ffmapDist f = fscatter (f .# (runElement . runElement)) id .# Element
+{-# inline ffmapDist #-}
+
+instance FDistributive f => FFunctor (FDist f) where
+  ffmap = ffmapDist
+  {-# inline ffmap #-}
+
+instance FDistributive f => FZip (FDist f) where
+  fzipWith = fzipWithDist
+  {-# inline fzipWith #-}
+
+fzipWithDist :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
+fzipWithDist f m n = fdistrib (D2 m n) $ \(D2 (Element m') (Element n')) -> f m' n'
+{-# inline fzipWithDist #-}
+
+instance FDistributive f => FRepeat (FDist f) where
+  frepeat = frepeatDist
+  {-# inline frepeat #-}
+
+frepeatDist :: FDistributive f => (forall x. a x) -> f a
+frepeatDist ax = fscatter (runLimit .# getConst) id (Const (Limit ax))
+-- frepeatDist a = fdistrib Proxy $ \_ -> a
+{-# inline frepeatDist #-}
