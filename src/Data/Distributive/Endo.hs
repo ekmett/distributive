@@ -43,3 +43,5 @@ instance Distributive f => Monoid (Endo f) where
   mempty = EndoDist askDist
   {-# inline mempty #-}
 
+--instance (Distributive f, Traversable f) => Eq (Endo f) where
+--  (==) = liftEqDist (on (==) logToLogarithm)

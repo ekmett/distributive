@@ -113,6 +113,13 @@ module Data.Distributive
 , ifoldMapDist
 -- *** TraversableWithIndex
 , itraverseDist
+-- * Eq/Eq1
+, eqDist
+, neDist
+, liftEqDist
+-- * Ord/Ord1
+, compareDist
+, liftCompareDist
 -- *** As right adjoints
 , leftAdjunctDist
 , rightAdjunctDist
@@ -746,21 +753,52 @@ instance (Distributive f, Floating a) => Floating (Dist f a) where
   {-# inline log1mexp #-}
 
 instance (Distributive f, Foldable f, Eq a) => Eq (Dist f a) where
-  xs == ys = Monoid.getAll $ fold $ liftA2 (\x y -> Monoid.All (x == y)) xs ys
+  (==) = eqDist
   {-# inline (==) #-}
-  xs /= ys = Monoid.getAny $ fold $ liftA2 (\x y -> Monoid.Any (x /= y)) xs ys
+  (/=) = neDist
   {-# inline (/=) #-}
 
+eqDist
+  :: (Distributive f, Foldable f, Eq a)
+  => f a -> f a -> Bool
+eqDist xs ys =
+  Monoid.getAll $ fold $ liftD2 (\x y -> Monoid.All (x == y)) xs ys
+{-# inline eqDist #-}
+
+neDist
+  :: (Distributive f, Foldable f, Eq a)
+  => f a -> f a -> Bool
+neDist xs ys =
+  Monoid.getAny $ fold $ liftD2 (\x y -> Monoid.Any (x /= y)) xs ys
+
 instance (Distributive f, Foldable f, Ord a) => Ord (Dist f a) where
-  compare xs ys = fold $ liftA2 compare xs ys
+  compare xs ys = fold $ liftD2 compare xs ys
   {-# inline compare #-}
 
+compareDist
+  :: (Distributive f, Foldable f, Ord a)
+  => f a -> f a -> Ordering
+compareDist xs ys = fold $ liftD2 compare xs ys
+{-# inline compareDist #-}
+
+liftCompareDist
+  :: (Distributive f, Foldable f)
+  => (a -> b -> Ordering)
+  -> f a -> f b -> Ordering
+liftCompareDist f xs ys = fold $ liftD2 f xs ys
+{-# inline liftCompareDist #-}
+
+liftEqDist :: (Distributive f, Foldable f) => (a -> b -> Bool) -> f a -> f b -> Bool
+liftEqDist f xs ys =
+  Monoid.getAll $ fold $ liftD2 (\x y -> Monoid.All (f x y)) xs ys
+{-# inline liftEqDist #-}
+
 instance (Distributive f, Foldable f) => Eq1 (Dist f) where
-  liftEq f xs ys = Monoid.getAll $ fold $ liftA2 (\x y -> Monoid.All (f x y)) xs ys
+  liftEq = liftEqDist
   {-# inline liftEq #-}
 
 instance (Distributive f, Foldable f) => Ord1 (Dist f) where
-  liftCompare f xs ys = fold $ liftA2 f xs ys
+  liftCompare = liftCompareDist
   {-# inline liftCompare #-}
 
 -- * MonadZip
