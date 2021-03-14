@@ -67,6 +67,7 @@ library
     Data.Functor.Confusing
     Data.HKD
     Data.HKD.Distributive
+    Data.HKD.Distributive.Endo
     Data.Machine.Moore
     Control.Monad.Distributive.Reader
     Control.Monad.Distributive.State
