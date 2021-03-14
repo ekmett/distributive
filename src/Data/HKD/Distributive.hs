@@ -2,27 +2,30 @@
 {-# Language ConstraintKinds #-}
 {-# Language DataKinds #-}
 {-# Language DefaultSignatures #-}
-{-# Language FlexibleContexts #-}
-{-# Language StandaloneDeriving #-}
+{-# Language DeriveDataTypeable #-}
+{-# Language DeriveGeneric #-}
 {-# Language DerivingStrategies #-}
-{-# Language LiberalTypeSynonyms #-}
+{-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
+{-# Language GeneralizedNewtypeDeriving #-}
 {-# Language KindSignatures #-}
+{-# Language LiberalTypeSynonyms #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language PatternSynonyms #-}
 {-# Language PolyKinds #-}
 {-# Language RankNTypes #-}
 {-# Language ScopedTypeVariables #-}
+{-# Language StandaloneDeriving #-}
 {-# Language Trustworthy #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
-{-# Language GeneralizedNewtypeDeriving #-}
 {-# Language UndecidableInstances #-}
 {-# Language UndecidableSuperClasses #-}
 {-# Language ViewPatterns #-}
 
 module Data.HKD.Distributive
 ( type (%)
+, FDistributive(..)
 , FLogarithm(..)
 , FTab(..)
 , findexLogarithm
@@ -38,10 +41,17 @@ module Data.HKD.Distributive
 
 , FDist(..)
 , ffmapDist
+, frepeatDist
+, fzipWithDist
+, faskDist
+, ftraceDist
+, flogToLogarithm
+, flogFromLogarithm
 ) where
 
 import Control.Applicative
 import Control.Applicative.Backwards
+import Data.Data
 import Data.Distributive
 import Data.Distributive.Coerce
 import Data.Distributive.Util
@@ -53,15 +63,16 @@ import qualified Data.Monoid as Monoid
 import Data.Kind
 import Data.HKD
 import Data.Void
-import Data.Proxy
 import GHC.Generics
 import Data.Coerce
 
 type (%) f g i = f (g i)
 infixr 9 %
 
+-- | A higher-kinded 'Logarithm'
 newtype FLogarithm f a = FLogarithm { runFLogarithm :: forall g. f g -> g a }
 
+-- | A higher-kinded 'Tab'
 newtype FTab g f = FTab { runFTab :: FLogarithm f ~> g }
 
 instance FFunctor (FTab g) where
@@ -69,9 +80,11 @@ instance FFunctor (FTab g) where
   {-# inline ffmap #-}
 
 class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
+  -- | A higher-kinded 'Log'
   type FLog f :: k -> Type
   type FLog f = DefaultFLog f
 
+  -- | A higher-kinded 'scatter'
   fscatter :: FFunctor w => (w % Element ~> r) -> (g ~> f) -> w g -> f r
   default fscatter
     :: (Generic1 f, FDistributive (Rep1 f), FFunctor w)
@@ -79,6 +92,7 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   fscatter = fscatterRep
   {-# inline fscatter #-}
 
+  -- | A higher-kinded 'tabulate'
   ftabulate :: (FLog f ~> a) -> f a
   default ftabulate
     :: (Generic1 f, DefaultFTabulate f)
@@ -86,6 +100,7 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   ftabulate = defaultFTabulate (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) 3))
   {-# inline ftabulate #-}
 
+  -- | A higher-kinded 'index'
   findex :: f a -> FLog f ~> a
   default findex
      :: (Generic1 f, DefaultFIndex f)
@@ -93,18 +108,22 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   findex = defaultFIndex (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) 3))
   {-# inline findex #-}
 
+-- | A higher-kinded 'distrib'
 fdistrib :: (FFunctor w, FDistributive f) => w f -> (w % Element ~> r) -> f r
 fdistrib w k = fscatter k id w
 {-# inline fdistrib #-}
 
+-- | A higher-kinded 'tabulateLogarithm'
 ftabulateLogarithm :: FDistributive f => (FLogarithm f ~> a) -> f a
 ftabulateLogarithm f = fdistrib (FTab f) $ \(FTab f') -> f' (FLogarithm runElement)
 {-# inline ftabulateLogarithm #-}
 
+-- | A higher-kinded 'indexLogarithm'
 findexLogarithm :: f a -> FLogarithm f ~> a
 findexLogarithm fa (FLogarithm k) = k fa
 {-# inline findexLogarithm #-}
 
+-- | A higher-kinded 'tabulateRep'
 ftabulateRep
   :: forall f a.
      (FDistributive (Rep1 f), Generic1 f, Coercible (FLog f) (FLog (Rep1 f)))
@@ -112,6 +131,7 @@ ftabulateRep
 ftabulateRep f = to1 $ ftabulate (\x -> f (coerce x))
 {-# inline ftabulateRep #-}
 
+-- | A higher-kinded 'indexRep'
 findexRep
   :: forall f a.
      (FDistributive (Rep1 f), Generic1 f, Coercible (FLog f) (FLog (Rep1 f)))
@@ -119,12 +139,14 @@ findexRep
 findexRep fa flog = findex (from1 fa) (coerce flog)
 {-# inline findexRep #-}
 
+-- | A higher-kinded 'scatterRep'
 fscatterRep
   :: (FDistributive (Rep1 f), Generic1 f, FFunctor w)
   => (w % Element ~> r) -> (g ~> f) -> w g -> f r
 fscatterRep k phi = to1 . fscatter k (from1 . phi)
 {-# inline fscatterRep #-}
 
+-- | A higher-kinded 'Tabulate'
 pattern FTabulate :: FDistributive f => (FLog f ~> a) -> f a
 pattern FTabulate i <- (findex -> i) where
   FTabulate i = ftabulate i
@@ -164,7 +186,7 @@ type DefaultFLog f = DefaultFLog' (ContainsSelfRec1 (Rep1 f) 3) f
 type DefaultFTabulate f = DefaultFTabulate' (ContainsSelfRec1 (Rep1 f) 3) f
 type DefaultFIndex f = DefaultFIndex' (ContainsSelfRec1 (Rep1 f) 3) f
 
--- | 
+-- | A higher-kinded 'distribute'
 --
 -- @
 -- 'fdistribute' = 'fcollect' 'id'
@@ -175,7 +197,8 @@ fdistribute
 fdistribute f = fdistrib (DCompose f) $ \(DCompose f') -> Compose $ fmap coerce f'
 {-# inline fdistribute #-}
 
--- |
+-- | A higher-kinded 'collect'
+--
 -- @
 -- 'fcollect' f = 'fdistribute' . 'fmap' f
 -- @
@@ -186,7 +209,8 @@ fcollect
 fcollect f fa = fdistrib (DCompose f) $ \(DCompose f') -> Compose $ fmap (coerce f') fa
 {-# inline fcollect #-}
 
--- |
+-- | A higher-kinded 'cotraverse'
+--
 -- @
 -- 'fcotraverse' f = 'fmap' f . 'fdistribute'
 -- @
@@ -270,7 +294,9 @@ deriving newtype instance FDistributive f => FDistributive (Monoid.Alt f)
 deriving newtype instance FDistributive f => FDistributive (Monoid.Ap f)
 #endif
 
+-- | A higher-kinded 'Dist'
 newtype FDist f a = FDist { runFDist :: f a }
+  deriving stock (Data, Generic, Generic1)
   deriving newtype (FFoldable)
 
 instance (FDistributive f, FTraversable f) => FTraversable (FDist f) where
@@ -292,6 +318,7 @@ instance FDistributive f => FZip (FDist f) where
   fzipWith = fzipWithDist
   {-# inline fzipWith #-}
 
+-- | A default definition of 'fzipWith' from 'FZip' in terms of 'FDistributive'
 fzipWithDist :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
 fzipWithDist f m n = fdistrib (D2 m n) $ \(D2 (Element m') (Element n')) -> f m' n'
 {-# inline fzipWithDist #-}
@@ -300,7 +327,46 @@ instance FDistributive f => FRepeat (FDist f) where
   frepeat = frepeatDist
   {-# inline frepeat #-}
 
+-- | A default definition of 'frepeat' from 'FRepeat' in terms of 'FDistributive'
 frepeatDist :: FDistributive f => (forall x. a x) -> f a
 frepeatDist ax = fscatter (\x -> runLimit (getConst x)) id (Const (Limit ax))
 -- frepeatDist a = fdistrib Proxy $ \_ -> a
 {-# inline frepeatDist #-}
+
+faskDist :: FDistributive f => f (FLog f)
+faskDist = ftabulate id
+
+ftraceDist :: FDistributive f => FLog f a -> f g -> g a
+ftraceDist x y = findex y x
+
+-- | We can convert a 'FLogarithm' of a 'FDistributive' 'FFunctor' to any choice of 'FLog', as the two forms are canonically isomorphic.
+--
+-- @
+-- 'findex' f . 'flogFromLogarithm' ≡ 'findexLogarithm' f
+-- 'ftabulate' (f . 'flogFromLogarithm') ≡ 'ftabulateLogarithm' f
+-- 'flogFromLogarithm' '.' 'flogToLogarithm' ≡ 'id'
+-- 'flogToLogarithm' '.' 'flogFromLogarithm' ≡ 'id'
+-- @
+flogFromLogarithm :: FDistributive f => FLogarithm f ~> FLog f
+flogFromLogarithm (FLogarithm f) = f faskDist
+{-# inline flogFromLogarithm #-}
+
+-- | We can convert any 'FLog' to a 'FLogarithm' as the two types are canonically isomorphic.
+--
+-- @
+-- 'findexLogarithm' f . 'flogToLogarithm' ≡ 'findex' f
+-- 'ftabulateLogarithm' (f . 'flogToLogarithm') ≡ 'ftabulate' f
+-- 'flogFromLogarithm' '.' 'flogToLogarithm' ≡ 'id'
+-- 'flogToLogarithm' '.' 'flogFromLogarithm' ≡ 'id'
+-- @
+flogToLogarithm :: FDistributive f => FLog f ~> FLogarithm f
+flogToLogarithm f = FLogarithm (ftraceDist f)
+{-# inline flogToLogarithm #-}
+
+{-
+type Lens' s a = forall f. Functor f => (a -> f a) -> s -> f s
+
+-- | For any 'FTraversable', each 'FLogarithm' identifies a 'Lens'.
+_flogarithm :: FTraversable t => FLogarithm t j -> Lens' (t f) (f a)
+-}
+

@@ -1,6 +1,8 @@
 {-# Language CPP #-}
 {-# Language DataKinds #-}
+{-# Language DeriveFunctor #-}
 {-# Language PatternSynonyms #-}
+{-# Language LambdaCase #-}
 {-# Language PolyKinds #-}
 {-# Language Safe #-}
 {-# Language TypeFamilies #-}
@@ -25,6 +27,11 @@ module Data.Distributive.Util
 , D4(..)
 , D5(..)
 , DBind(..)
+, Path(..)
+, Trail(..)
+, end
+, Evil(..)
+, runEvil
 ) where
 
 import Data.Distributive.Coerce
@@ -96,3 +103,38 @@ instance FFunctor (DBind x y) where
   ffmap f (DBind l r) = DBind (f l) (f . r)
   {-# inline ffmap #-}
 
+data Path = End | L Path | R Path deriving (Eq, Ord, Show, Read)
+
+-- This is not a legal 'Applicative', but it is used towards legal ends.
+
+newtype Trail a = Trail { runTrail :: (Path -> Path) -> a }
+  deriving Functor
+
+instance Applicative Trail where
+  pure = Trail . const
+  {-# inline pure #-}
+
+  fab <*> fa = Trail $ \k -> runTrail fab (k . L) $ runTrail fa (k . R)
+  {-# inline (<*>) #-}
+
+end :: Trail Path
+end = Trail $ \k -> k End
+{-# inline end #-}
+
+-- This is also not a legal 'Applicative', but it is used towards legal ends.
+
+data Evil a = Evil a (Path -> a)
+  deriving Functor
+
+instance Applicative Evil where
+  pure a = Evil a $ \_ -> a
+  {-# inline pure #-}
+  ~(Evil mb mg) <*> ~(Evil nb ng) = Evil (mb nb) $ \case
+    L xs -> mg xs nb
+    R xs -> mb (ng xs)
+    End -> undefined
+  {-# inline (<*>) #-}
+
+runEvil :: Evil a -> Path -> a
+runEvil (Evil _ mg) p = mg p
+{-# inline runEvil #-}

@@ -871,24 +871,6 @@ rightAdjunctDist :: Distributive u => (a -> u b) -> (a, Log u) -> b
 rightAdjunctDist f ~(a, k) = f a `index` k
 {-# inline rightAdjunctDist #-}
 
-data Path = End | L Path | R Path deriving (Eq, Ord, Show, Read)
-
--- This is not a legal 'Applicative', but it is used towards legal ends.
-
-newtype Trail a = Trail { runTrail :: (Path -> Path) -> a }
-  deriving Functor
-
-instance Applicative Trail where
-  pure = Trail . const
-  {-# inline pure #-}
-
-  fab <*> fa = Trail $ \k -> runTrail fab (k . L) $ runTrail fa (k . R)
-  {-# inline (<*>) #-}
-
-end :: Trail Path
-end = Trail $ \k -> k End
-{-# inline end #-}
-
 logPath :: (Distributive f, Traversable f) => Logarithm f -> Path
 logPath (Logarithm f) = f $ runTrail (traverse id $ pureDist end) id
 {-# inline logPath #-}
@@ -912,24 +894,6 @@ instance (Distributive f, Traversable f) => Ord (Logarithm f) where
   {-# inline (>) #-}
 
 type Lens' s a = forall f. Functor f => (a -> f a) -> s -> f s
-
--- This is also not a legal 'Applicative', but it is used towards legal ends.
-
-data Evil a = Evil a (Path -> a)
-  deriving Functor
-
-instance Applicative Evil where
-  pure a = Evil a $ \_ -> a
-  {-# inline pure #-}
-  ~(Evil mb mg) <*> ~(Evil nb ng) = Evil (mb nb) $ \case
-    L xs -> mg xs nb
-    R xs -> mb (ng xs)
-    End -> undefined
-  {-# inline (<*>) #-}
-
-runEvil :: Evil a -> Path -> a
-runEvil (Evil _ mg) p = mg p
-{-# inline runEvil #-}
 
 -- | For any 'Traversable', each logarithm identifies a 'Lens'.
 _logarithm :: Traversable f => Logarithm f -> Lens' (f a) a
