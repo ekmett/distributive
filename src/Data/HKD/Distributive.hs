@@ -26,6 +26,23 @@
 module Data.HKD.Distributive
 ( type (%)
 , FDistributive(..)
+, fdistribute
+, fdistrib
+, fcollect
+, fcotraverse
+, pattern FTabulate
+-- * DerivingVia
+, FDist(..)
+-- * FFunctor
+, ffmapDist
+-- * FRepeat
+, frepeatDist
+-- * FZip
+, fzipWithDist
+-- * Others
+, faskDist
+, ftraceDist
+-- * Default logarithms
 , FLogarithm(..)
 , FTab(..)
 , findexLogarithm
@@ -33,18 +50,8 @@ module Data.HKD.Distributive
 , ftabulateRep
 , findexRep
 , fscatterRep
-, fdistrib
-, fdistribute
-, fcollect
-, fcotraverse
-, pattern FTabulate
 
-, FDist(..)
-, ffmapDist
-, frepeatDist
-, fzipWithDist
-, faskDist
-, ftraceDist
+-- * Uniqueness of logarithms
 , flogToLogarithm
 , flogFromLogarithm
 ) where

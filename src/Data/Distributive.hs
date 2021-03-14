@@ -45,7 +45,7 @@
 --
 -- @
 -- data V3 a = V3 a a a
---   deriving stock (Eq, Ord, Functor, Foldable, Traversable, Generic1)
+--   deriving stock (Eq, Ord, Functor, Foldable, Traversable, Generic, Generic1, Data)
 --   deriving anyclass Distributive
 --   deriving ( Applicative, Monad, MonadFix, MonadZip
 --              MonadReader (Logarithm V3)
@@ -61,8 +61,9 @@
 -- implement tabulate and index directly, `Dist` can still be used.
 module Data.Distributive
 ( Distributive(..)
-, distrib
 , distribute
+, distrib
+, dist
 , collect
 , cotraverse
 , pattern Tabulate
@@ -297,6 +298,11 @@ type DefaultIndex f = DefaultIndex' (ContainsSelfRec1 (Rep1 f) 3) f
 distrib :: (Distributive f, FFunctor w) => w f -> (w Identity -> r) -> f r
 distrib w k = scatter k id w
 {-# inline distrib #-}
+
+-- | The essential essence of the new 'scatter' with administrative mapping removed.
+dist :: (Distributive f, FFunctor w) => w f -> f (w Identity)
+dist = scatter id id
+{-# inline dist #-}
 
 -- | Implements 'scatter' in terms of 'tabulate' and 'index' by the law
 -- that relates 'scatter' to its canonical implementation.
