@@ -37,6 +37,8 @@ pattern Coyoneda :: (b -> a) -> f b -> Coyoneda f a
 pattern Coyoneda ga flg <- CoyonedaDist (Tabulate ga) flg where
   Coyoneda ga flg = CoyonedaDist ga flg
 
+{-# complete Coyoneda :: Coyoneda #-}
+
 instance (Show1 f, Functor f) => Show1 (Coyoneda f) where
   liftShowsPrec sp sl d (CoyonedaDist f a) =
     showsUnaryWith (liftShowsPrec sp sl) "liftCoyoneda" d (fmap (index f) a)

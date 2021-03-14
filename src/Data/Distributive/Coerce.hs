@@ -20,3 +20,4 @@ pattern Coerce :: Coercible a b => a -> b
 pattern Coerce x <- (coerce -> x) where
   Coerce x = coerce x
 
+-- {-# complete Coerce :: b #-}

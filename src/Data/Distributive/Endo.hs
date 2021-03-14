@@ -29,13 +29,15 @@ newtype Endo f = EndoDist { runEndoDist :: f (Log f) }
 pattern Endo :: Distributive f => (Log f -> Log f) -> Endo f
 pattern Endo { appEndo } = EndoDist (Tabulate appEndo)
 
+{-# complete Endo :: Endo #-}
+
 instance Distributive f => Semigroup (Endo f) where
-  EndoDist f <> EndoDist g = EndoDist $ tabulate $ \x -> index f (index g x)
+  Endo f <> Endo g = Endo (f . g)
   {-# inline (<>) #-}
 
 instance Distributive f => Monoid (Endo f) where
 #if __GLASGOW_HASKELL__ < 804
-  EndoDist f `mappend` EndoDist g = EndoDist $ tabulate $ \x -> index f (index g x)
+  Endo f `mappend` Endo g = Endo (f . g)
   {-# inline mappend #-}
 #endif
   mempty = EndoDist askDist
