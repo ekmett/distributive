@@ -40,22 +40,22 @@ pattern Coyoneda ga flg <- CoyonedaDist (Tabulate ga) flg where
 {-# complete Coyoneda :: Coyoneda #-}
 
 instance (Show1 f, Functor f) => Show1 (Coyoneda f) where
-  liftShowsPrec sp sl d (CoyonedaDist f a) =
+  liftShowsPrec = \ sp sl d (CoyonedaDist f a) ->
     showsUnaryWith (liftShowsPrec sp sl) "liftCoyoneda" d (fmap (index f) a)
   {-# inline liftShowsPrec #-}
 
 instance Read1 f => Read1 (Coyoneda f) where
-  liftReadsPrec rp rl = readsData $
+  liftReadsPrec = \ rp rl -> readsData $
     readsUnaryWith (liftReadsPrec rp rl) "liftCoyoneda" liftCoyoneda
   {-# inline liftReadsPrec #-}
 
 instance Eq1 f => Eq1 (Coyoneda f) where
-  liftEq eq (CoyonedaDist f xs) (CoyonedaDist g ys) =
+  liftEq = \eq (CoyonedaDist f xs) (CoyonedaDist g ys) ->
     liftEq (\x y -> eq (index f x) (index g y)) xs ys
   {-# inline liftEq #-}
 
 instance Ord1 f => Ord1 (Coyoneda f) where
-  liftCompare cmp (CoyonedaDist f xs) (CoyonedaDist g ys) =
+  liftCompare = \cmp (CoyonedaDist f xs) (CoyonedaDist g ys) ->
     liftCompare (\x y -> cmp (index f x) (index g y)) xs ys
   {-# inline liftCompare #-}
 
@@ -78,31 +78,31 @@ instance Read (f a) => Read (Coyoneda f a) where
   {-# inline readPrec #-}
 
 instance Functor (Coyoneda f) where
-  fmap f (CoyonedaDist ga fl) = CoyonedaDist (fmap f ga) fl
+  fmap = \f (CoyonedaDist ga fl) -> CoyonedaDist (fmap f ga) fl
   {-# inline fmap #-}
 
 instance Applicative f => Applicative (Coyoneda f) where
-  pure a = CoyonedaDist (Identity a) (pure ())
+  pure = \a -> CoyonedaDist (Identity a) (pure ())
   {-# inline pure #-}
 
-  liftA2 abc (CoyonedaDist ga flg) (CoyonedaDist hb flh) = 
+  liftA2 = \abc (CoyonedaDist ga flg) (CoyonedaDist hb flh) ->
     CoyonedaDist (Compose $ fmap (\a -> fmap (abc a) hb) ga) (liftA2 (,) flg flh)
   {-# inline liftA2 #-}
 
-  CoyonedaDist gab flg <*> CoyonedaDist ha flh =
+  (<*>) = \(CoyonedaDist gab flg) (CoyonedaDist ha flh) ->
     CoyonedaDist (Compose $ fmap (\ab -> fmap ab ha) gab) (liftA2 (,) flg flh)
   {-# inline (<*>) #-}
 
-  CoyonedaDist ga flg <* CoyonedaDist _ flh = CoyonedaDist ga (flg <* flh)
+  (<*) = \(CoyonedaDist ga flg) (CoyonedaDist _ flh) -> CoyonedaDist ga (flg <* flh)
   {-# inline (<*) #-}
 
-  CoyonedaDist _ flg *> CoyonedaDist ha flh = CoyonedaDist ha (flg *> flh)
+  (*>) = \(CoyonedaDist _ flg) (CoyonedaDist ha flh) -> CoyonedaDist ha (flg *> flh)
   {-# inline (*>) #-}
 
 instance Alternative f => Alternative (Coyoneda f) where
   empty = liftCoyoneda empty
   {-# inline empty #-}
-  m <|> n = liftCoyoneda $ lowerCoyoneda m <|> lowerCoyoneda n
+  (<|>) = \m n -> liftCoyoneda $ lowerCoyoneda m <|> lowerCoyoneda n
   {-# inline (<|>) #-}
 
 instance MonadIO f => MonadIO (Coyoneda f) where
@@ -110,16 +110,17 @@ instance MonadIO f => MonadIO (Coyoneda f) where
   {-# inline liftIO #-}
 
 instance MonadZip f => MonadZip (Coyoneda f) where
-  mzipWith abc (CoyonedaDist ga flg) (CoyonedaDist hb flh) = 
+  mzipWith = \abc (CoyonedaDist ga flg) (CoyonedaDist hb flh) ->
     CoyonedaDist (Compose $ fmap (\a -> fmap (abc a) hb) ga) (mzipWith (,) flg flh)
   {-# inline mzipWith #-}
 
 instance Monad f => Monad (Coyoneda f) where
-  CoyonedaDist f v >>= k = lift (v >>= lowerCoyoneda . k . index f)
+  (>>=) = \(CoyonedaDist f v) k ->
+    lift (v >>= lowerCoyoneda . k . index f)
   {-# inline (>>=) #-}
 
 instance MonadFix f => MonadFix (Coyoneda f) where
-  mfix f = lift $ mfix (lowerCoyoneda . f)
+  mfix = \f -> lift $ mfix (lowerCoyoneda . f)
   {-# INLINE mfix #-}
 
 instance MonadTrans Coyoneda where
@@ -127,26 +128,26 @@ instance MonadTrans Coyoneda where
   {-# inline lift #-}
 
 instance Foldable f => Foldable (Coyoneda f) where
-  foldMap f (CoyonedaDist g flg) = foldMap (index g') flg where
-    g' = fmap f g
+  foldMap = \f (CoyonedaDist (fmap f -> g') flg) -> 
+    foldMap (index g') flg
   {-# inline foldMap #-}
 
 instance Traversable f => Traversable (Coyoneda f) where
-  traverse f (CoyonedaDist g flg) = liftCoyoneda <$> traverse (index g') flg where
-    g' = fmap f g
+  traverse = \f (CoyonedaDist (fmap f -> g') flg) -> 
+    liftCoyoneda <$> traverse (index g') flg where
   {-# inline traverse #-}
 
 instance MonadPlus f => MonadPlus (Coyoneda f) where
   mzero = lift mzero
   {-# inline mzero #-}
-  mplus m n = lift $ lowerCoyoneda m `mplus` lowerCoyoneda n
+  mplus = \m n -> lift $ lowerCoyoneda m `mplus` lowerCoyoneda n
   {-# inline mplus #-}
 
 instance Distributive f => Distributive (Coyoneda f) where
   type Log (Coyoneda f) = Log f
-  scatter wid2r h2cyf wh = liftCoyoneda (scatter wid2r (lowerCoyoneda . h2cyf) wh)
-  tabulate logf2a = CoyonedaDist (tabulate @f logf2a) askDist
-  index (CoyonedaDist g flg) lf = index g (index flg lf)
+  scatter = \wid2r h2cyf wh -> liftCoyoneda (scatter wid2r (lowerCoyoneda . h2cyf) wh)
+  tabulate = \logf2a -> CoyonedaDist (tabulate @f logf2a) askDist
+  index = \(CoyonedaDist g flg) lf -> index g (index flg lf)
   {-# inline scatter #-}
   {-# inline tabulate #-}
   {-# inline index #-}
@@ -160,13 +161,13 @@ liftCoyoneda = CoyonedaDist id
 {-# inline liftCoyoneda #-}
 
 lowerCoyoneda :: Functor f => Coyoneda f a -> f a
-lowerCoyoneda (CoyonedaDist f m) = fmap (index f) m
+lowerCoyoneda = \(CoyonedaDist f m) -> fmap (index f) m
 {-# inline lowerCoyoneda #-}
 
 -- | Lift a natural transformation from @f@ to @g@ to a natural transformation
 -- from @Coyoneda f@ to @Coyoneda g@.
 hoistCoyoneda :: (forall a. f a -> g a) -> (Coyoneda f b -> Coyoneda g b)
-hoistCoyoneda f (CoyonedaDist g x) = CoyonedaDist g (f x)
+hoistCoyoneda = \f (CoyonedaDist g x) -> CoyonedaDist g (f x)
 {-# inline hoistCoyoneda #-}
 
 -- instance ComonadTrans Coyoneda where lower (Coyoneda g fa) = fmap (index g) fa

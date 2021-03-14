@@ -109,14 +109,14 @@ pattern StateT { runStateT } = StateDistT (Tabulate runStateT)
 {-# complete StateT #-}
 
 mapStateT :: Functor g => (m (a, Log g) -> n (b, Log g)) -> StateT g m a -> StateT g n b
-mapStateT f = StateDistT #. fmap f .# runStateDistT
+mapStateT = \f -> StateDistT #. fmap f .# runStateDistT
 
 -- | Evaluate a state computation with the given initial state
 -- and return the final value, discarding the final state.
 --
 -- * @'evalStateT' m s = 'liftM' 'fst' ('runStateT' m s)@
 evalStateT :: (Distributive g, Monad m) => StateT g m a -> Log g -> m a
-evalStateT m s = do
+evalStateT = \m s -> do
   (a, _) <- runStateT m s
   return a
 
@@ -125,27 +125,27 @@ evalStateT m s = do
 --
 -- * @'execStateT' m s = 'liftM' 'snd' ('runStateT' m s)@
 execStateT :: (Distributive g, Monad m) => StateT g m a -> Log g -> m (Log g)
-execStateT m s = do
+execStateT = \m s -> do
   (_, s') <- runStateT m s
   return s'
 
 instance (Functor g, Functor m) => Functor (StateT g m) where
-  fmap f = StateDistT #. fmap (fmap (\ ~(a, s) -> (f a, s))) .# runStateDistT
+  fmap = \f -> StateDistT #. fmap (fmap (\ ~(a, s) -> (f a, s))) .# runStateDistT
 
 instance (Distributive g, Functor m, Monad m) => Applicative (StateT g m) where
   pure = StateDistT #. leftAdjunctDist return
-  mf <*> ma = mf >>= \f -> fmap f ma
+  (<*>) = \mf ma -> mf >>= \f -> fmap f ma
 
 instance (Distributive g, Monad m) => Monad (StateT g m) where
-  StateDistT m >>= f = StateDistT $ fmap (>>= rightAdjunctDist (runStateT . f)) m
+  (>>=) = \(StateDistT m) f -> StateDistT $ fmap (>>= rightAdjunctDist (runStateT . f)) m
 
 instance Distributive f => MonadTrans (StateT f) where
-  lift m = StateT $ \s -> liftM (\a -> (a, s)) m
+  lift = \m -> StateT $ \s -> liftM (\a -> (a, s)) m
 
 instance (Distributive g, Monad m, Log g ~ s) => MonadState s (StateT g m) where
   get = StateT $ \s -> pure (s, s)
-  put s = StateDistT $ pureDist $ pure ((),s)
-  state f = StateT $ pure . f
+  put = \s -> StateDistT $ pureDist $ pure ((),s)
+  state = \f -> StateT $ pure . f
 
 instance (Distributive g, MonadReader e m) => MonadReader e (StateT g m) where
   ask = lift ask
@@ -171,7 +171,7 @@ liftCallCC
   => ((((a,Log g) -> m (b,Log g)) -> m (a,Log g)) -> m (a,Log g))
   -> ((a -> StateT g m b) -> StateT g m a)
   -> StateT g m a
-liftCallCC callCC' f = StateT $ \s ->
+liftCallCC = \callCC' f -> StateT $ \s ->
   callCC' $ \c ->
   runStateT (f (\a -> StateDistT $ pureDist $ c (a, s))) s
 
@@ -182,6 +182,6 @@ liftCallCC'
   :: Distributive g => ((((a,Log g) -> m (b,Log g)) -> m (a,Log g)) -> m (a,Log g))
   -> ((a -> StateT g m b) -> StateT g m a)
   -> StateT g m a
-liftCallCC' callCC' f = StateT $ \s ->
+liftCallCC' = \callCC' f -> StateT $ \s ->
   callCC' $ \c ->
   runStateT (f (\a -> StateT $ \s' -> c (a, s'))) s

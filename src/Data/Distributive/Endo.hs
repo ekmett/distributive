@@ -32,12 +32,12 @@ pattern Endo { appEndo } = EndoDist (Tabulate appEndo)
 {-# complete Endo :: Endo #-}
 
 instance Distributive f => Semigroup (Endo f) where
-  Endo f <> Endo g = Endo (f . g)
+  (<>) = \f g -> Endo (appEndo f . appEndo g)
   {-# inline (<>) #-}
 
 instance Distributive f => Monoid (Endo f) where
 #if __GLASGOW_HASKELL__ < 804
-  Endo f `mappend` Endo g = Endo (f . g)
+  mappend = \f g -> Endo (appEndo f . appEndo g)
   {-# inline mappend #-}
 #endif
   mempty = EndoDist askDist

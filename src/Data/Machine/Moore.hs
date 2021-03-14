@@ -1,10 +1,11 @@
 {-# Language CPP #-}
-{-# Language DerivingStrategies #-}
-{-# Language DeriveGeneric #-}
-{-# Language TypeFamilies #-}
 {-# Language DeriveFunctor #-}
+{-# Language DeriveGeneric #-}
+{-# Language DerivingStrategies #-}
+{-# Language LambdaCase #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language Safe #-}
+{-# Language TypeFamilies #-}
 #if __GLASGOW_HASKELL__ >= 806
 {-# Language DerivingVia #-}
 #endif
@@ -60,9 +61,10 @@ data Moore a b = Moore b (a -> Moore a b)
 
 instance Distributive (Moore a) where
   type Log (Moore a) = [a]
-  index (Moore b _) [] = b
-  index (Moore _ k) (a:as) = index (k a) as
-  tabulate f = Moore (f []) $ \a -> tabulate (f.(a:))
+  index = \(Moore b k) -> \case 
+    [] -> b
+    (a:as) -> index (k a) as
+  tabulate = \f -> Moore (f []) $ \a -> tabulate (f.(a:))
 
 -- | Accumulate the input as a sequence.
 logMoore :: Monoid m => Moore m m
@@ -72,7 +74,7 @@ logMoore = h mempty where
 
 -- | Construct a Moore machine from a state valuation and transition function
 unfoldMoore :: (s -> b) -> (s -> a -> s) -> s -> Moore a b
-unfoldMoore f g s = Moore (f s) $ \a -> unfoldMoore f g (g s a)
+unfoldMoore = \f g s -> Moore (f s) $ \a -> unfoldMoore f g (g s a)
 {-# INLINE unfoldMoore #-}
 
 #if __GLASGOW_HASKELL__ < 806
@@ -83,9 +85,9 @@ instance Applicative (Moore a) where
   {-# inline (<*>) #-}
   liftA2 = liftD2
   {-# inline liftA2 #-}
-  m <* _ = m
+  (<*) = const
   {-# inline (<*) #-}
-  _ *> n = n
+  (*>) = \_ n -> n
   {-# inline (*>) #-}
 
 -- | slow diagonalization
@@ -110,14 +112,14 @@ instance MonadReader [a] (Moore a) where
   {-# inline local #-}
 
 instance Semigroup b => Semigroup (Moore a b) where
-  Moore x f <> Moore y g = Moore (x Semigroup.<> y) (f Semigroup.<> g)
+  (<>) = \(Moore x f) (Moore y g) -> Moore (x Semigroup.<> y) (f Semigroup.<> g)
   {-# inline (<>) #-}
 
 instance Monoid b => Monoid (Moore a b) where
   mempty = Moore mempty mempty
   {-# inline mempty #-}
 #if !(MIN_VERSION_base(4,11,0))
-  Moore x f `mappend` Moore y g = Moore (x `mappend` y) (f `mappend` g)
+  mappend = \(Moore x f) (Moore y g) -> Moore (x `mappend` y) (f `mappend` g)
   {-# inline mappend #-}
 #endif
 
@@ -190,5 +192,4 @@ instance Floating b => Floating (Moore a b) where
   {-# inline expm1 #-}
   {-# inline log1pexp #-}
   {-# inline log1mexp #-}
-
 #endif
