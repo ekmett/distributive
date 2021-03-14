@@ -309,6 +309,6 @@ instance FDistributive f => FRepeat (FDist f) where
   {-# inline frepeat #-}
 
 frepeatDist :: FDistributive f => (forall x. a x) -> f a
-frepeatDist ax = fscatter (runLimit .# getConst) id (Const (Limit ax))
+frepeatDist ax = fscatter (\x -> runLimit (getConst x)) id (Const (Limit ax))
 -- frepeatDist a = fdistrib Proxy $ \_ -> a
 {-# inline frepeatDist #-}

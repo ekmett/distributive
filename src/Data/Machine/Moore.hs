@@ -29,8 +29,9 @@ import Control.Monad.Fix
 import Control.Monad.Zip
 import Control.Monad.Reader.Class
 import Data.Distributive
-import qualified Data.Semigroup as Semigroup
+import qualified Data.Monoid as Monoid
 #if __GLASGOW_HASKELL__ < 804
+import qualified Data.Semigroup as Semigroup
 import Data.Semigroup (Semigroup(..))
 #endif
 import GHC.Generics
@@ -51,7 +52,7 @@ data Moore a b = Moore b (a -> Moore a b)
   deriving
     ( Semigroup
     , Monoid
-    ) via Ap (Moore a) b
+    ) via Monoid.Ap (Moore a) b
   deriving
     ( Num, Fractional, Floating
     )  via Dist (Moore a) b

@@ -33,8 +33,9 @@ import Data.Kind
 import Data.Type.Bool (type (||))
 import GHC.Generics
 import GHC.TypeLits (Nat, type (-))
-
-#if !(MIN_VERSION_base(4,11,0))
+#if MIN_VERSION_base(4,11,0)
+import Data.Functor
+#else
 (<&>) :: Functor f => f a -> (a -> b) -> f b
 m <&> f = fmap f m
 infixl 1 <&>
