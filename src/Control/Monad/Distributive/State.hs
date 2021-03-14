@@ -41,7 +41,7 @@ import Control.Monad.Reader.Class
 import Control.Monad.Writer.Class
 import Control.Monad.Trans.Class
 import Data.Distributive
-import Data.Distributive.Util
+import Data.Distributive.Coerce
 import Data.Functor.Identity
 
 -- | A memoized state monad parameterized by a 'Distributive' functor @g@, where

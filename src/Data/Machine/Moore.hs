@@ -3,6 +3,7 @@
 {-# Language DeriveGeneric #-}
 {-# Language TypeFamilies #-}
 {-# Language DeriveFunctor #-}
+{-# Language MultiParamTypeClasses #-}
 {-# Language Safe #-}
 #if __GLASGOW_HASKELL__ >= 806
 {-# Language DerivingVia #-}
@@ -28,9 +29,12 @@ import Control.Monad.Fix
 import Control.Monad.Zip
 import Control.Monad.Reader.Class
 import Data.Distributive
-import Data.Semigroup
-import Data.Monoid
+import qualified Data.Semigroup as Semigroup
+#if __GLASGOW_HASKELL__ < 804
+import Data.Semigroup (Semigroup(..))
+#endif
 import GHC.Generics
+import Numeric
 import Prelude
 
 -- data Moore a b where
@@ -101,13 +105,13 @@ instance MonadZip (Moore a) where
   {-# inline mzipWith #-}
 
 instance MonadReader [a] (Moore a) where
-  ask = askRep
+  ask = askDist
   {-# inline ask #-}
-  local = localRep
+  local = localDist
   {-# inline local #-}
 
 instance Semigroup b => Semigroup (Moore a b) where
-  Moore x f <> Moore y g = Moore (x <> y) (f <> g)
+  Moore x f <> Moore y g = Moore (x Semigroup.<> y) (f Semigroup.<> g)
   {-# inline (<>) #-}
 
 instance Monoid b => Monoid (Moore a b) where

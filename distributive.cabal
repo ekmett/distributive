@@ -57,16 +57,19 @@ library
     transformers >= 0.3 && < 0.6
 
   hs-source-dirs:  src
-  other-modules:   Data.Distributive.Util
-  exposed-modules: Data.Distributive
-                   Data.Distributive.Coyoneda
-                   Data.Distributive.Endo
-                   Data.Functor.Confusing
-                   Data.HKD
-                   Data.HKD.Distributive
-                   Data.Machine.Moore
-                   Control.Monad.Distributive.Reader
-                   Control.Monad.Distributive.State
+  other-modules:
+    Data.Distributive.Coerce
+    Data.Distributive.Util
+  exposed-modules:
+    Data.Distributive
+    Data.Distributive.Coyoneda
+    Data.Distributive.Endo
+    Data.Functor.Confusing
+    Data.HKD
+    Data.HKD.Distributive
+    Data.Machine.Moore
+    Control.Monad.Distributive.Reader
+    Control.Monad.Distributive.State
   --                 Data.Machine.Distributive.Moore
 
   if flag(tagged)

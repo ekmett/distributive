@@ -100,6 +100,7 @@ module Data.Distributive
   , mzipWithDist
   -- *** MonadReader
   , askDist
+  , localDist
   -- *** Comonad
   , extractDist, extractDistBy
   , extendDist, extendDistBy
@@ -126,10 +127,10 @@ import Control.Monad.Trans.Identity
 import Control.Monad.Zip
 import Data.Coerce
 import Data.Complex
+import Data.Distributive.Coerce
 import Data.Distributive.Util
 import Data.Foldable (fold)
 import Data.Function (on)
-import Data.Functor
 import Data.Functor.Classes
 import Data.Functor.Compose
 import Data.Functor.Identity
@@ -445,6 +446,7 @@ instance (Distributive f, Distributive g) => Distributive (Product f g) where
   index = indexRep
   tabulate = tabulateRep
   {-# inline tabulate #-}
+  {-# inline index #-}
 
 instance Distributive Proxy
 instance Distributive Identity
@@ -499,64 +501,14 @@ instance Distributive Monoid.Sum where
 
 #endif
 
-#if __GLASGOW_HASKELL__ >= 806
-
 deriving newtype instance Distributive f => Distributive (Backwards f)
 deriving newtype instance Distributive f => Distributive (Reverse f)
 deriving newtype instance Distributive f => Distributive (Monoid.Alt f)
-deriving newtype instance Distributive f => Distributive (Monoid.Ap f)
 instance Distributive Monoid.Dual
-
-#else
-
-instance Distributive f => Distributive (Backwards f) where
-  type Log (Backwards f) = Log f
-  scatter k f = coerce $ scatter k (forwards #. f)
-  index = index .# forwards
-  tabulate = Backwards #. tabulate
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
-
-instance Distributive f => Distributive (Reverse f) where
-  type Log (Reverse f) = Log f
-  scatter k f = coerce $ scatter k (getReverse #. f)
-  index = index .# getReverse
-  tabulate = Reverse #. tabulate
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
-
-instance Distributive f => Distributive (Monoid.Alt f) where
-  type Log (Monoid.Alt f) = Log f
-  scatter k f = coerce $ scatter k (Monoid.getAlt #. f)
-  index = index .# Monoid.getAlt
-  tabulate = Monoid.Alt #. tabulate
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
 
 #if MIN_VERSION_base(4,12,0)
 
-instance Distributive f => Distributive (Monoid.Ap f) where
-  type Log (Monoid.Ap f) = Log f
-  scatter k f = coerce $ scatter k (Monoid.getAp #. f)
-  index = index .# Monoid.getAp
-  tabulate = Monoid.Ap #. tabulate
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
-
-#endif
-
-instance Distributive Monoid.Dual where
-  type Log Monoid.Dual = ()
-  scatter k f = coerce $ k .  ffmap ((Identity . Monoid.getDual) #. f)
-  index x () = Monoid.getDual x
-  tabulate f = Monoid.Dual $ f ()
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
+deriving newtype instance Distributive f => Distributive (Monoid.Ap f)
 
 #endif
 
@@ -565,18 +517,7 @@ instance Distributive Semigroup.Last
 instance Distributive Semigroup.Min
 instance Distributive Semigroup.Max
 
-#if __GLASGOW_HASKELL__ >= 806
 deriving newtype instance (Distributive f, Monad f) => Distributive (WrappedMonad f)
-#else
-instance (Distributive f, Monad f) => Distributive (WrappedMonad f) where
-  type Log (WrappedMonad f) = Log f
-  scatter k f = coerce $ scatter k (unwrapMonad #. f)
-  index = index .# unwrapMonad
-  tabulate = WrapMonad #. tabulate
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
-#endif
 
 instance Distributive f => Distributive (Kleisli f a) where
   type Log (Kleisli f a) = (a, Log f)

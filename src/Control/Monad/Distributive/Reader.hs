@@ -41,7 +41,7 @@ import Control.Monad.Trans.Class
 import Control.Monad.IO.Class
 import Data.Coerce
 import Data.Distributive
-import Data.Distributive.Util
+import Data.Distributive.Coerce
 import Data.Functor.Identity
 import GHC.Generics
 

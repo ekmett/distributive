@@ -4,11 +4,14 @@
 {-# language GADTs #-}
 {-# language MultiParamTypeClasses #-}
 {-# language PolyKinds #-}
+{-# language StandaloneDeriving #-}
+{-# language DerivingStrategies #-}
+{-# Language GeneralizedNewtypeDeriving #-}
 {-# language RankNTypes #-}
 {-# language ScopedTypeVariables #-}
 {-# language Trustworthy #-}
 {-# language TypeOperators #-}
-#if !defined(HLINT) && MIN_VERSION_base(4,10,0) && __GLASGOW_HASKELL__ >= 708
+#if !defined(HLINT)
 {-# language LambdaCase #-}
 {-# language EmptyCase #-}
 #endif
@@ -54,44 +57,30 @@ module Data.HKD
 , Limit(..)
 ) where
 
-#if MIN_VERSION_base(4,9,0)
 import Data.Kind (Type)
-#else
-#define Type *
-#endif
-
 import Control.Applicative
+import Control.Applicative.Backwards
 import qualified Data.Monoid as Monoid
 import Data.Semigroup (Semigroup (..))
 import Data.Proxy (Proxy (..))
 import Data.Functor.Identity (Identity (..))
+import Data.Functor.Reverse
 import Data.Monoid (Monoid (..))
 
 import GHC.Generics
 import Data.Functor.Confusing
 
--- In older base:s types aren't PolyKinded
-#if MIN_VERSION_base(4,9,0)
-import Data.Coerce (Coercible, coerce)
+import Data.Coerce (coerce)
 import Data.Functor.Compose (Compose (..))
 import Data.Functor.Product (Product (..))
 import Data.Functor.Sum (Sum (..))
-#endif
 
 import Data.Some.GADT (Some (..), mapSome, foldSome)
 import qualified Data.Some.Newtype as N
 import qualified Data.Some.Church as C
 
-#if MIN_VERSION_base(4,9,0)
-(#.) :: Coercible b c => (b -> c) -> (a -> b) -> a -> c
-(#.) _ = coerce
-
-(.#) :: Coercible a b => (b -> c) -> (a -> b) -> a -> c
-(.#) f _ = coerce f
-
-infixr 9 #.
-infixr 8 .#
-#endif
+import Data.Distributive.Coerce
+import Unsafe.Coerce
 
 -------------------------------------------------------------------------------
 -- wiggly arrow
@@ -110,7 +99,6 @@ class FFunctor (t :: (k -> Type) -> Type) where
 instance FFunctor Proxy where
   ffmap _ Proxy = Proxy
 
-#if MIN_VERSION_base(4,9,0)
 instance FFunctor (Const a) where
   ffmap _ (Const a) = Const a
 
@@ -123,17 +111,12 @@ instance (FFunctor f, FFunctor g) => FFunctor (Product f g) where
 instance (FFunctor f, FFunctor g) => FFunctor (Sum f g) where
   ffmap f (InL g) = InL (ffmap f g)
   ffmap f (InR h) = InR (ffmap f h)
-#endif
 
-#if MIN_VERSION_base(4,10,0)
 instance FFunctor (K1 i a) where
   ffmap _ = coerce
 
-instance FFunctor f => FFunctor (M1 i c f) where
-  ffmap f = M1 #. ffmap f .# unM1
-
-instance FFunctor f => FFunctor (Rec1 f) where
-  ffmap f = Rec1 #. ffmap f .# unRec1
+deriving newtype instance FFunctor f => FFunctor (M1 i c f)
+deriving newtype instance FFunctor f => FFunctor (Rec1 f)
 
 instance FFunctor U1 where
   ffmap _ U1 = U1
@@ -152,7 +135,6 @@ instance (FFunctor f, FFunctor g) => FFunctor (f :*: g) where
 instance (FFunctor f, FFunctor g) => FFunctor (f :+: g) where
   ffmap f (L1 g) = L1 (ffmap f g)
   ffmap f (R1 h) = R1 (ffmap f h)
-#endif
 
 -------------------------------------------------------------------------------
 -- FFoldable
@@ -177,7 +159,6 @@ instance FFoldable Proxy where
   ffoldMap _ = Data.Monoid.mempty
   flengthAcc = const
 
-#if MIN_VERSION_base(4,9,0)
 instance FFoldable (Const a) where
   ffoldMap _ = mempty
   flengthAcc = const
@@ -192,9 +173,7 @@ instance (FFoldable f, FFoldable g) => FFoldable (Product f g) where
 instance (FFoldable f, FFoldable g) => FFoldable (Sum f g) where
   ffoldMap f (InL g) = ffoldMap f g
   ffoldMap f (InR h) = ffoldMap f h
-#endif
 
-#if MIN_VERSION_base(4,10,0)
 instance FFoldable V1 where
 #ifndef HLINT
   ffoldMap _ = \case
@@ -205,13 +184,8 @@ instance FFoldable (K1 i a) where
   ffoldMap _ = mempty
   flengthAcc = const
 
-instance FFoldable f => FFoldable (M1 i c f) where
-  ffoldMap f = ffoldMap f .# unM1
-  flengthAcc n = flengthAcc n .# unM1
-
-instance FFoldable f => FFoldable (Rec1 f) where
-  ffoldMap f = ffoldMap f .# unRec1
-  flengthAcc n = flengthAcc n .# unRec1
+deriving newtype instance FFoldable f => FFoldable (M1 i c f)
+deriving newtype instance FFoldable f => FFoldable (Rec1 f)
 
 instance FFoldable U1 where
   ffoldMap _ = mempty
@@ -229,7 +203,6 @@ instance (FFoldable f, FFoldable g) => FFoldable (f :+: g) where
   ffoldMap f (R1 h) = ffoldMap f h
   flengthAcc acc (L1 g) = flengthAcc acc g
   flengthAcc acc (R1 g) = flengthAcc acc g
-#endif
 
 -------------------------------------------------------------------------------
 -- FTraversable
@@ -253,7 +226,6 @@ fsequence = ftraverse (fmap Identity)
 instance FTraversable Proxy where
   ftraverse _ Proxy = pure Proxy
 
-#if MIN_VERSION_base(4,9,0)
 instance FTraversable (Const a) where
   ftraverse _ = pure .# (Const . getConst)
 
@@ -266,9 +238,7 @@ instance (FTraversable f, FTraversable g) => FTraversable (Product f g) where
 instance (FTraversable f, FTraversable g) => FTraversable (Sum f g) where
   ftraverse f (InL g) = InL <$> ftraverse f g
   ftraverse f (InR h) = InR <$> ftraverse f h
-#endif
 
-#if MIN_VERSION_base(4,10,0)
 instance FTraversable U1 where
   ftraverse _ U1 = pure U1
 
@@ -295,7 +265,6 @@ instance (FTraversable f, FTraversable g) => FTraversable (f :*: g) where
 instance (FTraversable f, FTraversable g) => FTraversable (f :+: g) where
   ftraverse f (L1 g) = L1 <$> ftraverse f g
   ftraverse f (R1 h) = R1 <$> ftraverse f h
-#endif
 
 -------------------------------------------------------------------------------
 -- FZip
@@ -331,7 +300,6 @@ instance FZip Limit where
 instance FRepeat Limit where
   frepeat x = Limit x
 
-#if MIN_VERSION_base(4,9,0)
 instance Data.Semigroup.Semigroup a => FZip (Const a) where
   fzipWith _ (Const a) (Const b) = Const (a <> b)
 
@@ -350,9 +318,7 @@ instance (Applicative f, FZip g) => FZip (Compose f g) where
 
 instance (Applicative f, FRepeat g) => FRepeat (Compose f g) where
   frepeat x = Compose (pure (frepeat x))
-#endif
 
-#if MIN_VERSION_base(4,10,0)
 instance FZip U1 where
   fzipWith _ _ _ =  U1
 
@@ -392,7 +358,6 @@ instance (Applicative f, FZip g) => FZip (f :.: g) where
 
 instance (Applicative f, FRepeat g) => FRepeat (f :.: g) where
   frepeat x = Comp1 (pure (frepeat x))
-#endif
 
 -------------------------------------------------------------------------------
 -- FContravariant
@@ -404,7 +369,6 @@ class FContravariant (t :: (k -> Type) -> Type) where
 instance FContravariant Proxy where
   fcontramap _ Proxy = Proxy
 
-#if MIN_VERSION_base(4,9,0)
 instance FContravariant (Const a) where
   fcontramap _ (Const a) = Const a
 
@@ -417,17 +381,12 @@ instance (FContravariant f, FContravariant g) => FContravariant (Product f g) wh
 instance (FContravariant f, FContravariant g) => FContravariant (Sum f g) where
   fcontramap f (InL g) = InL (fcontramap f g)
   fcontramap f (InR h) = InR (fcontramap f h)
-#endif
 
-#if MIN_VERSION_base(4,10,0)
 instance FContravariant (K1 i a) where
   fcontramap _ = coerce
 
-instance FContravariant f => FContravariant (M1 i c f) where
-  fcontramap f = M1 #. fcontramap f .# unM1
-
-instance FContravariant f => FContravariant (Rec1 f) where
-  fcontramap f = Rec1 #. fcontramap f .# unRec1
+deriving newtype instance FContravariant f => FContravariant (M1 i c f)
+deriving newtype instance FContravariant f => FContravariant (Rec1 f)
 
 instance FContravariant U1 where
   fcontramap _ U1 = U1
@@ -446,6 +405,43 @@ instance (FContravariant f, FContravariant g) => FContravariant (f :*: g) where
 instance (FContravariant f, FContravariant g) => FContravariant (f :+: g) where
   fcontramap f (L1 g) = L1 (fcontramap f g)
   fcontramap f (R1 h) = R1 (fcontramap f h)
+
+deriving newtype instance FFunctor f => FFunctor (Backwards f)
+deriving newtype instance FFunctor f => FFunctor (Reverse f)
+deriving newtype instance FFunctor f => FFunctor (Monoid.Alt f)
+deriving newtype instance FContravariant f => FContravariant (Backwards f)
+deriving newtype instance FContravariant f => FContravariant (Reverse f)
+deriving newtype instance FContravariant f => FContravariant (Monoid.Alt f)
+deriving newtype instance FZip f => FZip (Backwards f)
+deriving newtype instance FZip f => FZip (Reverse f)
+deriving newtype instance FZip f => FZip (Monoid.Alt f)
+deriving newtype instance FRepeat f => FRepeat (Backwards f)
+deriving newtype instance FRepeat f => FRepeat (Reverse f)
+deriving newtype instance FRepeat f => FRepeat (Monoid.Alt f)
+deriving newtype instance FFoldable f => FFoldable (Backwards f)
+deriving newtype instance FFoldable f => FFoldable (Monoid.Alt f)
+
+instance FFoldable f => FFoldable (Reverse f) where
+  ffoldMap f = Monoid.getDual #. ffoldMap (Monoid.Dual #. f)
+
+instance FTraversable f => FTraversable (Reverse f) where
+  ftraverse f = forwards #. fmap Reverse . ftraverse (Backwards #. f) .# getReverse
+
+instance FTraversable f => FTraversable (Backwards f) where
+  ftraverse f = fmap Backwards . ftraverse f .# forwards
+
+instance FTraversable f => FTraversable (Monoid.Alt f) where
+  ftraverse f = fmap Monoid.Alt . ftraverse f .# Monoid.getAlt 
+  
+#if MIN_VERSION_base(4,12,0)
+deriving newtype instance FFunctor f => FFunctor (Monoid.Ap f)
+deriving newtype instance FContravariant f => FContravariant (Monoid.Ap f)
+deriving newtype instance FZip f => FZip (Monoid.Ap f)
+deriving newtype instance FRepeat f => FRepeat (Monoid.Ap f)
+deriving newtype instance FFoldable f => FFoldable (Monoid.Ap f)
+
+instance FTraversable f => FTraversable (Monoid.Ap f) where
+  ftraverse f = fmap Monoid.Ap . ftraverse f .# Monoid.getAp
 #endif
 
 -------------------------------------------------------------------------------
@@ -521,6 +517,9 @@ instance FFunctor Limit where
 instance FFoldable Limit where
   ffoldMap f (Limit g) = f g
   flengthAcc len _ = len + 1
+
+instance FTraversable Limit where
+  ftraverse f (Limit m) = unsafeCoerce <$> f m
 
 -------------------------------------------------------------------------------
 -- Generic ftraverse

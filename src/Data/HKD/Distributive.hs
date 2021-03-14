@@ -3,6 +3,8 @@
 {-# Language DataKinds #-}
 {-# Language DefaultSignatures #-}
 {-# Language FlexibleContexts #-}
+{-# Language StandaloneDeriving #-}
+{-# Language DerivingStrategies #-}
 {-# Language LiberalTypeSynonyms #-}
 {-# Language FlexibleInstances #-}
 {-# Language KindSignatures #-}
@@ -14,22 +16,32 @@
 {-# Language Trustworthy #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
+{-# Language GeneralizedNewtypeDeriving #-}
 {-# Language UndecidableInstances #-}
 {-# Language UndecidableSuperClasses #-}
 {-# Language ViewPatterns #-}
 
 module Data.HKD.Distributive where
 
+import Control.Applicative
+import Control.Applicative.Backwards
+import Data.Distributive
+import Data.Distributive.Coerce
 import Data.Distributive.Util
 import Data.Functor.Compose
+import Data.Functor.Identity
+import Data.Functor.Product
+import Data.Functor.Reverse
+import qualified Data.Monoid as Monoid
 import Data.Kind
 import Data.HKD
+import Data.Void
 import Data.Proxy
 import GHC.Generics
 import Data.Coerce
 
-type (.) f g i = f (g i)
-infixr 9 .
+type (%) f g i = f (g i)
+infixr 9 %
 
 newtype FLogarithm f a = FLogarithm { runFLogarithm :: forall g. f g -> g a }
 
@@ -42,10 +54,10 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   type FLog f :: k -> Type
   type FLog f = DefaultFLog f
 
-  fscatter :: FFunctor w => (w . Element ~> r) -> (g ~> f) -> w g -> f r
+  fscatter :: FFunctor w => (w % Element ~> r) -> (g ~> f) -> w g -> f r
   default fscatter
     :: (Generic1 f, FDistributive (Rep1 f), FFunctor w)
-    => (w . Element ~> r) -> (g ~> f) -> w g -> f r
+    => (w % Element ~> r) -> (g ~> f) -> w g -> f r
   fscatter = fscatterRep
 
   ftabulate :: (FLog f ~> a) -> f a
@@ -62,7 +74,7 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   findex = defaultFIndex (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) 3))
   {-# inline findex #-}
 
-fdistrib :: (FFunctor w, FDistributive f) => w f -> (w . Element ~> r) -> f r
+fdistrib :: (FFunctor w, FDistributive f) => w f -> (w % Element ~> r) -> f r
 fdistrib w k = fscatter k id w
 
 ftabulateLogarithm :: FDistributive f => (FLogarithm f ~> a) -> f a
@@ -87,7 +99,7 @@ findexRep fa flog = findex (from1 fa) (coerce flog)
 
 fscatterRep
   :: (FDistributive (Rep1 f), Generic1 f, FFunctor w)
-  => (w . Element ~> r) -> (g ~> f) -> w g -> f r
+  => (w % Element ~> r) -> (g ~> f) -> w g -> f r
 fscatterRep k phi = to1 . fscatter k (from1 . phi)
 {-# inline fscatterRep #-}
 
@@ -165,7 +177,7 @@ fcollect f fa = fdistrib (DCompose f) $ \(DCompose f') -> Compose $ fmap (coerce
 -- @
 fcotraverse
   :: (Functor f, FDistributive g)
-  => (f . a ~> b)
+  => (f % a ~> b)
   -> f (g a) -> g b
 fcotraverse fab fga = fdistrib (DCompose fga) $ \(DCompose f') -> fab (fmap coerce f')
 {-# inline fcotraverse #-}
@@ -182,16 +194,76 @@ instance (FDistributive f, FDistributive g) => FDistributive (f :*: g) where
   {-# inline ftabulate #-}
   {-# inline findex #-}
 
-{-
 instance FDistributive f => FDistributive (M1 i c f) where
   type FLog (M1 i c f) = FLog f
   fscatter k f = M1 #. fscatter k (unM1 #. f)
-  findex = findex .# unM1
-  ftabulate = M1 #. ftabulate
+  findex (M1 f) = findex f
+  ftabulate f = M1 $ ftabulate f
   {-# inline fscatter #-}
   {-# inline ftabulate #-}
   {-# inline findex #-}
+
+instance FDistributive U1 where
+  type FLog U1 = Const Void
+  fscatter _ _ _ = U1
+  ftabulate _ = U1
+  findex _ = absurd .# getConst
+  {-# inline fscatter #-}
+  {-# inline ftabulate #-}
+  {-# inline findex #-}
+
+instance FDistributive f => FDistributive (Rec1 f) where
+  type FLog (Rec1 f) = FLog f
+  fscatter k f = Rec1 #. fscatter k (unRec1 #. f)
+  findex (Rec1 f) = findex f
+  ftabulate f = Rec1 $ ftabulate f
+  {-# inline fscatter #-}
+  {-# inline ftabulate #-}
+  {-# inline findex #-}
+
+{-
+instance Distributive Par1 where
+  type Log Par1 = ()
+  scatter k f = coerce $ k .  ffmap ((Identity . unPar1) #. f)
+  index x () = unPar1 x
+  tabulate f = Par1 $ f ()
+  {-# inline scatter #-}
+  {-# inline tabulate #-}
+  {-# inline index #-}
 -}
 
+instance (Distributive f, FDistributive g) => FDistributive (f :.: g) where
+  type FLog (f :.: g) = Const (Log f) :*: FLog g
+  fscatter k phi wg = Comp1 $ scatter (fscatter k coerce .# runAppCompose) id (AppCompose (ffmap phi wg))
+  findex (Comp1 f) (Const x :*: y) = findex (index f x) y
+  ftabulate f = Comp1 $ tabulate $ \i -> ftabulate $ \j -> f (Const i :*: j)
+  {-# inline fscatter #-}
+  {-# inline ftabulate #-}
+  {-# inline findex #-}
+
+instance (Distributive f, FDistributive g) => FDistributive (Compose f g) where
+  type FLog (Compose f g) = FLog (Rep1 (Compose f g))
+  findex = findexRep
+  ftabulate = ftabulateRep
+  {-# inline ftabulate #-}
+  {-# inline findex #-}
+
+instance (FDistributive f, FDistributive g) => FDistributive (Product f g) where
+  type FLog (Product f g) = FLog (Rep1 (Product f g))
+  findex = findexRep
+  {-# inline findex #-}
+  ftabulate = ftabulateRep
+  {-# inline ftabulate #-}
+
+instance FDistributive Proxy
+
+deriving newtype instance FDistributive f => FDistributive (Backwards f)
+deriving newtype instance FDistributive f => FDistributive (Reverse f)
+deriving newtype instance FDistributive f => FDistributive (Monoid.Alt f)
+
+#if MIN_VERSION_base(4,12,0)
+-- Ap was only added in base 4.12 ghc 8.6
+deriving newtype instance FDistributive f => FDistributive (Monoid.Ap f)
+#endif
 
 newtype FDist f a = FDist { runFDist :: f a }

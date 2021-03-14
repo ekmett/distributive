@@ -1,11 +1,12 @@
-{-# Language PatternSynonyms #-}
-{-# Language TypeOperators #-}
-{-# Language TypeFamilies #-}
-{-# Language Trustworthy #-}
-{-# Language ViewPatterns #-}
-{-# Language UndecidableInstances #-}
+{-# Language CPP #-}
 {-# Language DataKinds #-}
+{-# Language PatternSynonyms #-}
 {-# Language PolyKinds #-}
+{-# Language Safe #-}
+{-# Language TypeFamilies #-}
+{-# Language TypeOperators #-}
+{-# Language UndecidableInstances #-}
+{-# Language ViewPatterns #-}
 -- |
 -- Module      : Data.Distributive.Util
 -- Copyright   : (C) 2021 Edward Kmett
@@ -14,24 +15,30 @@
 -- Maintainer  : Edward Kmett <ekmett@gmail.com>
 -- Stability   : provisional
 -- Portability : non-portable (ghc 8.0+)
-module Data.Distributive.Util where
+module Data.Distributive.Util
+  ( (<&>)
+  , type ContainsSelfRec1
+  , DCompose(..)
+  , AppCompose(..)
+  , D2(..)
+  , D3(..)
+  , D4(..)
+  , D5(..)
+  , DBind(..)
+  ) where
 
-import Data.Coerce
+import Data.Distributive.Coerce
 import Data.HKD
 import Data.Kind
 import Data.Type.Bool (type (||))
 import GHC.Generics
 import GHC.TypeLits (Nat, type (-))
 
-(#.) :: Coercible b c => (b -> c) -> (a -> b) -> a -> c
-(#.) _ = coerce
-{-# inline (#.) #-}
-
-(.#) :: Coercible a b => (b -> c) -> (a -> b) -> a -> c
-(.#) f _ = coerce f
-{-# inline (.#) #-}
-
-infixr 9 #., .#
+#if !(MIN_VERSION_base(4,11,0))
+(<&>) :: Functor f => f a -> (a -> b) -> f b
+m <&> f = fmap f m
+infixl 1 <&>
+#endif
 
 -- Does Generic Rep contain 'Rec1'?
 --
@@ -52,11 +59,6 @@ type family ContainsSelfRec1 (f :: j -> Type) (i :: Nat) :: Bool where
   --
   -- An alternative with non-linear match is suboptimal in other ways
   ContainsSelfRec1 (Rec1 f)   i = ContainsSelfRec1 (Rep1 f) (i - 1)
-
-
-pattern Coerce :: Coercible a b => a -> b
-pattern Coerce x <- (coerce -> x) where
-  Coerce x = coerce x
 
 newtype DCompose a f g = DCompose { runDCompose :: f (g a) }
 instance Functor f => FFunctor (DCompose a f) where
