@@ -23,16 +23,13 @@ module Data.HKD.Distributive where
 import Data.Distributive.Util
 import Data.Functor.Compose
 import Data.Kind
-import Data.HKD hiding (type (~>))
+import Data.HKD
 import Data.Proxy
 import GHC.Generics
 import Data.Coerce
 
 type (.) f g i = f (g i)
 infixr 9 .
-
-type f ~> g = forall i. f i -> g i
-infixr 0 ~>
 
 newtype FLogarithm f a = FLogarithm { runFLogarithm :: forall g. f g -> g a }
 
