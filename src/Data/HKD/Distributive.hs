@@ -66,6 +66,7 @@ newtype FTab g f = FTab { runFTab :: FLogarithm f ~> g }
 
 instance FFunctor (FTab g) where
   ffmap f (FTab k) = FTab (\(FLogarithm j) -> k $ FLogarithm (j . f))
+  {-# inline ffmap #-}
 
 class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   type FLog f :: k -> Type
@@ -76,6 +77,7 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
     :: (Generic1 f, FDistributive (Rep1 f), FFunctor w)
     => (w % Element ~> r) -> (g ~> f) -> w g -> f r
   fscatter = fscatterRep
+  {-# inline fscatter #-}
 
   ftabulate :: (FLog f ~> a) -> f a
   default ftabulate
@@ -93,12 +95,15 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
 
 fdistrib :: (FFunctor w, FDistributive f) => w f -> (w % Element ~> r) -> f r
 fdistrib w k = fscatter k id w
+{-# inline fdistrib #-}
 
 ftabulateLogarithm :: FDistributive f => (FLogarithm f ~> a) -> f a
 ftabulateLogarithm f = fdistrib (FTab f) $ \(FTab f') -> f' (FLogarithm runElement)
+{-# inline ftabulateLogarithm #-}
 
 findexLogarithm :: f a -> FLogarithm f ~> a
 findexLogarithm fa (FLogarithm k) = k fa
+{-# inline findexLogarithm #-}
 
 ftabulateRep
   :: forall f a.
@@ -159,14 +164,10 @@ type DefaultFLog f = DefaultFLog' (ContainsSelfRec1 (Rep1 f) 3) f
 type DefaultFTabulate f = DefaultFTabulate' (ContainsSelfRec1 (Rep1 f) 3) f
 type DefaultFIndex f = DefaultFIndex' (ContainsSelfRec1 (Rep1 f) 3) f
 
--- | The dual of 'Data.Traversable.sequenceA'
---
--- >>> distribute [(+1),(+2)] 1
--- [2,3]
+-- | 
 --
 -- @
--- 'distribute' = 'collect' 'id'
--- 'distribute' . 'distribute' = 'id'
+-- 'fdistribute' = 'fcollect' 'id'
 -- @
 fdistribute
   :: (Functor f, FDistributive g)
@@ -176,9 +177,7 @@ fdistribute f = fdistrib (DCompose f) $ \(DCompose f') -> Compose $ fmap coerce 
 
 -- |
 -- @
--- 'collect' f = 'distribute' . 'fmap' f
--- 'fmap' f = 'runIdentity' . 'collect' ('Identity' . f)
--- 'fmap' 'distribute' . 'collect' f = 'getCompose' . 'collect' ('Compose' . f)
+-- 'fcollect' f = 'fdistribute' . 'fmap' f
 -- @
 fcollect
   :: (Functor f, FDistributive g)
@@ -187,10 +186,9 @@ fcollect
 fcollect f fa = fdistrib (DCompose f) $ \(DCompose f') -> Compose $ fmap (coerce f') fa
 {-# inline fcollect #-}
 
--- | The dual of 'Data.Traversable.traverse'
---
+-- |
 -- @
--- 'cotraverse' f = 'fmap' f . 'distribute'
+-- 'fcotraverse' f = 'fmap' f . 'fdistribute'
 -- @
 fcotraverse
   :: (Functor f, FDistributive g)
@@ -237,17 +235,6 @@ instance FDistributive f => FDistributive (Rec1 f) where
   {-# inline fscatter #-}
   {-# inline ftabulate #-}
   {-# inline findex #-}
-
-{-
-instance Distributive Par1 where
-  type Log Par1 = ()
-  scatter k f = coerce $ k .  ffmap ((Identity . unPar1) #. f)
-  index x () = unPar1 x
-  tabulate f = Par1 $ f ()
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
--}
 
 instance (Distributive f, FDistributive g) => FDistributive (f :.: g) where
   type FLog (f :.: g) = Const (Log f) :*: FLog g
