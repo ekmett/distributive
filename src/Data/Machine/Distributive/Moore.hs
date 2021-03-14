@@ -19,11 +19,11 @@
 -- <http://en.wikipedia.org/wiki/Moore_machine>
 
 module Data.Machine.Distributive.Moore
-  ( Moore(..)
-  , logMoore
-  , unfoldMoore
-  , wrapMoore
-  ) where
+( Moore(..)
+, logMoore
+, unfoldMoore
+, wrapMoore
+) where
 
 import Control.Applicative
 import Control.Monad.Fix

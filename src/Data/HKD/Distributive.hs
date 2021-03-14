@@ -22,23 +22,23 @@
 {-# Language ViewPatterns #-}
 
 module Data.HKD.Distributive
-  ( type (%)
-  , FLogarithm(..)
-  , FTab(..)
-  , findexLogarithm
-  , ftabulateLogarithm
-  , ftabulateRep
-  , findexRep
-  , fscatterRep
-  , fdistrib
-  , fdistribute
-  , fcollect
-  , fcotraverse
-  , pattern FTabulate
+( type (%)
+, FLogarithm(..)
+, FTab(..)
+, findexLogarithm
+, ftabulateLogarithm
+, ftabulateRep
+, findexRep
+, fscatterRep
+, fdistrib
+, fdistribute
+, fcollect
+, fcotraverse
+, pattern FTabulate
 
-  , FDist(..)
-  , ffmapDist
-  ) where
+, FDist(..)
+, ffmapDist
+) where
 
 import Control.Applicative
 import Control.Applicative.Backwards

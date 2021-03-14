@@ -9,13 +9,13 @@
 -- https://arxiv.org/abs/1805.06798
 --
 module Data.Functor.Confusing
-  ( confusing, LensLike
-  , iconfusing, IxLensLike
-  , fconfusing, FLensLike
-  , liftCurriedYoneda, yap
-  , Curried (..), liftCurried, lowerCurried
-  , Yoneda (..), liftYoneda, lowerYoneda
-  ) where
+( confusing, LensLike
+, iconfusing, IxLensLike
+, fconfusing, FLensLike
+, liftCurriedYoneda, yap
+, Curried (..), liftCurried, lowerCurried
+, Yoneda (..), liftYoneda, lowerYoneda
+) where
 
 #ifndef MIN_VERSION_base
 #define MIN_VERSION_base(x,y,z) 0
