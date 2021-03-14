@@ -45,13 +45,14 @@
 --
 -- @
 -- data V3 a = V3 a a a
---   deriving stock (Functor, Foldable, Traversable, Generic1)
+--   deriving stock (Eq, Ord, Functor, Foldable, Traversable, Generic1)
 --   deriving anyclass Distributive
 --   deriving ( Applicative, Monad, MonadFix, MonadZip
 --              MonadReader (Logarithm V3)
 --            , FunctorWithIndex (Logarithm V3)
 --            , FoldableWithIndex (Logarithm V3)
 --            , TraversableWithIndex (Logarithm V3)
+--            , Eq1, Ord1
 --            ) via Dist V3
 --   deriving (Num, Fractional, Floating) via Dist V3 a
 -- @
