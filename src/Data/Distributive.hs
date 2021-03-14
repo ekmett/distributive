@@ -312,6 +312,30 @@ tabulateLogarithm f =
   distrib (Tab f) $ \(Tab f') -> f' (Logarithm runIdentity)
 {-# inline tabulateLogarithm #-}
 
+-- | A logarithm.
+--
+-- Recall that function arrow, @->@ is an exponential object. If we take @f = (->) r@, then
+--
+-- @
+-- 'Logarithm' ((->) r) ≅ forall a. (r -> a) -> a ≅ r
+-- @
+--
+-- and this works for all 'Distributive' / 'Representable' functors.
+--
+newtype Logarithm f = Logarithm { runLogarithm :: forall a. f a -> a }
+
+indexLogarithm :: f a -> Logarithm f -> a
+indexLogarithm fa (Logarithm fa2a) = fa2a fa
+
+instance FContravariant Logarithm where
+  fcontramap f g = Logarithm (runLogarithm g . f)
+
+-- | Tabulation.
+newtype Tab a f = Tab { runTab :: Logarithm f -> a }
+
+instance FFunctor (Tab a) where
+  ffmap f g = Tab (runTab g . fcontramap f)
+
 -- | The dual of 'Data.Traversable.sequenceA'
 --
 -- >>> distribute [(+1),(+2)] 1
