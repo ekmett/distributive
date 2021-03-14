@@ -12,8 +12,8 @@
 --
 -- Tabulated endomorphisms
 module Data.Distributive.Endo 
-  ( Endo(.., Endo, appEndo)
-  ) where
+( Endo(.., Endo, appEndo)
+) where
 
 import Data.Distributive
 

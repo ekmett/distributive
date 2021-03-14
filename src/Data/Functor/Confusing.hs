@@ -95,9 +95,10 @@ instance Applicative f => Applicative (Yoneda f) where
   Yoneda m <*> Yoneda n = Yoneda (\f -> m (f .) <*> n id)
   {-# inline (<*>) #-}
 
--- This is modified version of part of @generic-lens@ library
+-- This is modified version of part of @generic-lens@ library.
 --
 -- Copyright (c) 2018, Csongor Kiss
+-- Copyright (C) 2012-16 Edward Kmett, Eric Mertens
 -- 
 -- All rights reserved.
 -- 

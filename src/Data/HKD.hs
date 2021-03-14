@@ -16,7 +16,7 @@
 {-# language EmptyCase #-}
 #endif
 -- |
--- Copyright :  (c) 2019 Edward Kmett, 2019 Oleg Grenrus
+-- Copyright :  (c) 2019-2021 Edward Kmett, 2019 Oleg Grenrus
 -- License   :  BSD-2-Clause OR Apache-2.0
 -- Maintainer:  Oleg Grenrus <oleg.grenrus@iki.fi>
 -- Stability :  experimental

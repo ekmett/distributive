@@ -10,12 +10,12 @@
 {-# Language ViewPatterns #-}
 {-# Language Safe #-}
 module Data.Distributive.Coyoneda
-  ( Coyoneda(CoyonedaDist, Coyoneda)
-  , liftCoyonedaDist
-  , liftCoyoneda
-  , lowerCoyoneda
-  , hoistCoyoneda
-  ) where
+( Coyoneda(CoyonedaDist, Coyoneda)
+, liftCoyonedaDist
+, liftCoyoneda
+, lowerCoyoneda
+, hoistCoyoneda
+) where
 
 import Control.Applicative
 import Control.Monad

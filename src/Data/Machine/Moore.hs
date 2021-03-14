@@ -19,10 +19,10 @@
 -- <http://en.wikipedia.org/wiki/Moore_machine>
 
 module Data.Machine.Moore
-  ( Moore(..)
-  , logMoore
-  , unfoldMoore
-  ) where
+( Moore(..)
+, logMoore
+, unfoldMoore
+) where
 
 import Control.Applicative
 import Control.Monad.Fix
@@ -71,10 +71,8 @@ logMoore = h mempty where
 {-# INLINE logMoore #-}
 
 -- | Construct a Moore machine from a state valuation and transition function
-unfoldMoore :: (s -> (b, a -> s)) -> s -> Moore a b
-unfoldMoore f = go where
-  go s = case f s of
-    (b, g) -> Moore b (go . g)
+unfoldMoore :: (s -> b) -> (s -> a -> s) -> s -> Moore a b
+unfoldMoore f g s = Moore (f s) $ \a -> unfoldMoore f g (g s a)
 {-# INLINE unfoldMoore #-}
 
 #if __GLASGOW_HASKELL__ < 806

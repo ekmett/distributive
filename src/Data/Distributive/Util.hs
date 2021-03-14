@@ -16,16 +16,16 @@
 -- Stability   : provisional
 -- Portability : non-portable (ghc 8.0+)
 module Data.Distributive.Util
-  ( (<&>)
-  , type ContainsSelfRec1
-  , DCompose(..)
-  , AppCompose(..)
-  , D2(..)
-  , D3(..)
-  , D4(..)
-  , D5(..)
-  , DBind(..)
-  ) where
+( (<&>)
+, type ContainsSelfRec1
+, DCompose(..)
+, AppCompose(..)
+, D2(..)
+, D3(..)
+, D4(..)
+, D5(..)
+, DBind(..)
+) where
 
 import Data.Distributive.Coerce
 import Data.HKD

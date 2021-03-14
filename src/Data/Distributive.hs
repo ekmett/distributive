@@ -59,64 +59,64 @@
 -- If you want a special form for the 'Log' of your functor you can
 -- implement tabulate and index directly, `Dist` can still be used.
 module Data.Distributive
-  ( Distributive(..)
-  , distrib
-  , distribute
-  , collect
-  , cotraverse
-  , pattern Tabulate
-  -- * Default definitions
-  -- ** via Generics
-  , tabulateRep
-  , indexRep
-  , scatterRep
-  -- ** Simple Scattering
-  , scatterDefault
-  -- ** Canonical 'Logarithm's
-  , Logarithm(..)
-  , tabulateLogarithm
-  , indexLogarithm
-  , _logarithm
-  , logFromLogarithm
-  , logToLogarithm
-  , _log
-  -- ** via DerivingVia
-  , Dist(..)
-  -- ** for other classes
-  -- *** Functor
-  , fmapDist
-  -- *** Applicative
-  , pureDist
-  , apDist
-  , liftD2
-  , liftD3
-  , liftD4
-  , liftD5
-  -- *** Monad
-  , bindDist
-  -- *** MonadFix
-  , mfixDist
-  -- *** MonadZip
-  , mzipWithDist
-  -- *** MonadReader
-  , askDist
-  , localDist
-  -- *** Comonad
-  , extractDist, extractDistBy
-  , extendDist, extendDistBy
-  , duplicateDist, duplicateDistBy
-  -- *** ComonadTrace
-  , traceDist
-  -- *** FunctorWithIndex
-  , imapDist
-  -- *** FoldableWithIndex
-  , ifoldMapDist
-  -- *** TraversableWithIndex
-  , itraverseDist
-  -- *** As right adjoints
-  , leftAdjunctDist
-  , rightAdjunctDist
-  ) where
+( Distributive(..)
+, distrib
+, distribute
+, collect
+, cotraverse
+, pattern Tabulate
+-- * Default definitions
+-- ** via Generics
+, tabulateRep
+, indexRep
+, scatterRep
+-- ** Simple Scattering
+, scatterDefault
+-- ** Canonical 'Logarithm's
+, Logarithm(..)
+, tabulateLogarithm
+, indexLogarithm
+, _logarithm
+, logFromLogarithm
+, logToLogarithm
+, _log
+-- ** via DerivingVia
+, Dist(..)
+-- ** for other classes
+-- *** Functor
+, fmapDist
+-- *** Applicative
+, pureDist
+, apDist
+, liftD2
+, liftD3
+, liftD4
+, liftD5
+-- *** Monad
+, bindDist
+-- *** MonadFix
+, mfixDist
+-- *** MonadZip
+, mzipWithDist
+-- *** MonadReader
+, askDist
+, localDist
+-- *** Comonad
+, extractDist, extractDistBy
+, extendDist, extendDistBy
+, duplicateDist, duplicateDistBy
+-- *** ComonadTrace
+, traceDist
+-- *** FunctorWithIndex
+, imapDist
+-- *** FoldableWithIndex
+, ifoldMapDist
+-- *** TraversableWithIndex
+, itraverseDist
+-- *** As right adjoints
+, leftAdjunctDist
+, rightAdjunctDist
+) where
 
 import Control.Applicative
 import Control.Applicative.Backwards
