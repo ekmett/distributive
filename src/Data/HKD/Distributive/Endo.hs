@@ -35,12 +35,12 @@ pattern FEndo { appFEndo } = FEndoDist (FTabulate appFEndo)
 {-# complete FEndo #-}
 
 instance FDistributive f => Semigroup (FEndo f) where
-  FEndo f <> FEndo g = FEndo (f . g)
+  (<>) = \ f g -> FEndo (appFEndo f . appFEndo g)
   {-# inline (<>) #-}
 
 instance FDistributive f => Monoid (FEndo f) where
 #if __GLASGOW_HASKELL__ < 804
-  FEndo f `mappend` FEndo g = FEndo (f . g)
+  mappend = \f g -> FEndo (appFEndo f . appFEndo g)
   {-# inline mappend #-}
 #endif
   mempty = FEndoDist faskDist
