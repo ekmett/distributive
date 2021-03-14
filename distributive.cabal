@@ -10,7 +10,7 @@ stability:     provisional
 homepage:      http://github.com/ekmett/distributive/
 bug-reports:   http://github.com/ekmett/distributive/issues
 copyright:     Copyright 2011-2021 Edward A. Kmett,
-               Copyright 2018 Aaron Vargo,
+               Copyright 2017-2021 Aaron Vargo,
                Copyright 2021 Oleg Grenrus
 synopsis:      Distributive functors -- Dual to Traversable
 description:   Distributive functors -- Dual to @Traversable@
