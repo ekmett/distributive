@@ -52,7 +52,7 @@ library
   build-depends:
     base         >= 4.10 && < 5,
     base-orphans >= 0.5.2 && < 1,
-    hkd          >= 0.1 && < 0.2,
+    some,
     mtl          >= 2.2 && < 2.3,
     transformers >= 0.3 && < 0.6
 
@@ -61,6 +61,9 @@ library
   exposed-modules: Data.Distributive
                    Data.Distributive.Coyoneda
                    Data.Distributive.Endo
+                   Data.Functor.Confusing
+                   Data.HKD
+                   Data.HKD.Distributive
                    Data.Machine.Moore
                    Control.Monad.Distributive.Reader
                    Control.Monad.Distributive.State

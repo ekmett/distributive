@@ -143,9 +143,7 @@ import Data.Ord (Down(..))
 import Data.Orphans ()
 import Data.Proxy
 import Data.Void
-import Data.Type.Bool (type (||))
 import GHC.Generics
-import GHC.TypeLits (Nat, type (-))
 import Numeric
 
 #if __GLASGOW_HASKELL__ < 804
@@ -246,26 +244,6 @@ pattern Tabulate i <- (index -> i) where
   Tabulate i = tabulate i
 
 -- * Generic derivation
-
--- Does Generic Rep contain 'Rec1'?
---
--- This is a Hack. If we loop i (= 3) times we declared we are recursive.
-type family ContainsSelfRec1 (f :: Type -> Type) (i :: Nat) :: Bool where
-  ContainsSelfRec1 _          0 = 'True
-  ContainsSelfRec1 (K1 _ _)   i = 'False
-  ContainsSelfRec1 (M1 _ _ f) i = ContainsSelfRec1 f i
-  ContainsSelfRec1 U1         i = 'False
-  ContainsSelfRec1 V1         i = 'False
-  ContainsSelfRec1 Par1       _ = 'False
-  ContainsSelfRec1 (f :*: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
-  ContainsSelfRec1 (f :+: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
-  ContainsSelfRec1 (f :.: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
-
-  -- this clause is a hack. If pieces @f@ is built from are not 'Generic1',
-  -- this will get stuck.
-  --
-  -- An alternative with non-linear match is suboptimal in other ways
-  ContainsSelfRec1 (Rec1 f)   i = ContainsSelfRec1 (Rep1 f) (i - 1)
 
 type family DefaultLog' (containsRec1 :: Bool) f :: Type where
   DefaultLog' 'True  f = Logarithm f

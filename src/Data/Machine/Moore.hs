@@ -40,19 +40,19 @@ import Prelude
 data Moore a b = Moore b (a -> Moore a b)
   deriving stock (Functor, Generic1)
 #if __GLASGOW_HASKELL__ >= 806
-  deriving 
+  deriving
     ( Applicative, Monad, MonadFix
     , MonadZip, MonadReader [a]
     ) via Dist (Moore a)
-  deriving 
+  deriving
     ( Semigroup
     , Monoid
     ) via Ap (Moore a) b
   deriving
-    ( Num, Fractional, Floating 
+    ( Num, Fractional, Floating
     )  via Dist (Moore a) b
 #endif
-  
+
 instance Distributive (Moore a) where
   type Log (Moore a) = [a]
   index (Moore b _) [] = b

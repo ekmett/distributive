@@ -20,8 +20,9 @@
 
 module Data.Machine.Distributive.Moore
   ( Moore(..)
-  -- , logMoore
-  -- , unfoldMoore
+  , logMoore
+  , unfoldMoore
+  , wrapMoore
   ) where
 
 import Control.Applicative
@@ -37,65 +38,80 @@ import Prelude
 
 -- type role Moore representational representational
 data Moore a b where
-  Moore :: Distributive f => f b -> (a -> Endo f) -> Log f -> Moore a b
+    Moore :: Distributive f => f b -> (a -> Endo f) -> Log f -> Moore a b
+  deriving (Monad, MonadFix, MonadReader [a]) via (Dist (Moore a)
 
 instance Functor (Moore a) where
   fmap f (Moore k g s) = Moore (fmap f k) g s
+  a <$ _ = Moore (Identity a) (\_ -> Identity ()) ()
 
 instance Distributive (Moore a) where
   type Log (Moore a) = [a]
-  index (Moore k g s0) = k . foldl (\s a -> appEndo (g a) s) s0 
+  index (Moore k g s0) = k . foldl (\s a -> appEndo (g a) s) s0
   tabulate f = Moore f (Endo . (:)) []
   scatter = scatterRep
-  
-{-
--- | Accumulate the input as a sequence.
-logMoore :: Monoid m => Moore m m
-logMoore = h mempty where
-  h m = Moore m (\a -> h (m `mappend` a))
-{-# INLINE logMoore #-}
 
--- | Construct a Moore machine from a state valuation and transition function
-unfoldMoore :: (s -> (b, a -> s)) -> s -> Moore a b
-unfoldMoore f = go where
-  go s = case f s of
-    (b, g) -> Moore b (go . g)
-{-# INLINE unfoldMoore #-}
--}
-
-#if __GLASGOW_HASKELL__ < 806
 instance Applicative (Moore a) where
-  pure = pureDist
+  pure a = Moore (Identity a) (\_ -> Identity ()) ()
   {-# inline pure #-}
-  (<*>) = apDist
-  {-# inline (<*>) #-}
-  liftA2 = liftD2
+  Moore kf gf zf <*> Moore ka ga za = Moore
+    (Compose $ (<$> ka) <$> kf)
+    (\a -> let EndoDist x = gf a
+               EndoDist y = ga a
+           in  EndoDist (Compose $ (\lx -> ((,) lx) <$> y) <$> x))
+    (zf, za)
+  liftA2 f (Moore ka ga za) (Moore kb gb zb) = Moore
+    (Compose $ (\a -> (f a <$> kb)) <$> ka)
+    (\i -> let EndoDist x = ga i
+               EndoDist y = gb i
+           in  EndoDist (Compose $ (\lx -> ((,) lx) <$> y) <$> x))
+    (za, zb)
   {-# inline liftA2 #-}
+  _ *> m = m
+  {-# inline (*>) #-}
   m <* _ = m
   {-# inline (<*) #-}
-  _ *> n = n
-  {-# inline (*>) #-}
 
--- | slow diagonalization
+instance MonadZip (Moore a) where
+  mzipWith = liftA2
+  {-# inline mzipWith #-}
+
+wrapMoore :: b -> (a -> Moore a b) -> Moore a b
+wrapMoore first step1 = Moore (maybe first (\(Moore k _ s) -> k s)) step Nothing where
+  step a = Endo $ \s -> Just $ case s of
+    Nothing -> step1 a
+    Moore k g z -> Moore k g $ appEndo (g a) z
+
+
+#if __GLASGOW_HASKELL__ < 806
 instance Monad (Moore a) where
   (>>=) = bindDist
   {-# inline (>>=) #-}
   (>>) = (*>)
   {-# inline (>>) #-}
 
+instance MonadReader (Moore a) where
+  ask = askDist
+  {-# inline ask #-}
+  local = localDist
+  {-# inline local #-}
+
 instance MonadFix (Moore a) where
   mfix = mfixDist
   {-# inline mfix #-}
+#endif
 
-instance MonadZip (Moore a) where
-  mzipWith = mzipWithDist
-  {-# inline mzipWith #-}
+-- | Accumulate the input as a sequence.
+logMoore :: Monoid m => Moore m m
+logMoore = Moore id mappend mempty
+{-# INLINE logMoore #-}
+
+-- | Construct a Moore machine from a state valuation and transition function
+unfoldMoore :: (s -> b) -> (s -> a -> s) -> s -> Moore a b
+unfoldMoore = Moore
+{-# INLINE unfoldMoore #-}
 
 instance MonadReader [a] (Moore a) where
-  ask = askRep
-  {-# inline ask #-}
-  local = localRep
-  {-# inline local #-}
 
 instance Semigroup b => Semigroup (Moore a b) where
   Moore x f <> Moore y g = Moore (x <> y) (f <> g)
@@ -179,4 +195,3 @@ instance Floating b => Floating (Moore a b) where
   {-# inline log1pexp #-}
   {-# inline log1mexp #-}
 
-#endif

@@ -1,7 +1,11 @@
 {-# Language PatternSynonyms #-}
 {-# Language TypeOperators #-}
+{-# Language TypeFamilies #-}
 {-# Language Trustworthy #-}
 {-# Language ViewPatterns #-}
+{-# Language UndecidableInstances #-}
+{-# Language DataKinds #-}
+{-# Language PolyKinds #-}
 -- |
 -- Module      : Data.Distributive.Util
 -- Copyright   : (C) 2021 Edward Kmett
@@ -14,7 +18,10 @@ module Data.Distributive.Util where
 
 import Data.Coerce
 import Data.HKD
+import Data.Kind
+import Data.Type.Bool (type (||))
 import GHC.Generics
+import GHC.TypeLits (Nat, type (-))
 
 (#.) :: Coercible b c => (b -> c) -> (a -> b) -> a -> c
 (#.) _ = coerce
@@ -25,6 +32,27 @@ import GHC.Generics
 {-# inline (.#) #-}
 
 infixr 9 #., .#
+
+-- Does Generic Rep contain 'Rec1'?
+--
+-- This is a Hack. If we loop i (= 3) times we declared we are recursive.
+type family ContainsSelfRec1 (f :: j -> Type) (i :: Nat) :: Bool where
+  ContainsSelfRec1 _          0 = 'True
+  ContainsSelfRec1 (K1 _ _)   i = 'False
+  ContainsSelfRec1 (M1 _ _ f) i = ContainsSelfRec1 f i
+  ContainsSelfRec1 U1         i = 'False
+  ContainsSelfRec1 V1         i = 'False
+  ContainsSelfRec1 Par1       _ = 'False
+  ContainsSelfRec1 (f :*: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
+  ContainsSelfRec1 (f :+: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
+  ContainsSelfRec1 (f :.: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
+
+  -- this clause is a hack. If pieces @f@ is built from are not 'Generic1',
+  -- this will get stuck.
+  --
+  -- An alternative with non-linear match is suboptimal in other ways
+  ContainsSelfRec1 (Rec1 f)   i = ContainsSelfRec1 (Rep1 f) (i - 1)
+
 
 pattern Coerce :: Coercible a b => a -> b
 pattern Coerce x <- (coerce -> x) where
