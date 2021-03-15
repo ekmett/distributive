@@ -983,10 +983,17 @@ logToLogarithm = \f -> Logarithm (traceDist f)
 {-# inline logToLogarithm #-}
 
 -- | For any 'Traversable' 'Distributive' each 'Log' determines a 'Lens'.
+--
+-- @ 
+-- '_log' f = '_logarithm' ('logToLogarithm' f)
+-- @
 _log :: (Traversable f, Distributive f) => Log f -> Lens' (f a) a
-_log = \f -> _logarithm (logToLogarithm f)
+_log = \lg a2ga fa ->
+  case index (runTrail (traverse (\a -> (a,) <$> end) fa) id) lg of
+    (a, p) -> a2ga a <&> \a' -> runEvil (traverse (\a'' -> Evil a'' (const a')) fa) p
 {-# inline _log #-}
 
+-- | Construct the lens using @'Eq' ('Log' f)@ instead of with @'Traversable' f@
 _logEq :: (Distributive f, Eq (Log f)) => Log f -> Lens' (f a) a
 _logEq = \i a2ga fa -> a2ga (index fa i) <&> \a' -> imapDist (\j a -> if i == j then a' else a) fa
 {-# inline _logEq #-}

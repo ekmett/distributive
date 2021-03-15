@@ -508,6 +508,13 @@ _flog = \i a2ga tf ->
     FPath a p -> a2ga a <&> \a' -> runEvil (ftraverse (\a'' -> Evil a'' (const (unsafeCoerce a'))) tf) p
 {-# inline _flog #-}
 
+-- | Construct the lens for a logarithm using @'GEq' ('FLog' t)@ instead of with @'FTraversable' t@
+_flogGEq :: (FDistributive t, GEq (FLog t)) => FLog t a -> Lens' (t f) (f a)
+_flogGEq = \i a2ga fa -> a2ga (findex fa i) <&> \a' -> imapFDist (\j a -> case geq i j of
+  Just Refl -> a'
+  Nothing -> a) fa
+{-# inline _flogGEq #-}
+
 imapFDist
   :: FDistributive f
   => (forall x. FLog f x -> a x -> b x) -> f a -> f b
