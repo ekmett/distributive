@@ -56,6 +56,9 @@ import Data.Distributive.Coerce
 import Data.Functor.Identity
 import Data.HKD
 import GHC.Generics
+#if MIN_VERSION_base(4,12,0)
+import Data.Functor.Contravariant
+#endif
 
 type Reader f = ReaderT f Identity
 
@@ -198,11 +201,7 @@ instance (Distributive f, Alternative m) => Alternative (ReaderT f m) where
   (<|>) = \(ReaderDistT fm) (ReaderDistT fn) -> ReaderDistT (liftD2 (<|>) fm fn)
   {-# inline (<|>) #-}
 
-instance (Distributive f, MonadPlus m) => MonadPlus (ReaderT f m) where
-  mzero = liftReaderT mzero
-  {-# inline mzero #-}
-  mplus = \(ReaderDistT fm) (ReaderDistT fn) -> ReaderDistT (liftD2 mplus fm fn)
-  {-# inline mplus #-}
+instance (Distributive f, MonadPlus m) => MonadPlus (ReaderT f m)
 
 instance (Distributive f, MonadFix m) => MonadFix (ReaderT f m) where
   mfix = \f -> ReaderDistT $ distrib (DCompReaderT f) $ mfix . coerce
@@ -211,3 +210,9 @@ instance (Distributive f, MonadFix m) => MonadFix (ReaderT f m) where
 instance (Distributive f, MonadZip m) => MonadZip (ReaderT f m) where
   mzipWith = \f (ReaderDistT m) (ReaderDistT n) -> ReaderDistT $ liftD2 (mzipWith f) m n
   {-# inline mzipWith #-}
+
+#if MIN_VERSION_base(4,12,0)
+instance (Distributive f, Contravariant m) => Contravariant (ReaderT f m) where
+  contramap f (ReaderDistT m) = ReaderDistT $ contramap f <$> m
+  {-# INLINE contramap #-}
+#endif
