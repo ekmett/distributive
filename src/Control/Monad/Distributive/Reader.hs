@@ -42,6 +42,7 @@ import Control.Applicative
 import Control.Monad
 import Control.Monad.Cont.Class
 import Control.Monad.Error.Class
+import Control.Monad.Fail
 import Control.Monad.Fix
 import Control.Monad.Zip
 import Control.Monad.IO.Class
@@ -102,12 +103,12 @@ instance (Distributive f, Monad m) => Monad (ReaderT f m) where
     ReaderDistT $ liftD2 (>>=) fm $ distribute (runReaderDistT . f)
   {-# inline (>>=) #-}
 #if !(MIN_VERSION_base(4,13,0))
-  fail = lift . fail
+  fail = lift . Control.Monad.fail
   {-# inline fail #-}
 #endif
 
 instance (Distributive f, MonadFail m) => MonadFail (ReaderT f m) where
-  fail = lift . fail
+  fail = lift . Control.Monad.Fail.fail
   {-# inline fail #-}
 
 instance (Distributive f, Monad m, Log f ~ e) => MonadReader e (ReaderT f m) where
