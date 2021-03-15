@@ -27,7 +27,6 @@ module Data.Distributive.Util
 , D4(..)
 , D5(..)
 , DBind(..)
---, DCatch(..)
 , Path(..)
 , Trail(..)
 , end
@@ -103,13 +102,6 @@ data DBind x y f = DBind (f x) (x -> f y)
 instance FFunctor (DBind x y) where
   ffmap f (DBind l r) = DBind (f l) (f . r)
   {-# inline ffmap #-}
-
-{-
-data DCatch x e f = DCatch (f x) (e -> f x)
-instance FFunctor (DCatch x y) where
-  ffmap f (DCatch l r) = DCatch (f l) (f . r)
-  {-# inline ffmap #-}
--}
 
 data Path = End | L Path | R Path deriving (Eq, Ord, Show, Read)
 
