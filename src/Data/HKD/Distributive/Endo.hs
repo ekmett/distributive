@@ -43,6 +43,6 @@ instance FDistributive f => Monoid (FEndo f) where
   mappend = \f g -> FEndo (appFEndo f . appFEndo g)
   {-# inline mappend #-}
 #endif
-  mempty = FEndoDist faskDist
+  mempty = FEndoDist faskFDist
   {-# inline mempty #-}
 

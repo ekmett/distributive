@@ -36,29 +36,29 @@ module Data.HKD.Distributive
 -- * DerivingVia
 , FDist(..)
 -- * FFunctor
-, ffmapDist
+, ffmapFDist
 -- * FRepeat
-, frepeatDist
+, frepeatFDist
 -- * FZip
-, fzipWithDist
+, fzipWithFDist
 -- * Others
-, faskDist
-, ftraceDist
+, faskFDist
+, ftraceFDist
 , imapFDist
 , ifoldMapFDist
 , itraverseFDist
 -- * Default logarithms
 , FLogarithm(..)
 , FTab(..)
-, findexLogarithm
-, ftabulateLogarithm
+, findexFLogarithm
+, ftabulateFLogarithm
 , ftabulateRep
 , findexRep
 , fscatterRep
 
 -- * Uniqueness of logarithms
-, flogToLogarithm
-, flogFromLogarithm
+, flogToFLogarithm
+, flogFromFLogarithm
 
 -- * Logarithm lens
 , _flogarithm
@@ -142,15 +142,15 @@ fdistrib = \ w k -> fscatter k id w
 {-# inline fdistrib #-}
 
 -- | A higher-kinded 'tabulateLogarithm'
-ftabulateLogarithm :: FDistributive f => (FLogarithm f ~> a) -> f a
-ftabulateLogarithm
+ftabulateFLogarithm :: FDistributive f => (FLogarithm f ~> a) -> f a
+ftabulateFLogarithm
   = \f -> fdistrib (FTab f) $ \(FTab f') -> f' (FLogarithm runElement)
-{-# inline ftabulateLogarithm #-}
+{-# inline ftabulateFLogarithm #-}
 
 -- | A higher-kinded 'indexLogarithm'
-findexLogarithm :: f a -> FLogarithm f ~> a
-findexLogarithm = \fa (FLogarithm k) -> k fa
-{-# inline findexLogarithm #-}
+findexFLogarithm :: f a -> FLogarithm f ~> a
+findexFLogarithm = \fa (FLogarithm k) -> k fa
+{-# inline findexFLogarithm #-}
 
 -- | A higher-kinded 'tabulateRep'
 ftabulateRep
@@ -193,7 +193,7 @@ class DefaultFImplC containsRec1 f => DefaultFTabulate' (containsRec1 :: Bool) f
   defaultFTabulate :: Proxy containsRec1 -> (FLog f ~> a) -> f a
 
 instance DefaultFImplC 'True f => DefaultFTabulate' 'True f where
-  defaultFTabulate = \_ -> ftabulateLogarithm
+  defaultFTabulate = \_ -> ftabulateFLogarithm
   {-# inline defaultFTabulate #-}
 
 instance DefaultFImplC 'False f => DefaultFTabulate' 'False f where
@@ -204,7 +204,7 @@ class DefaultFImplC containsRec1 f => DefaultFIndex' (containsRec1 :: Bool) f wh
   defaultFIndex :: Proxy containsRec1 -> f a -> FLog f ~> a
 
 instance DefaultFImplC 'True f => DefaultFIndex' 'True f where
-  defaultFIndex = \_ -> findexLogarithm
+  defaultFIndex = \_ -> findexFLogarithm
   {-# inline defaultFIndex #-}
 
 instance DefaultFImplC 'False f => DefaultFIndex' 'False f where
@@ -336,39 +336,39 @@ instance (FDistributive f, FTraversable f) => FTraversable (FDist f) where
 deriving newtype instance FDistributive f => FDistributive (FDist f)
 
 -- | A default definition for 'ffmap' from 'FFunctor' in terms of 'FDistributive'
-ffmapDist :: FDistributive f => (a ~> b) -> f a -> f b
-ffmapDist = \f -> fscatter (f .# (runElement . runElement)) id .# Element
-{-# inline ffmapDist #-}
+ffmapFDist :: FDistributive f => (a ~> b) -> f a -> f b
+ffmapFDist = \f -> fscatter (f .# (runElement . runElement)) id .# Element
+{-# inline ffmapFDist #-}
 
 instance FDistributive f => FFunctor (FDist f) where
-  ffmap = ffmapDist
+  ffmap = ffmapFDist
   {-# inline ffmap #-}
 
 instance FDistributive f => FZip (FDist f) where
-  fzipWith = fzipWithDist
+  fzipWith = fzipWithFDist
   {-# inline fzipWith #-}
 
 -- | A default definition of 'fzipWith' from 'FZip' in terms of 'FDistributive'
-fzipWithDist :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
-fzipWithDist = \f m n ->
+fzipWithFDist :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
+fzipWithFDist = \f m n ->
   fdistrib (D2 m n) $ \(D2 (Element m') (Element n')) -> f m' n'
-{-# inline fzipWithDist #-}
+{-# inline fzipWithFDist #-}
 
 instance FDistributive f => FRepeat (FDist f) where
-  frepeat = frepeatDist
+  frepeat = frepeatFDist
   {-# inline frepeat #-}
 
 -- | A default definition of 'frepeat' from 'FRepeat' in terms of 'FDistributive'
-frepeatDist :: FDistributive f => (forall x. a x) -> f a
-frepeatDist = \ax -> fscatter (\x -> runLimit (getConst x)) id (Const (Limit ax))
+frepeatFDist :: FDistributive f => (forall x. a x) -> f a
+frepeatFDist = \ax -> fscatter (\x -> runLimit (getConst x)) id (Const (Limit ax))
 -- frepeatDist a = fdistrib Proxy $ \_ -> a
-{-# inline frepeatDist #-}
+{-# inline frepeatFDist #-}
 
-faskDist :: FDistributive f => f (FLog f)
-faskDist = ftabulate id
+faskFDist :: FDistributive f => f (FLog f)
+faskFDist = ftabulate id
 
-ftraceDist :: FDistributive f => FLog f a -> f g -> g a
-ftraceDist = \x y -> findex y x
+ftraceFDist :: FDistributive f => FLog f a -> f g -> g a
+ftraceFDist = \x y -> findex y x
 
 -- | We can convert a 'FLogarithm' of a 'FDistributive' 'FFunctor' to any choice of 'FLog', as the two forms are canonically isomorphic.
 --
@@ -378,9 +378,9 @@ ftraceDist = \x y -> findex y x
 -- 'flogFromLogarithm' '.' 'flogToLogarithm' ≡ 'id'
 -- 'flogToLogarithm' '.' 'flogFromLogarithm' ≡ 'id'
 -- @
-flogFromLogarithm :: FDistributive f => FLogarithm f ~> FLog f
-flogFromLogarithm = \(FLogarithm f) -> f faskDist
-{-# inline flogFromLogarithm #-}
+flogFromFLogarithm :: FDistributive f => FLogarithm f ~> FLog f
+flogFromFLogarithm = \(FLogarithm f) -> f faskFDist
+{-# inline flogFromFLogarithm #-}
 
 -- | We can convert any 'FLog' to a 'FLogarithm' as the two types are canonically isomorphic.
 --
@@ -390,9 +390,9 @@ flogFromLogarithm = \(FLogarithm f) -> f faskDist
 -- 'flogFromLogarithm' '.' 'flogToLogarithm' ≡ 'id'
 -- 'flogToLogarithm' '.' 'flogFromLogarithm' ≡ 'id'
 -- @
-flogToLogarithm :: FDistributive f => FLog f ~> FLogarithm f
-flogToLogarithm = \f -> FLogarithm (ftraceDist f)
-{-# inline flogToLogarithm #-}
+flogToFLogarithm :: FDistributive f => FLog f ~> FLogarithm f
+flogToFLogarithm = \f -> FLogarithm (ftraceFDist f)
+{-# inline flogToFLogarithm #-}
 
 -------------------------------------------------------------------------------
 -- LKD
@@ -457,7 +457,7 @@ lowerLogarithm = \(FLogarithm f) -> Logarithm $ getConst #. f .# runLKD
 {-# inline lowerLogarithm #-}
 
 liftLogarithm :: FDistributive f => Logarithm (LKD f) -> Some (FLogarithm f)
-liftLogarithm = \(Logarithm f) -> f $ LKD $ ftabulateLogarithm (Const #. Some)
+liftLogarithm = \(Logarithm f) -> f $ LKD $ ftabulateFLogarithm (Const #. Some)
 {-# inline liftLogarithm #-}
 
 instance (FTraversable f, FDistributive f) => Eq (FLogarithm f a) where
