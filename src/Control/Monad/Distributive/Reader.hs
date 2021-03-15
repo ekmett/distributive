@@ -55,12 +55,10 @@ import Control.Monad.Writer.Class as Writer
 import Data.Coerce
 import Data.Distributive
 import Data.Distributive.Coerce
+import Data.Functor.Contravariant
 import Data.Functor.Identity
 import Data.HKD
 import GHC.Generics
-#if MIN_VERSION_base(4,12,0)
-import Data.Functor.Contravariant
-#endif
 
 type Reader f = ReaderT f Identity
 
@@ -214,8 +212,6 @@ instance (Distributive f, MonadZip m) => MonadZip (ReaderT f m) where
   mzipWith = \f (ReaderDistT m) -> ReaderDistT #. liftD2 (mzipWith f) m .# runReaderDistT
   {-# inline mzipWith #-}
 
-#if MIN_VERSION_base(4,12,0)
 instance (Distributive f, Contravariant m) => Contravariant (ReaderT f m) where
   contramap = \f -> ReaderDistT #. fmap (contramap f) .# runReaderDistT
   {-# INLINE contramap #-}
-#endif

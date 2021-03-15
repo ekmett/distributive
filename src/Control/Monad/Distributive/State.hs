@@ -53,9 +53,7 @@ import Data.Coerce
 import Data.Distributive
 import Data.Distributive.Coerce
 import Data.Distributive.Util
-#if MIN_VERSION_base(4,12,0)
 import Data.Functor.Contravariant
-#endif
 import Data.Functor.Identity
 import Data.HKD
 
@@ -271,8 +269,6 @@ instance (Distributive f, MonadFix m) => MonadFix (StateT f m) where
     StateDistT $ distrib (DCompose (runStateDistT #. f)) $ \f' -> mfix (coerce f' . fst)
   {-# inline mfix #-}
 
-#if MIN_VERSION_base(4,12,0)
 instance (Distributive f, Contravariant m) => Contravariant (StateT f m) where
   contramap = \f (StateDistT m) -> StateDistT $ contramap (\ ~(a, s') -> (f a, s')) <$> m
   {-# inline contramap #-}
-#endif

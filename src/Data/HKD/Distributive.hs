@@ -81,9 +81,7 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
-#if MIN_VERSION_base(4,12,0)
 import Data.Functor.Contravariant
-#endif
 import Data.GADT.Compare
 import qualified Data.Monoid as Monoid
 import Data.Kind
@@ -427,11 +425,8 @@ instance FFunctor f => Functor (LKD f) where
   fmap = \f -> LKD #. ffmap (Const #. f .# getConst) .# runLKD
   {-# inline fmap #-}
 
--- Needs Contravariant
-#if MIN_VERSION_base(4,12,0)
 instance FContravariant f => Contravariant (LKD f) where
   contramap = \f -> LKD #. fcontramap (Const #. f .# getConst) .# runLKD
-#endif
 
 instance FFoldable f => Foldable (LKD f) where
   foldMap = \f -> ffoldMap (f .# getConst) .# runLKD
