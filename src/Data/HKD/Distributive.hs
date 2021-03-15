@@ -341,7 +341,7 @@ instance FDistributive f => FRepeat (FDist f) where
 
 -- | A default definition of 'frepeat' from 'FRepeat' in terms of 'FDistributive'
 frepeatDist :: FDistributive f => (forall x. a x) -> f a
-frepeatDist = \ ax -> fscatter (\x -> runLimit (getConst x)) id (Const (Limit ax))
+frepeatDist = \ax -> fscatter (\x -> runLimit (getConst x)) id (Const (Limit ax))
 -- frepeatDist a = fdistrib Proxy $ \_ -> a
 {-# inline frepeatDist #-}
 
@@ -360,7 +360,7 @@ ftraceDist = \x y -> findex y x
 -- 'flogToLogarithm' '.' 'flogFromLogarithm' ≡ 'id'
 -- @
 flogFromLogarithm :: FDistributive f => FLogarithm f ~> FLog f
-flogFromLogarithm = \ (FLogarithm f) -> f faskDist
+flogFromLogarithm = \(FLogarithm f) -> f faskDist
 {-# inline flogFromLogarithm #-}
 
 -- | We can convert any 'FLog' to a 'FLogarithm' as the two types are canonically isomorphic.
@@ -372,7 +372,7 @@ flogFromLogarithm = \ (FLogarithm f) -> f faskDist
 -- 'flogToLogarithm' '.' 'flogFromLogarithm' ≡ 'id'
 -- @
 flogToLogarithm :: FDistributive f => FLog f ~> FLogarithm f
-flogToLogarithm = \ f -> FLogarithm (ftraceDist f)
+flogToLogarithm = \f -> FLogarithm (ftraceDist f)
 {-# inline flogToLogarithm #-}
 
 {-
