@@ -137,12 +137,15 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   {-# inline findex #-}
 
 -- | A higher-kinded 'distrib'
-fdistrib :: (FFunctor w, FDistributive f) => w f -> (w % Element ~> r) -> f r
+fdistrib
+  :: (FFunctor w, FDistributive f)
+  => w f -> (w % Element ~> r) -> f r
 fdistrib = \ w k -> fscatter k id w
 {-# inline fdistrib #-}
 
 -- | A higher-kinded 'tabulateLogarithm'
-ftabulateFLogarithm :: FDistributive f => (FLogarithm f ~> a) -> f a
+ftabulateFLogarithm
+  :: FDistributive f => (FLogarithm f ~> a) -> f a
 ftabulateFLogarithm
   = \f -> fdistrib (FTab f) $ \(FTab f') -> f' (FLogarithm runElement)
 {-# inline ftabulateFLogarithm #-}
@@ -223,7 +226,9 @@ type DefaultFIndex f = DefaultFIndex' (ContainsSelfRec1 (Rep1 f) 3) f
 fdistribute
   :: (Functor f, FDistributive g)
   => f (g a) -> g (Compose f a)
-fdistribute = \f -> fdistrib (DCompose f) $ \(DCompose f') -> Compose $ fmap coerce f'
+fdistribute = \f ->
+  fdistrib (DCompose f) $ \(DCompose f') ->
+    Compose $ fmap coerce f'
 {-# inline fdistribute #-}
 
 -- | A higher-kinded 'collect'
@@ -235,7 +240,9 @@ fcollect
   :: (Functor f, FDistributive g)
   => (a -> g b)
   -> f a -> g (Compose f b)
-fcollect = \f fa -> fdistrib (DCompose f) $ \(DCompose f') -> Compose $ fmap (coerce f') fa
+fcollect = \f fa ->
+  fdistrib (DCompose f) $ \(DCompose f') ->
+    Compose $ fmap (coerce f') fa
 {-# inline fcollect #-}
 
 -- | A higher-kinded 'cotraverse'
@@ -247,7 +254,9 @@ fcotraverse
   :: (Functor f, FDistributive g)
   => (f % a ~> b)
   -> f (g a) -> g b
-fcotraverse = \fab fga -> fdistrib (DCompose fga) $ \(DCompose f') -> fab (fmap coerce f')
+fcotraverse = \fab fga ->
+  fdistrib (DCompose fga) $ \(DCompose f') ->
+    fab (fmap coerce f')
 {-# inline fcotraverse #-}
 
 instance (FDistributive f, FDistributive g) => FDistributive (f :*: g) where
@@ -292,7 +301,8 @@ instance FDistributive f => FDistributive (Rec1 f) where
 
 instance (Distributive f, FDistributive g) => FDistributive (f :.: g) where
   type FLog (f :.: g) = Const (Log f) :*: FLog g
-  fscatter = \k phi wg -> Comp1 $ scatter (fscatter k coerce .# runAppCompose) id (AppCompose (ffmap phi wg))
+  fscatter = \k phi wg -> Comp1 $ 
+    scatter (fscatter k coerce .# runAppCompose) id $ AppCompose (ffmap phi wg)
   findex = \(Comp1 f) (Const x :*: y) -> findex (index f x) y
   ftabulate = \f -> Comp1 $ tabulate $ \i -> ftabulate $ \j -> f (Const i :*: j)
   {-# inline fscatter #-}
@@ -370,7 +380,8 @@ faskFDist = ftabulate id
 ftraceFDist :: FDistributive f => FLog f a -> f g -> g a
 ftraceFDist = \x y -> findex y x
 
--- | We can convert a 'FLogarithm' of a 'FDistributive' 'FFunctor' to any choice of 'FLog', as the two forms are canonically isomorphic.
+-- | We can convert a 'FLogarithm' of a 'FDistributive' 'FFunctor' to any choice
+-- of 'FLog', as the two forms are canonically isomorphic.
 --
 -- @
 -- 'findex' f . 'flogFromLogarithm' ≡ 'findexLogarithm' f
