@@ -396,6 +396,7 @@ cotraverse = \fab fga ->
   distrib (DCompose fga) $ \(DCompose f') -> fab (runIdentity <$> f')
 {-# inline cotraverse #-}
 
+
 instance (Distributive f, Distributive g) => Distributive (f :*: g) where
   type Log (f :*: g) = Either (Log f) (Log g)
   scatter = \ k f (ffmap f -> w) -> 
