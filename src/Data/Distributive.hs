@@ -17,6 +17,7 @@
 {-# Language PatternSynonyms #-}
 {-# Language PolyKinds #-}
 {-# Language RankNTypes #-}
+{-# Language RoleAnnotations #-}
 {-# Language ScopedTypeVariables #-}
 {-# Language StandaloneDeriving #-}
 {-# Language Trustworthy #-}
@@ -337,7 +338,8 @@ tabulateLogarithm = \ f ->
 -- @
 --
 -- and this works for all 'Distributive' / 'Representable' functors.
---
+
+type role Logarithm representational
 newtype Logarithm f = Logarithm { runLogarithm :: forall a. f a -> a }
 
 indexLogarithm :: f a -> Logarithm f -> a
@@ -591,6 +593,8 @@ instance Distributive f => Distributive (ReaderT e f) where
 --
 -- Deriving 'Distributive', 'Foldable', or 'Traversable' via 'Dist' f leads to non-termination
 -- but all other instances are fine for use and are defined in terms of these three.
+
+type role Dist representational nominal
 newtype Dist f a = Dist { runDist :: f a }
   deriving stock (Foldable, Traversable)
 

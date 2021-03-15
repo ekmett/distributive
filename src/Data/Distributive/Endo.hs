@@ -1,6 +1,7 @@
 {-# Language CPP #-}
-{-# Language Safe #-}
 {-# Language PatternSynonyms #-}
+{-# Language RoleAnnotations #-}
+{-# Language Safe #-}
 {-# Language ViewPatterns #-}
 -- |
 -- Copyright   : (C) 2021 Edward Kmett
@@ -24,6 +25,7 @@ import Data.Semigroup (Semigroup(..))
 -- | Tabulated endomorphisms.
 --
 -- Many representable functors can be used to memoize functions.
+type role Endo nominal
 newtype Endo f = EndoDist { runEndoDist :: f (Log f) }
 
 pattern Endo :: Distributive f => (Log f -> Log f) -> Endo f

@@ -4,6 +4,7 @@
 {-# Language FlexibleInstances #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language PatternSynonyms #-}
+{-# Language RoleAnnotations #-}
 {-# Language Trustworthy #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
@@ -70,6 +71,7 @@ pattern Reader { runReader } <- ReaderT (Coerce runReader)
 
 -- | This 'representable monad transformer' transforms any monad @m@ with a 'Distributive' 'Monad'.
 -- This monad in turn is also representable if @m@ is 'Distributive'.
+type role ReaderT representational nominal nominal
 newtype ReaderT f m b = ReaderDistT { runReaderDistT :: f (m b) }
 
 pattern ReaderT :: Distributive f => (Log f -> m a) -> ReaderT f m a

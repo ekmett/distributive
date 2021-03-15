@@ -3,6 +3,7 @@
 {-# Language FlexibleInstances #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language PatternSynonyms #-}
+{-# Language RoleAnnotations #-}
 {-# Language Trustworthy #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeSynonymInstances #-}
@@ -115,6 +116,7 @@ mapState f = mapStateT (Identity #. f .# runIdentity)
 -- The 'return' function leaves the state unchanged, while @>>=@ uses
 -- the final state of the first computation as the initial state of
 -- the second.
+type role StateT nominal nominal nominal
 newtype StateT g m a = StateDistT
   { runStateDistT :: g (m (a, Log g))
   }

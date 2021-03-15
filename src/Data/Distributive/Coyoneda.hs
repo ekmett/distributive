@@ -7,6 +7,7 @@
 {-# Language TypeApplications #-}
 {-# Language TypeFamilies #-}
 {-# Language RankNTypes #-}
+{-# Language RoleAnnotations #-}
 {-# Language ViewPatterns #-}
 {-# Language Safe #-}
 module Data.Distributive.Coyoneda
@@ -28,6 +29,7 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Text.Read hiding (lift)
 
+type role Coyoneda representational nominal
 data Coyoneda f a where
   CoyonedaDist :: Distributive g => g a -> f (Log g) -> Coyoneda f a 
 

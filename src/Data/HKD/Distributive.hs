@@ -16,6 +16,7 @@
 {-# Language PatternSynonyms #-}
 {-# Language PolyKinds #-}
 {-# Language RankNTypes #-}
+{-# Language RoleAnnotations #-}
 {-# Language ScopedTypeVariables #-}
 {-# Language StandaloneDeriving #-}
 {-# Language Trustworthy #-}
@@ -98,9 +99,12 @@ type (%) f g i = f (g i)
 infixr 9 %
 
 -- | A higher-kinded 'Logarithm'
+--
+type role FLogarithm representational nominal
 newtype FLogarithm f a = FLogarithm { runFLogarithm :: forall g. f g -> g a }
 
 -- | A higher-kinded 'Tab'
+type role FTab representational representational
 newtype FTab g f = FTab { runFTab :: FLogarithm f ~> g }
 
 instance FFunctor (FTab g) where
@@ -335,6 +339,7 @@ deriving newtype instance FDistributive f => FDistributive (Monoid.Ap f)
 #endif
 
 -- | A higher-kinded 'Dist'
+type role FDist representational nominal
 newtype FDist f a = FDist { runFDist :: f a }
   deriving stock (Data, Generic, Generic1)
   deriving newtype (FFoldable)
@@ -415,6 +420,7 @@ flogToFLogarithm = \f -> FLogarithm (ftraceFDist f)
 
 -- | Forget higher-kindedness. Unffctor? Lower?
 -- Generally, if @f@ is an @FThing@ then @'LKD' f@ is a @Thing@
+type role LKD representational nominal
 newtype LKD f a = LKD { runLKD :: f (Const a) }
 
 instance FFunctor f => Functor (LKD f) where
@@ -442,6 +448,7 @@ instance FRepeat f => Applicative (LKD f) where
   pure = \a -> LKD $ frepeat (Const a)
   {-# inline pure #-}
 
+type role DScatter representational nominal
 newtype DScatter w f = DScatter { runDScatter :: w (LKD f) }
 
 instance FFunctor w => FFunctor (DScatter w) where
@@ -491,6 +498,7 @@ instance (FTraversable f, FDistributive f) => GCompare (FLogarithm f) where
 
 type Lens' s a = forall f. Functor f => (a -> f a) -> s -> f s
 
+type role FPath representational nominal
 data FPath f a = FPath (f a) Path
 
 fend :: f a -> Trail (FPath f a)
