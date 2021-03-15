@@ -5,6 +5,7 @@
 {-# Language DeriveDataTypeable #-}
 {-# Language DeriveGeneric #-}
 {-# Language DerivingStrategies #-}
+{-# Language ExistentialQuantification #-}
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
 {-# Language GeneralizedNewtypeDeriving #-}
@@ -55,6 +56,13 @@ module Data.HKD.Distributive
 -- * Uniqueness of logarithms
 , flogToLogarithm
 , flogFromLogarithm
+
+-- * Lower
+, Lower(..)
+, SomeFLogarithm(..)
+, lowerLogarithm'
+, lowerLogarithm
+, raiseLogarithm
 ) where
 
 import Control.Applicative
@@ -70,10 +78,11 @@ import Data.Functor.Reverse
 import qualified Data.Monoid as Monoid
 import Data.Kind
 import Data.HKD
--- import Data.Some
+import Data.Some
 import Data.Void
 import GHC.Generics
 import Data.Coerce
+import Data.Function
 
 type (%) f g i = f (g i)
 infixr 9 %
@@ -341,7 +350,7 @@ instance FDistributive f => FRepeat (FDist f) where
 
 -- | A default definition of 'frepeat' from 'FRepeat' in terms of 'FDistributive'
 frepeatDist :: FDistributive f => (forall x. a x) -> f a
-frepeatDist = \ ax -> fscatter (\x -> runLimit (getConst x)) id (Const (Limit ax))
+frepeatDist = \ax -> fscatter (\x -> runLimit (getConst x)) id (Const (Limit ax))
 -- frepeatDist a = fdistrib Proxy $ \_ -> a
 {-# inline frepeatDist #-}
 
@@ -360,7 +369,7 @@ ftraceDist = \x y -> findex y x
 -- 'flogToLogarithm' '.' 'flogFromLogarithm' ≡ 'id'
 -- @
 flogFromLogarithm :: FDistributive f => FLogarithm f ~> FLog f
-flogFromLogarithm = \ (FLogarithm f) -> f faskDist
+flogFromLogarithm = \(FLogarithm f) -> f faskDist
 {-# inline flogFromLogarithm #-}
 
 -- | We can convert any 'FLog' to a 'FLogarithm' as the two types are canonically isomorphic.
@@ -372,37 +381,90 @@ flogFromLogarithm = \ (FLogarithm f) -> f faskDist
 -- 'flogToLogarithm' '.' 'flogFromLogarithm' ≡ 'id'
 -- @
 flogToLogarithm :: FDistributive f => FLog f ~> FLogarithm f
-flogToLogarithm = \ f -> FLogarithm (ftraceDist f)
+flogToLogarithm = \f -> FLogarithm (ftraceDist f)
 {-# inline flogToLogarithm #-}
 
-{-
-newtype Foo f a = Foo { runFoo :: f (Const a) }
+-------------------------------------------------------------------------------
+-- Lower
+-------------------------------------------------------------------------------
+-- probably belongs in HKD, but then the Distributive instance becomes an orphan
 
-instance FFunctor f => Functor (Foo f) where
-  fmap f = Foo #. ffmap (Const #. f .# getConst) .# runFoo
+-- also consider adding Raise :: (Type -> Type) -> (() -> Type) -> Type 
+-- in the other direction?
+
+-- | Forget higher-kindedness. 
+-- Generally, if @f@ is an @FThing@ then @'Lower' f@ is a @Thing@
+newtype Lower f a = Lower { runLower :: f (Const a) }
+
+instance FFunctor f => Functor (Lower f) where
+  fmap = \f -> Lower #. ffmap (Const #. f .# getConst) .# runLower
   {-# inline fmap #-}
 
-newtype DScatter w f = DScatter (w (Foo f))
+-- Needs Contravariant
+-- instance FContravariant f => Contravariant (Lower f) where
+
+instance FFoldable f => Foldable (Lower f) where
+  foldMap = \f -> ffoldMap (f .# getConst) .# runLower
+  {-# inline foldMap #-}
+
+instance FTraversable f => Traversable (Lower f) where
+  traverse = \f -> fmap Lower . ftraverse (fmap Const . f .# getConst) .# runLower
+  {-# inline traverse #-}
+
+-- Assumes FRepeat is FApplicative
+instance FRepeat f => Applicative (Lower f) where
+  (<*>) = \(Lower fab) (Lower fa) -> Lower (fzipWith coerce fab fa) 
+  {-# inline (<*>) #-}
+  pure = \a -> Lower $ frepeat (Const a)
+  {-# inline pure #-}
+
+newtype DScatter w f = DScatter { runDScatter :: w (Lower f) }
 
 instance FFunctor w => FFunctor (DScatter w) where
+  ffmap = \f -> DScatter #. ffmap (Lower #. f .# runLower) .# runDScatter
+  {-# inline ffmap #-}
 
-instance FDistributive f => Distributive (Foo f) where
-  type Log (Foo f) = Some (FLog f)
-  -- scatter :: (w Identity -> r) -> (g ~> Foo f) -> w g -> Foo f r
-  scatter k g h = Foo $ _ -- fscatter k' g' h'
-  -- k :: w Identity -> r
-  -- g :: g ~> Foo f
-  -- h :: w g
-  ----------------------------
-  -- f (Const a)
-  --
-  -- fdistrib :: w f -> (w % Element ~> r) f r
-  -- r ~ Const a
+instance FDistributive f => Distributive (Lower f) where
+  type Log (Lower f) = Some (FLog f)
+  scatter = \k g -> Lower . fscatter (Const #. k .  ffmap coerce .# runDScatter) id . DScatter . ffmap g
   {-# inline scatter #-}
-  index = \fa (Some lg) -> getConst (findex (runFoo fa) lg)
+  index = \fa (Some lg) -> getConst (findex (runLower fa) lg)
   {-# inline index #-}
-  tabulate = \f -> Foo $ ftabulate (Const #. f . Some)
+  tabulate = \f -> Lower $ ftabulate (Const #. f . Some)
   {-# inline tabulate #-}
+
+-- maybe this could be replaced with `Some FLogarithm`, either using Flexible instances,
+-- or if we had EqSome and OrdSome classes, with EqSome f => Eq (Some f), etc.
+
+-- | @'Some' 'FLogarithm'@, but with 'Eq' and 'Ord' instances
+data SomeFLogarithm f = forall a. SomeFLogarithm { runSomeFLogarithm :: FLogarithm f a }
+
+lowerLogarithm' :: FLogarithm f x -> Logarithm (Lower f)
+lowerLogarithm' = \(FLogarithm f) -> Logarithm $ getConst #. f .# runLower
+{-# inline lowerLogarithm' #-}
+
+lowerLogarithm :: SomeFLogarithm f -> Logarithm (Lower f)
+lowerLogarithm = \(SomeFLogarithm f) -> lowerLogarithm' f
+{-# inline lowerLogarithm #-}
+
+raiseLogarithm :: FDistributive f => Logarithm (Lower f) -> SomeFLogarithm f
+raiseLogarithm = \(Logarithm f) -> f $ Lower $ ftabulateLogarithm (Const #. SomeFLogarithm)
+{-# inline raiseLogarithm #-}
+
+instance (FTraversable f, FDistributive f) => Eq (SomeFLogarithm f) where
+  (==) = (==) `on` lowerLogarithm
+
+instance (FTraversable f, FDistributive f) => Ord (SomeFLogarithm f) where
+  compare = compare `on` lowerLogarithm
+
+instance (FTraversable f, FDistributive f) => Eq (FLogarithm f a) where
+  (==) = (==) `on` SomeFLogarithm
+
+instance (FTraversable f, FDistributive f) => Ord (FLogarithm f a) where
+  compare = compare `on` SomeFLogarithm
+
+
+{- the lens and TestEquality can use Lower, but require unsafe unsafeCoerces...
 
 type Lens' s a = forall f. Functor f => (a -> f a) -> s -> f s
 
@@ -413,9 +475,6 @@ _flogarithm :: FTraversable t => FLogarithm t j -> Lens' (t f) (f a)
 --flogPath = \(FLogarithm f) -> getConst $ f _ -- $ runTrail (traverse id $ pureDist end) id
 --{-# inline flogPath #-}
 
-
---instance Eq (FLogarithm f a) where
---instance Ord (FLogarithm f a)
 -- instance TestEquality (FLogarithm f)
 
 -}
