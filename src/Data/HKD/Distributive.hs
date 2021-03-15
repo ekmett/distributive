@@ -70,6 +70,7 @@ import Data.Functor.Reverse
 import qualified Data.Monoid as Monoid
 import Data.Kind
 import Data.HKD
+-- import Data.Some
 import Data.Void
 import GHC.Generics
 import Data.Coerce
@@ -375,9 +376,46 @@ flogToLogarithm = \ f -> FLogarithm (ftraceDist f)
 {-# inline flogToLogarithm #-}
 
 {-
+newtype Foo f a = Foo { runFoo :: f (Const a) }
+
+instance FFunctor f => Functor (Foo f) where
+  fmap f = Foo #. ffmap (Const #. f .# getConst) .# runFoo
+  {-# inline fmap #-}
+
+newtype DScatter w f = DScatter (w (Foo f))
+
+instance FFunctor w => FFunctor (DScatter w) where
+
+instance FDistributive f => Distributive (Foo f) where
+  type Log (Foo f) = Some (FLog f)
+  -- scatter :: (w Identity -> r) -> (g ~> Foo f) -> w g -> Foo f r
+  scatter k g h = Foo $ _ -- fscatter k' g' h'
+  -- k :: w Identity -> r
+  -- g :: g ~> Foo f
+  -- h :: w g
+  ----------------------------
+  -- f (Const a)
+  --
+  -- fdistrib :: w f -> (w % Element ~> r) f r
+  -- r ~ Const a
+  {-# inline scatter #-}
+  index = \fa (Some lg) -> getConst (findex (runFoo fa) lg)
+  {-# inline index #-}
+  tabulate = \f -> Foo $ ftabulate (Const #. f . Some)
+  {-# inline tabulate #-}
+
 type Lens' s a = forall f. Functor f => (a -> f a) -> s -> f s
 
 -- | For any 'FTraversable', each 'FLogarithm' identifies a 'Lens'.
 _flogarithm :: FTraversable t => FLogarithm t j -> Lens' (t f) (f a)
--}
 
+--flogPath :: (FDistributive f, Traversable f) => FLogarithm f a -> Path
+--flogPath = \(FLogarithm f) -> getConst $ f _ -- $ runTrail (traverse id $ pureDist end) id
+--{-# inline flogPath #-}
+
+
+--instance Eq (FLogarithm f a) where
+--instance Ord (FLogarithm f a)
+-- instance TestEquality (FLogarithm f)
+
+-}
