@@ -198,7 +198,7 @@ instance (Distributive f, MonadCont m) => MonadCont (ReaderT f m) where
 instance (Distributive f, Alternative m) => Alternative (ReaderT f m) where
   empty = liftReaderT empty
   {-# inline empty #-}
-  (<|>) = \(ReaderDistT fm) (ReaderDistT fn) -> ReaderDistT (liftD2 (<|>) fm fn)
+  (<|>) = \(ReaderDistT fm) -> ReaderDistT #. liftD2 (<|>) fm .# runReaderDistT
   {-# inline (<|>) #-}
 
 instance (Distributive f, MonadPlus m) => MonadPlus (ReaderT f m)
@@ -208,11 +208,11 @@ instance (Distributive f, MonadFix m) => MonadFix (ReaderT f m) where
   {-# inline mfix #-}
 
 instance (Distributive f, MonadZip m) => MonadZip (ReaderT f m) where
-  mzipWith = \f (ReaderDistT m) (ReaderDistT n) -> ReaderDistT $ liftD2 (mzipWith f) m n
+  mzipWith = \f (ReaderDistT m) -> ReaderDistT #. liftD2 (mzipWith f) m .# runReaderDistT
   {-# inline mzipWith #-}
 
 #if MIN_VERSION_base(4,12,0)
 instance (Distributive f, Contravariant m) => Contravariant (ReaderT f m) where
-  contramap f (ReaderDistT m) = ReaderDistT $ contramap f <$> m
+  contramap = \f -> ReaderDistT #. fmap (contramap f) .# runReaderDistT
   {-# INLINE contramap #-}
 #endif

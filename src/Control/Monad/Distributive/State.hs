@@ -271,6 +271,6 @@ instance (Distributive f, MonadFix m) => MonadFix (StateT f m) where
 
 #if MIN_VERSION_base(4,12,0)
 instance (Distributive f, Contravariant m) => Contravariant (StateT f m) where
-  contramap f (StateDistT m) = StateDistT $ contramap (\ ~(a, s') -> (f a, s')) <$> m
+  contramap = \f (StateDistT m) -> StateDistT $ contramap (\ ~(a, s') -> (f a, s')) <$> m
   {-# inline contramap #-}
 #endif
