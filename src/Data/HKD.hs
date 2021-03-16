@@ -69,8 +69,8 @@ module Data.HKD
 , ffor
 , fsequence
 -- * Zip & Repeat
-, FZip (..)
-, FRepeat (..)
+, FZip(..)
+, FRepeat(..)
 -- * Higher kinded data
 -- | See also "Data.Some" in @some@ package. @hkd@ provides instances for it.
 , Element(..)
@@ -84,6 +84,7 @@ import Control.Applicative.Backwards
 import qualified Data.Monoid as Monoid
 import Data.Semigroup (Semigroup (..))
 import Data.Proxy (Proxy (..))
+import Data.Functor.Constant
 import Data.Functor.Identity (Identity (..))
 import Data.Functor.Reverse
 import Data.Monoid (Monoid (..))
@@ -121,11 +122,15 @@ class FFunctor (t :: (k -> Type) -> Type) where
   {-# inline ffmap #-}
 
 instance FFunctor Proxy where
-  ffmap _ Proxy = Proxy
+  ffmap = \_ -> coerce
   {-# inline ffmap #-}
 
 instance FFunctor (Const a) where
-  ffmap _ (Const a) = Const a
+  ffmap = \_ -> coerce
+  {-# inline ffmap #-}
+
+instance FFunctor (Constant a) where
+  ffmap = \_ -> coerce
   {-# inline ffmap #-}
 
 instance (Functor f, FFunctor g) => FFunctor (Compose f g) where
@@ -201,6 +206,12 @@ instance FFoldable Proxy where
   {-# inline flengthAcc #-}
 
 instance FFoldable (Const a) where
+  ffoldMap _ = mempty
+  flengthAcc = const
+  {-# inline ffoldMap #-}
+  {-# inline flengthAcc #-}
+
+instance FFoldable (Constant a) where
   ffoldMap _ = mempty
   flengthAcc = const
   {-# inline ffoldMap #-}
@@ -299,6 +310,10 @@ instance FTraversable Proxy where
 
 instance FTraversable (Const a) where
   ftraverse _ = pure .# (Const . getConst)
+  {-# inline ftraverse #-}
+
+instance FTraversable (Constant a) where
+  ftraverse _ = pure .# (Constant . getConstant)
   {-# inline ftraverse #-}
 
 instance (Traversable f, FTraversable g) => FTraversable (Compose f g) where
@@ -542,7 +557,12 @@ deriving newtype instance FFunctor f => FFunctor (Monoid.Alt f)
 deriving newtype instance FContravariant f => FContravariant (Backwards f)
 deriving newtype instance FContravariant f => FContravariant (Reverse f)
 deriving newtype instance FContravariant f => FContravariant (Monoid.Alt f)
-deriving newtype instance FZip f => FZip (Backwards f)
+
+-- to match the behavior on Appliative
+instance FZip f => FZip (Backwards f) where
+  fzipWith = \f (Backwards xs) (Backwards ys) -> Backwards $ fzipWith (\j k -> f k j) ys xs
+  {-# inline fzipWith #-}
+
 deriving newtype instance FZip f => FZip (Reverse f)
 deriving newtype instance FZip f => FZip (Monoid.Alt f)
 deriving newtype instance FRepeat f => FRepeat (Backwards f)
@@ -552,19 +572,19 @@ deriving newtype instance FFoldable f => FFoldable (Backwards f)
 deriving newtype instance FFoldable f => FFoldable (Monoid.Alt f)
 
 instance FFoldable f => FFoldable (Reverse f) where
-  ffoldMap f = Monoid.getDual #. ffoldMap (Monoid.Dual #. f)
+  ffoldMap = \f -> Monoid.getDual #. ffoldMap (Monoid.Dual #. f)
   {-# inline ffoldMap #-}
 
 instance FTraversable f => FTraversable (Reverse f) where
-  ftraverse f = forwards #. fmap Reverse . ftraverse (Backwards #. f) .# getReverse
+  ftraverse = \f -> forwards #. fmap Reverse . ftraverse (Backwards #. f) .# getReverse
   {-# inline ftraverse #-}
 
 instance FTraversable f => FTraversable (Backwards f) where
-  ftraverse f = fmap Backwards . ftraverse f .# forwards
+  ftraverse = \f -> fmap Backwards . ftraverse f .# forwards
   {-# inline ftraverse #-}
 
 instance FTraversable f => FTraversable (Monoid.Alt f) where
-  ftraverse f = fmap Monoid.Alt . ftraverse f .# Monoid.getAlt 
+  ftraverse = \f -> fmap Monoid.Alt . ftraverse f .# Monoid.getAlt 
   {-# inline ftraverse #-}
   
 #if MIN_VERSION_base(4,12,0)
@@ -575,7 +595,7 @@ deriving newtype instance FRepeat f => FRepeat (Monoid.Ap f)
 deriving newtype instance FFoldable f => FFoldable (Monoid.Ap f)
 
 instance FTraversable f => FTraversable (Monoid.Ap f) where
-  ftraverse f = fmap Monoid.Ap . ftraverse f .# Monoid.getAp
+  ftraverse = \f -> fmap Monoid.Ap . ftraverse f .# Monoid.getAp
   {-# inline ftraverse #-}
 #endif
 
@@ -587,17 +607,17 @@ instance FTraversable f => FTraversable (Monoid.Ap f) where
 newtype Element a f = Element { runElement :: f a }
 
 instance FFunctor (Element a) where
-  ffmap f (Element fa) = Element (f fa)
+  ffmap = \f -> Element #. f .# runElement
   {-# inline ffmap #-}
 
 instance FFoldable (Element a) where
-  ffoldMap f (Element fa) = f fa
+  ffoldMap f = f .# runElement
   flengthAcc acc _ = acc + 1
   {-# inline ffoldMap #-}
   {-# inline flengthAcc #-}
 
 instance FTraversable (Element a) where
-  ftraverse f (Element g) = Element <$> f g
+  ftraverse f = fmap Element . f .# runElement
   {-# inline ftraverse #-}
 
 -------------------------------------------------------------------------------

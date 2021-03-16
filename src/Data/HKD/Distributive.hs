@@ -53,9 +53,9 @@ module Data.HKD.Distributive
 -- * Others
 , faskFDist
 , ftraceFDist
-, imapFDist
-, ifoldMapFDist
-, itraverseFDist
+, ifmapFDist
+, iffoldMapFDist
+, iftraverseFDist
 -- * Default logarithms
 , FLogarithm(..)
 , FTab(..)
@@ -98,6 +98,7 @@ import Data.GADT.Compare
 import qualified Data.Monoid as Monoid
 import Data.Kind
 import Data.HKD
+import Data.HKD.WithIndex
 import Data.Some
 import Data.Type.Coercion
 import Data.Type.Equality
@@ -380,8 +381,8 @@ instance FDistributive (NT f) where
 
 instance FDistributive Limit where
   type FLog Limit = Proxy
-  fscatter = \k f w -> Limit $ k $ ffmap (Element #. runLimit . f) w
-  findex = const . runLimit
+  fscatter = \k f w -> Limit $ k $ ffmap (\x -> Element $ runLimit $ f x) w
+  findex f = const $ runLimit f
   ftabulate = \f -> Limit $ f (Proxy)
   {-# inline findex #-}
   {-# inline ftabulate #-}
@@ -564,7 +565,7 @@ instance Applicative f => FZip (HKD f) where
   {-# inline fzipWith #-}
 
 instance Applicative f => FRepeat (HKD f) where
-  frepeat = HKD #. pure
+  frepeat f = HKD $ pure f
   {-# inline frepeat #-}
 
 data HKDFLog f (a :: i) where
@@ -718,41 +719,41 @@ _flog = \i a2ga tf ->
 
 -- | Construct the lens for a logarithm using @'GEq' ('FLog' t)@ instead of with @'FTraversable' t@
 _flogGEq :: (FDistributive t, GEq (FLog t)) => FLog t a -> Lens' (t f) (f a)
-_flogGEq = \i a2ga fa -> a2ga (findex fa i) <&> \a' -> imapFDist (\j a -> case geq i j of
+_flogGEq = \i a2ga fa -> a2ga (findex fa i) <&> \a' -> ifmapFDist (\j a -> case geq i j of
   Just Refl -> a'
   Nothing -> a) fa
 {-# inline _flogGEq #-}
 
-imapFDist
+instance (FDistributive f, FLog f ~ i) => FFunctorWithIndex i (FDist f) where
+  ifmap = ifmapFDist
+  {-# inline ifmap #-}
+
+ifmapFDist
   :: forall f a b. FDistributive f
   => (forall x. FLog f x -> a x -> b x) -> f a -> f b
-imapFDist = \f -> fzipWithFDist f is
+ifmapFDist = \f -> fzipWithFDist f is
   where is = faskFDist :: f (FLog f)
-{-# inline imapFDist #-}
+{-# inline ifmapFDist #-}
+
+instance (FDistributive f, FFoldable f, FLog f ~ i) => FFoldableWithIndex i (FDist f) where
+  iffoldMap = iffoldMapFDist
+  {-# inline iffoldMap #-}
 
 -- | A default definition for 'ifoldMap' from @FoldableWithIndex@ in terms of 'Distributive'
-ifoldMapFDist
+iffoldMapFDist
   :: forall f m a.
      (FDistributive f, FFoldable f, Monoid m)
   => (forall x. FLog f x -> a x -> m) -> f a -> m
-ifoldMapFDist = \f -> ffoldMap getConst . imapFDist (\i -> Const #. f i)
-{-# inline ifoldMapFDist #-}
+iffoldMapFDist = \f -> ffoldMap getConst . ifmapFDist (\i -> Const #. f i)
+{-# inline iffoldMapFDist #-}
 
-itraverseFDist
+instance (FDistributive f, FTraversable f, FLog f ~ i) => FTraversableWithIndex i (FDist f) where
+  iftraverse = iftraverseFDist
+  {-# inline iftraverse #-}
+
+iftraverseFDist
   :: forall f m a b.
      (FDistributive f, FTraversable f, Applicative m)
   => (forall x. FLog f x -> a x -> m (b x)) -> f a -> m (f b)
-itraverseFDist = \f -> ftraverse getCompose . imapFDist (\i -> Compose #. f i)
-{-# inline itraverseFDist #-}
-
-{-
-
-_flogPath :: (FDistributive
-
--- | For any 'FTraversable', each 'FLogarithm' identifies a 'Lens'.
-
---flogPath :: (FDistributive f, Traversable f) => FLogarithm f a -> Path
---flogPath = \(FLogarithm f) -> getConst $ f $ runTrail (ftraverse id $ pureDist end) id
---{-# inline flogPath #-}
-
--}
+iftraverseFDist = \f -> ftraverse getCompose . ifmapFDist (\i -> Compose #. f i)
+{-# inline iftraverseFDist #-}

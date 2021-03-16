@@ -3,6 +3,7 @@
 {-# Language ScopedTypeVariables #-}
 {-# Language TypeOperators #-}
 {-# Language InstanceSigs #-}
+{-# Language Trustworthy #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Data.Distributive.Orphans where
 

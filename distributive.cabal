@@ -71,6 +71,7 @@ library
     Data.HKD
     Data.HKD.Distributive
     Data.HKD.Distributive.Endo
+    Data.HKD.WithIndex
     Data.Machine.Moore
     Control.Monad.Distributive.Reader
     Control.Monad.Distributive.State
