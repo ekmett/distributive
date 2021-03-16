@@ -71,11 +71,12 @@ library
     Data.HKD
     Data.HKD.Distributive
     Data.HKD.Distributive.Endo
+    Data.HKD.Divisible
     Data.HKD.WithIndex
     Data.Machine.Moore
     Control.Monad.Distributive.Reader
     Control.Monad.Distributive.State
-  --                 Data.Machine.Distributive.Moore
+  -- Data.Machine.Distributive.Moore
 
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1
