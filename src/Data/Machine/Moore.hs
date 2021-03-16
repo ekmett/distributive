@@ -9,6 +9,11 @@
 #if __GLASGOW_HASKELL__ >= 806
 {-# Language DerivingVia #-}
 #endif
+
+#ifndef MIN_VERSION_base
+#define MIN_VERSION_base(_x,_y,_z) 1
+#endif
+
 -- |
 -- Copyright   :  (C) 2012-2021 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)

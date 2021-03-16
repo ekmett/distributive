@@ -29,6 +29,10 @@
 {-# Language UndecidableSuperClasses #-}
 {-# Language ViewPatterns #-}
 
+#ifndef MIN_VERSION_base
+#define MIN_VERSION_Base(_x,_y,_z) 1
+#endif
+
 module Data.HKD.Distributive
 ( type (%)
 , FDistributive(..)

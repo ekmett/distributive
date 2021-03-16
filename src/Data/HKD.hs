@@ -16,6 +16,10 @@
 {-# language LambdaCase #-}
 {-# language EmptyCase #-}
 #endif
+
+#ifndef MIN_VERSION_base
+#define MIN_VERSION_base(_x,_y,_z) 1
+#endif
 -- |
 -- Copyright :  (c) 2019-2021 Edward Kmett
 --              (c) 2019 Oleg Grenrus

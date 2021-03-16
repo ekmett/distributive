@@ -11,6 +11,11 @@
 {-# Language TypeOperators #-}
 {-# Language UndecidableInstances #-}
 {-# Language ViewPatterns #-}
+
+#ifndef MIN_VERSION_base
+#define MIN_VERSION_base(_x,_y,_z) 1
+#endif
+
 -- |
 -- Module      : Data.Distributive.Util
 -- Copyright   : (C) 2021 Edward Kmett
@@ -19,6 +24,7 @@
 -- Maintainer  : Edward Kmett <ekmett@gmail.com>
 -- Stability   : provisional
 -- Portability : non-portable (ghc 8.0+)
+
 module Data.Distributive.Util
 ( (<&>)
 , type ContainsSelfRec1

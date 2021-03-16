@@ -9,6 +9,11 @@
 {-# Language TypeSynonymInstances #-}
 {-# Language UndecidableInstances #-}
 {-# Language ViewPatterns #-}
+
+#ifndef MIN_VERSION_base
+#define MIN_VERSION_base(_x,_y,_z) 1
+#endif
+
 -- |
 -- Module      :  Control.Monad.Distributive.State
 -- Copyright   :  (c) Edward Kmett 2011-2021
@@ -20,6 +25,7 @@
 --
 -- A generalized State monad, parameterized by a 'Distributive' functor.
 -- The 'Log' of that functor serves as the state.
+
 module Control.Monad.Distributive.State
   ( State
   , pattern State

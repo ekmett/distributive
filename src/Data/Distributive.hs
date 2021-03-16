@@ -30,6 +30,11 @@
 {-# Language UndecidableSuperClasses #-}
 {-# Language ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
+#ifndef MIN_VERSION_base
+#define MIN_VERSION_base(_x,_y,_z) 1
+#endif
+
 -- |
 -- Module      : Data.Distributive
 -- Copyright   : (C) 2011-2021 Edward Kmett,
@@ -785,6 +790,18 @@ instance (Distributive f, Floating a) => Floating (Dist f a) where
   {-# inline expm1 #-}
   {-# inline log1pexp #-}
   {-# inline log1mexp #-}
+
+instance (Distributive f, Semigroup a) => Semigroup (Dist f a) where
+  (<>) = liftD2 (<>)
+  {-# inline (<>) #-}
+
+instance (Distributive f, Monoid a) => Monoid (Dist f a) where
+  mempty = pure mempty
+  {-# noinline[0] mempty #-}
+#if !(MIN_VERSION_base(4,11,0))
+  mappend = liftD2 mappend
+  {-# inline mappend #-}
+#endif
 
 instance (Distributive f, Foldable f, Eq a) => Eq (Dist f a) where
   (==) = eqDist

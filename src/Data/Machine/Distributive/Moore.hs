@@ -5,9 +5,15 @@
 {-# Language TypeFamilies #-}
 {-# Language DeriveFunctor #-}
 {-# Language Safe #-}
+
 #if __GLASGOW_HASKELL__ >= 806
 {-# Language DerivingVia #-}
 #endif
+
+#ifndef MIN_VERSION_base
+#define MIN_VERSION_base(_x,_y,_z) 1
+#endif
+
 -- |
 -- Copyright   :  (C) 2012-2021 Edward Kmett
 -- License     :  BSD-style (see the file LICENSE)
@@ -82,7 +88,6 @@ wrapMoore first step1 = Moore (maybe first (\(Moore k _ s) -> k s)) step Nothing
     Nothing -> step1 a
     Moore k g z -> Moore k g $ appEndo (g a) z
 
-
 #if __GLASGOW_HASKELL__ < 806
 instance Monad (Moore a) where
   (>>=) = bindDist
@@ -114,14 +119,14 @@ unfoldMoore = Moore
 instance MonadReader [a] (Moore a) where
 
 instance Semigroup b => Semigroup (Moore a b) where
-  Moore x f <> Moore y g = Moore (x <> y) (f <> g)
+  (<>) = liftD2 (<>)
   {-# inline (<>) #-}
 
 instance Monoid b => Monoid (Moore a b) where
-  mempty = Moore mempty mempty
+  mempty = pure mempty
   {-# inline mempty #-}
 #if !(MIN_VERSION_base(4,11,0))
-  Moore x f `mappend` Moore y g = Moore (x `mappend` y) (f `mappend` g)
+  mappend = liftD2 mappend
   {-# inline mappend #-}
 #endif
 
