@@ -539,15 +539,15 @@ flogToFLogarithm = \f -> FLogarithm (ftraceFDist f)
 -- HKD
 -------------------------------------------------------------------------------
 
-type role HKD nominal representational nominal
-newtype HKD (x :: i) (f :: Type -> Type) (a :: i -> Type) = HKD { runHKD :: f (a x) }
+type role HKD representational nominal nominal
+newtype HKD (f :: Type -> Type) (x :: i) (a :: i -> Type) = HKD { runHKD :: f (a x) }
 
-mapHKD :: (f (a x) -> g (b x)) -> HKD x f a -> HKD x g b
+mapHKD :: (f (a x) -> g (b x)) -> HKD f x a -> HKD g x b
 mapHKD = \f -> HKD #. f .# runHKD
 {-# inline mapHKD #-}
 
 type role DHKD representational nominal nominal
-newtype DHKD w x f = DHKD { runDHKD :: w (HKD x f) }
+newtype DHKD w x f = DHKD { runDHKD :: w (HKD f x) }
 
 type role Atkey representational nominal nominal
 data Atkey a i j where
@@ -557,44 +557,44 @@ instance FFunctor w => FFunctor (DHKD w x) where
   ffmap f = DHKD #. ffmap (mapHKD f) .# runDHKD
   {-# inline ffmap #-}
 
-instance Functor f => FFunctor (HKD x f) where
+instance Functor f => FFunctor (HKD f x) where
   ffmap = \f -> mapHKD (fmap f)
   {-# inline ffmap #-}
 
-instance FunctorWithIndex i f => FFunctorWithIndex (Atkey i x) (HKD x f) where
+instance FunctorWithIndex i f => FFunctorWithIndex (Atkey i x) (HKD f x) where
   ifmap = \f -> mapHKD (imap (f . Atkey))
   {-# inline ifmap #-}
 
-instance Contravariant f => FContravariant (HKD x f) where
+instance Contravariant f => FContravariant (HKD f x) where
   fcontramap = \f -> HKD #. contramap f .# runHKD
   {-# inline fcontramap #-}
 
-instance Foldable f => FFoldable (HKD x f) where
+instance Foldable f => FFoldable (HKD f x) where
   ffoldMap = \f -> foldMap f .# runHKD
   {-# inline ffoldMap #-}
 
-instance FoldableWithIndex i f => FFoldableWithIndex (Atkey i x) (HKD x f) where
+instance FoldableWithIndex i f => FFoldableWithIndex (Atkey i x) (HKD f x) where
   iffoldMap = \f -> ifoldMap (f . Atkey) .# runHKD
   {-# inline iffoldMap #-}
 
-instance Traversable f => FTraversable (HKD x f) where
+instance Traversable f => FTraversable (HKD f x) where
   ftraverse = \f -> fmap HKD . traverse f .# runHKD
   {-# inline ftraverse #-}
 
-instance TraversableWithIndex i f => FTraversableWithIndex (Atkey i x) (HKD x f) where
+instance TraversableWithIndex i f => FTraversableWithIndex (Atkey i x) (HKD f x) where
   iftraverse = \f -> fmap HKD . itraverse (f . Atkey) .# runHKD
   {-# inline iftraverse #-}
 
-instance Applicative f => FZip (HKD x f) where
+instance Applicative f => FZip (HKD f x) where
   fzipWith = \f (HKD fab) (HKD fa) -> HKD (liftA2 f fab fa)
   {-# inline fzipWith #-}
 
-instance Applicative f => FRepeat (HKD x f) where
+instance Applicative f => FRepeat (HKD f x) where
   frepeat f = HKD $ pure f
   {-# inline frepeat #-}
 
-instance Distributive f => FDistributive (HKD x f) where
-  type FLog (HKD x f) = Atkey (Log f) x
+instance Distributive f => FDistributive (HKD f x) where
+  type FLog (HKD f x) = Atkey (Log f) x
   fscatter = \k g w -> HKD $ distrib (DHKD (ffmap g w)) $ k . ffmap coerce .# runDHKD
   {-# inline fscatter #-}
   findex = \(HKD fa) (Atkey lg) -> index fa lg
