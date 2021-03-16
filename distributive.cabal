@@ -52,6 +52,7 @@ library
   build-depends:
     base         >= 4.10 && < 5,
     base-orphans >= 0.5.2 && < 1,
+    contravariant >= 1.5.3 && < 1.6,
     ghc-prim,
     indexed-traversable >= 0.1 && < 0.2,
     mtl          >= 2.2 && < 2.3,
@@ -88,8 +89,6 @@ library
     if flag(semigroups)
       build-depends: semigroups >= 0.13 && < 1
 
-  if impl(ghc < 8.5)
-    build-depends: contravariant >= 1.5.3 && < 1.6
 
   ghc-options: -Wall
 

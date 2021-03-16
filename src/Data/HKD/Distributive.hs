@@ -6,6 +6,7 @@
 {-# Language DeriveDataTypeable #-}
 {-# Language DeriveGeneric #-}
 {-# Language DerivingStrategies #-}
+{-# Language EmptyCase #-}
 {-# Language ExistentialQuantification #-}
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
@@ -99,11 +100,13 @@ import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
 import Data.Functor.Contravariant
+import Data.Functor.Contravariant.Divisible
 import Data.Functor.WithIndex
 import Data.GADT.Compare
 import qualified Data.Monoid as Monoid
 import Data.Kind
 import Data.HKD
+import Data.HKD.Divisible
 import Data.HKD.WithIndex
 import Data.Some
 import Data.Traversable.WithIndex
@@ -565,10 +568,6 @@ instance FunctorWithIndex i f => FFunctorWithIndex (Atkey i x) (HKD f x) where
   ifmap = \f -> mapHKD (imap (f . Atkey))
   {-# inline ifmap #-}
 
-instance Contravariant f => FContravariant (HKD f x) where
-  fcontramap = \f -> HKD #. contramap f .# runHKD
-  {-# inline fcontramap #-}
-
 instance Foldable f => FFoldable (HKD f x) where
   ffoldMap = \f -> foldMap f .# runHKD
   {-# inline ffoldMap #-}
@@ -586,7 +585,7 @@ instance TraversableWithIndex i f => FTraversableWithIndex (Atkey i x) (HKD f x)
   {-# inline iftraverse #-}
 
 instance Applicative f => FZip (HKD f x) where
-  fzipWith = \f (HKD fab) (HKD fa) -> HKD (liftA2 f fab fa)
+  fzipWith = \f (HKD fab) -> HKD #. liftA2 f fab .# runHKD
   {-# inline fzipWith #-}
 
 instance Applicative f => FRepeat (HKD f x) where
@@ -602,16 +601,30 @@ instance Distributive f => FDistributive (HKD f x) where
   ftabulate = \f -> HKD $ tabulate (f . Atkey)
   {-# inline ftabulate #-}
 
+instance Contravariant f => FContravariant (HKD f x) where
+  fcontramap = \f -> HKD #. contramap f .# runHKD
+  {-# inline fcontramap #-}
+
+instance Divisible f => FSemidivisible (HKD f x) where
+  fdivide = \f g -> HKD #. divide (\a -> case f a of (b :*: c) -> (b, c)) (runHKD g) .# runHKD
+  {-# inline fdivide #-}
+
+instance Divisible f => FDivisible (HKD f x) where
+  fconquer = HKD conquer
+  {-# inline fconquer #-}
+
+instance Decidable f => FSemidecidable (HKD f x) where
+  fchoose = \f g -> HKD #. choose (\a -> case f a of
+    L1 x -> Left x
+    R1 y -> Right y) (runHKD g) .# runHKD
+  {-# inline fchoose #-}
+  flose f = HKD (lose $ \x -> case f x of)
+  {-# inline flose #-}
+
 -------------------------------------------------------------------------------
 -- LKD
 -------------------------------------------------------------------------------
--- probably belongs in HKD, but then the Distributive instance becomes an orphan
 
--- also consider adding Raise :: (Type -> Type) -> (() -> Type) -> Type
--- in the other direction?
-
--- | Forget higher-kindedness. Unffctor? Lower?
--- Generally, if @f@ is an @FThing@ then @'LKD' f@ is a @Thing@
 type role LKD representational nominal
 newtype LKD f a = LKD { runLKD :: f (Const a) }
 
@@ -621,10 +634,6 @@ instance FFunctor f => Functor (LKD f) where
 
 instance FFunctorWithIndex i f => FunctorWithIndex (Some i) (LKD f) where
   imap = \f -> LKD #. ifmap (\i -> Const #. f (Some i) .# getConst) .# runLKD
-
-instance FContravariant f => Contravariant (LKD f) where
-  contramap = \f -> LKD #. fcontramap (Const #. f .# getConst) .# runLKD
-  {-# inline contramap #-}
 
 instance FFoldable f => Foldable (LKD f) where
   foldMap = \f -> ffoldMap (f .# getConst) .# runLKD
@@ -641,6 +650,30 @@ instance FTraversable f => Traversable (LKD f) where
 instance FTraversableWithIndex i f => TraversableWithIndex (Some i) (LKD f) where
   itraverse = \f -> fmap LKD . iftraverse (\i -> fmap Const . f (Some i) .# getConst) .# runLKD
   {-# inline itraverse #-}
+
+instance FContravariant f => Contravariant (LKD f) where
+  contramap = \f -> LKD #. fcontramap (Const #. f .# getConst) .# runLKD
+  {-# inline contramap #-}
+
+instance FDivisible f => Divisible (LKD f) where
+  divide = \f g -> LKD #. fdivide
+    (\(Const a) -> case f a of
+      (b,c) -> Const b :*: Const c
+    )
+    (runLKD g) .# runLKD
+  {-# inline divide #-}
+  conquer = LKD fconquer
+  {-# inline conquer #-}
+
+instance FDecidable f => Decidable (LKD f) where
+  choose = \f g -> LKD #. fchoose
+    (\(Const a) -> case f a of
+      Left b -> L1 (Const b)
+      Right b -> R1 (Const b)) (runLKD g) .# runLKD
+  {-# inline choose #-}
+
+  lose = \f -> LKD $ flose (absurd . f .# getConst)
+  {-# inline lose #-}
 
 -- Assumes FRepeat is FApplicative
 instance FRepeat f => Applicative (LKD f) where
