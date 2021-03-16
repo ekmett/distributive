@@ -212,18 +212,14 @@ class Functor f => Distributive f where
 
   -- | Defaults to 'tabulateRep' when @f@ is non-recursive, otherwise to 'tabulateLogarithm'.
   tabulate :: (Log f -> a) -> f a
-  default tabulate
-    :: (Generic1 f, DefaultTabulate f)
-    => (Log f -> a) -> f a
-  tabulate = defaultTabulate @(ContainsSelfRec1 (Rep1 f) 3)
+  default tabulate :: DefaultTabulate f => (Log f -> a) -> f a
+  tabulate = defaultTabulate
   {-# inline tabulate #-}
 
   -- | Defaults to 'indexRep when @f@ is non-recursive, otherwise to 'indexLogarithm'.
   index :: f a -> Log f -> a
-  default index
-     :: (Generic1 f, DefaultIndex f)
-     => f a -> Log f -> a
-  index = defaultIndex @(ContainsSelfRec1 (Rep1 f) 3)
+  default index :: DefaultIndex f => f a -> Log f -> a
+  index = defaultIndex
   {-# inline index #-}
 
   -- | Scatter the contents of an 'FFunctor'. This admittedly complicated operation
@@ -277,36 +273,52 @@ type family DefaultLog' (containsRec1 :: Bool) f :: Type where
   DefaultLog' 'True  f = Logarithm f
   DefaultLog' 'False f = Log (Rep1 f)
 
-type family DefaultImplC (containsRec1 :: Bool) f :: Constraint where
+type DefaultLog f = DefaultLog' (ContainsSelfRec1 (Rep1 f) 3) f
+
+type family IsLogarithm f t :: Bool where
+  IsLogarithm f (Logarithm f) = 'True
+  IsLogarithm f t = 'False
+
+type LogIsLogarithm f = IsLogarithm f (Log f)
+
+type family DefaultImplC (logIsLogarithm :: Bool) f :: Constraint where
   DefaultImplC 'True  f = (Distributive f, Log f ~ Logarithm f)
   DefaultImplC 'False f = (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
 
--- individual type classes, so there is GHC needs to less work
-class DefaultImplC containsRec1 f => DefaultTabulate' (containsRec1 :: Bool) f where
-  defaultTabulate :: (Log f -> a) -> f a
+-- individual type classes, so GHC needs to do less work
+class DefaultImplC logIsLogarithm f => DefaultTabulate' (logIsLogarithm :: Bool) f where
+  defaultTabulate' :: (Log f -> a) -> f a
 
 instance DefaultImplC 'True f => DefaultTabulate' 'True f where
-  defaultTabulate = tabulateLogarithm
-  {-# inline defaultTabulate #-}
+  defaultTabulate' = tabulateLogarithm
+  {-# inline defaultTabulate' #-}
 
 instance DefaultImplC 'False f => DefaultTabulate' 'False f where
-  defaultTabulate = tabulateRep
-  {-# inline defaultTabulate #-}
+  defaultTabulate' = tabulateRep
+  {-# inline defaultTabulate' #-}
 
-class DefaultImplC containsRec1 f => DefaultIndex' (containsRec1 :: Bool) f where
-  defaultIndex :: f a -> Log f -> a
+type DefaultTabulate f = DefaultTabulate' (LogIsLogarithm f) f
+
+defaultTabulate :: forall f a. DefaultTabulate f => (Log f -> a) -> f a
+defaultTabulate = defaultTabulate' @(LogIsLogarithm f)
+{-# inline defaultTabulate #-}
+
+class DefaultImplC logIsLogarithm f => DefaultIndex' (logIsLogarithm :: Bool) f where
+  defaultIndex' :: f a -> Log f -> a
 
 instance DefaultImplC 'True f => DefaultIndex' 'True f where
-  defaultIndex = indexLogarithm
-  {-# inline defaultIndex #-}
+  defaultIndex' = indexLogarithm
+  {-# inline defaultIndex' #-}
 
 instance DefaultImplC 'False f => DefaultIndex' 'False f where
-  defaultIndex = indexRep
-  {-# inline defaultIndex #-}
+  defaultIndex' = indexRep
+  {-# inline defaultIndex' #-}
 
-type DefaultLog f = DefaultLog' (ContainsSelfRec1 (Rep1 f) 3) f
-type DefaultTabulate f = DefaultTabulate' (ContainsSelfRec1 (Rep1 f) 3) f
-type DefaultIndex f = DefaultIndex' (ContainsSelfRec1 (Rep1 f) 3) f
+type DefaultIndex f = DefaultIndex' (LogIsLogarithm f) f
+
+defaultIndex :: forall f a. DefaultIndex f => f a -> (Log f -> a)
+defaultIndex = defaultIndex' @(LogIsLogarithm f)
+{-# inline defaultIndex #-}
 
 -- | A helper for the most common usage pattern when working with higher-kinded data.
 --
