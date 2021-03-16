@@ -413,7 +413,7 @@ cotraverse = \fab fga ->
 
 instance (Distributive f, Distributive g) => Distributive (f :*: g) where
   type Log (f :*: g) = Either (Log f) (Log g)
-  scatter = \ k f (ffmap f -> w) -> 
+  scatter = \ k f (ffmap f -> w) ->
         scatter k (\(l :*: _) -> l) w
     :*: scatter k (\(_ :*: r) -> r) w
   tabulate = \ f -> tabulate (f . Left) :*: tabulate (f . Right)
@@ -1053,7 +1053,7 @@ logToLogarithm = \f -> Logarithm (traceDist f)
 
 -- | For any 'Traversable' 'Distributive' each 'Log' determines a 'Lens'.
 --
--- @ 
+-- @
 -- '_log' f = '_logarithm' ('logToLogarithm' f)
 -- @
 _log :: (Traversable f, Distributive f) => Log f -> Lens' (f a) a
