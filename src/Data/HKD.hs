@@ -12,6 +12,7 @@
 {-# language ScopedTypeVariables #-}
 {-# language Trustworthy #-}
 {-# language TypeOperators #-}
+{-# language RoleAnnotations #-}
 #if !defined(HLINT)
 {-# language LambdaCase #-}
 {-# language EmptyCase #-}
@@ -76,6 +77,8 @@ module Data.HKD
 , Element(..)
 , NT(..)
 , Limit(..)
+, AppCompose(..)
+, mapAppCompose
 ) where
 
 import Data.Kind (Type)
@@ -697,3 +700,46 @@ instance FTraversable Limit where
   ftraverse f (Limit m) = unsafeCoerce <$> f m
   {-# inline ftraverse #-}
 
+-------------------------------------------------------------------------------
+-- AppCompose
+-------------------------------------------------------------------------------
+
+-- consider renaming. Maybe something like `MapIndex`, since it has kind
+-- (i -> j) -> ((i -> Type) -> Type) -> (j -> Type) -> Type
+
+type role AppCompose nominal representational nominal
+newtype AppCompose g w f = AppCompose { runAppCompose :: w (f :.: g) }
+
+mapAppCompose
+  :: (w (f :.: g) -> w' (f' :.: g'))
+  -> AppCompose g w f -> AppCompose g' w' f'
+mapAppCompose = \f -> AppCompose #. f .# runAppCompose
+{-# inline mapAppCompose #-}
+
+mapComp1 :: (forall x. f (g x) -> f' (g' x)) -> f :.: g ~> f' :.: g'
+mapComp1 = \f -> Comp1 #. f .# unComp1
+{-# inline mapComp1#-}
+
+instance FFunctor w => FFunctor (AppCompose g w) where
+  ffmap = \f -> mapAppCompose $ ffmap (mapComp1 f)
+  {-# inline ffmap #-}
+
+instance FContravariant w => FContravariant (AppCompose g w) where
+  fcontramap = \f -> mapAppCompose $ fcontramap $ mapComp1 f
+  {-# inline fcontramap #-}
+
+instance FFoldable w => FFoldable (AppCompose g w) where
+  ffoldMap = \f -> ffoldMap (f .# unComp1) .# runAppCompose
+  {-# inline ffoldMap #-}
+
+instance FTraversable w => FTraversable (AppCompose g w) where
+  ftraverse = \f -> fmap AppCompose . ftraverse (fmap Comp1 . f .# unComp1) .# runAppCompose
+  {-# inline ftraverse #-}
+
+instance FZip w => FZip (AppCompose g w) where
+  fzipWith = \f (AppCompose x) (AppCompose y) -> AppCompose (fzipWith (\(Comp1 a) (Comp1 b) -> Comp1 (f a b)) x y)
+  {-# inline fzipWith #-}
+
+instance FRepeat w => FRepeat (AppCompose g w) where
+  frepeat = \a -> AppCompose $ frepeat $ Comp1 a
+  {-# inline frepeat #-}
