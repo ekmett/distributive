@@ -9,6 +9,7 @@
 {-# Language ExistentialQuantification #-}
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
+{-# Language GADTs #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language KindSignatures #-}
 {-# Language LambdaCase #-}
@@ -520,6 +521,57 @@ flogToFLogarithm = \f -> FLogarithm (ftraceFDist f)
 {-# inline flogToFLogarithm #-}
 
 -------------------------------------------------------------------------------
+-- HKD
+-------------------------------------------------------------------------------
+
+newtype HKD (f :: Type -> Type) (a :: () -> Type) = HKD { runHKD :: f (a '()) }
+
+mapHKD :: (f (a '()) -> g (b '())) -> HKD f a -> HKD g b
+mapHKD = \f -> HKD #. f .# runHKD
+{-# inline mapHKD #-}
+
+newtype DHKD w f = DHKD { runDHKD :: w (HKD f) }
+
+instance FFunctor w => FFunctor (DHKD w) where
+  ffmap f = DHKD #. ffmap (mapHKD f) .# runDHKD
+  {-# inline ffmap #-}
+
+instance Functor f => FFunctor (HKD f) where
+  ffmap = \f -> mapHKD (fmap f)
+  {-# inline ffmap #-}
+
+instance Contravariant f => FContravariant (HKD f) where
+  fcontramap = \f -> HKD #. contramap f .# runHKD
+  {-# inline fcontramap #-}
+
+instance Foldable f => FFoldable (HKD f) where
+  ffoldMap = \f -> foldMap f .# runHKD
+  {-# inline ffoldMap #-}
+
+instance Traversable f => FTraversable (HKD f) where
+  ftraverse = \f -> fmap HKD . traverse f .# runHKD
+  {-# inline ftraverse #-}
+
+instance Applicative f => FZip (HKD f) where
+  fzipWith = \f (HKD fab) (HKD fa) -> HKD (liftA2 f fab fa)
+  {-# inline fzipWith #-}
+instance Applicative f => FRepeat (HKD f) where
+  frepeat = HKD #. pure
+  {-# inline frepeat #-}
+
+data HKDFLog f (a :: ()) where
+  HKDFLog :: Log f -> HKDFLog f '()
+
+instance Distributive f => FDistributive (HKD f) where
+  type FLog (HKD f) = HKDFLog f
+  fscatter = \k g w -> HKD $ distrib (DHKD (ffmap g w)) $ k . ffmap coerce .# runDHKD
+  {-# inline fscatter #-}
+  findex = \(HKD fa) (HKDFLog lg) -> index fa lg
+  {-# inline findex #-}
+  ftabulate = \f -> HKD $ tabulate (f . HKDFLog)
+  {-# inline ftabulate #-}
+
+-------------------------------------------------------------------------------
 -- LKD
 -------------------------------------------------------------------------------
 -- probably belongs in HKD, but then the Distributive instance becomes an orphan
@@ -554,16 +606,16 @@ instance FRepeat f => Applicative (LKD f) where
   pure = \a -> LKD $ frepeat (Const a)
   {-# inline pure #-}
 
-type role DScatter representational nominal
-newtype DScatter w f = DScatter { runDScatter :: w (LKD f) }
+type role DLKD representational nominal
+newtype DLKD w f = DLKD { runDLKD :: w (LKD f) }
 
-instance FFunctor w => FFunctor (DScatter w) where
-  ffmap = \f -> DScatter #. ffmap (LKD #. f .# runLKD) .# runDScatter
+instance FFunctor w => FFunctor (DLKD w) where
+  ffmap = \f -> DLKD #. ffmap (LKD #. f .# runLKD) .# runDLKD
   {-# inline ffmap #-}
 
 instance FDistributive f => Distributive (LKD f) where
   type Log (LKD f) = Some (FLog f)
-  scatter = \k g -> LKD . fscatter (Const #. k .  ffmap coerce .# runDScatter) id . DScatter . ffmap g
+  scatter = \k g -> LKD . fscatter (Const #. k .  ffmap coerce .# runDLKD) id . DLKD . ffmap g
   {-# inline scatter #-}
   index = \fa (Some lg) -> getConst (findex (runLKD fa) lg)
   {-# inline index #-}
