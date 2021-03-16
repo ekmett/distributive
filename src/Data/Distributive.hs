@@ -963,7 +963,7 @@ logarithmPath = \ f -> runLogarithm f $ runTrail (traverse id $ pureDist end) id
 --logPath :: forall f. (Distributive f, Traversable f) => Proxy f -> Log f -> Path
 --logPath = \ _ f -> index (runTrail (traverse id $ pureDist end) id :: f Path) f
 logPath :: forall f. (Distributive f, Traversable f) => Log f -> Path
-logPath = \ f -> index (runTrail (traverse id $ pureDist end) id :: f Path) f
+logPath = index (runTrail (traverse id $ pureDist @f end) id)
 {-# inline logPath #-}
 
 -- unfortunate orphans, caused by having @hkd@ export the data type

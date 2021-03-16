@@ -1,4 +1,5 @@
 {-# Language CPP #-}
+{-# Language AllowAmbiguousTypes #-}
 {-# Language ConstraintKinds #-}
 {-# Language DataKinds #-}
 {-# Language DefaultSignatures #-}
@@ -20,6 +21,7 @@
 {-# Language ScopedTypeVariables #-}
 {-# Language StandaloneDeriving #-}
 {-# Language Trustworthy #-}
+{-# Language TypeApplications #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
 {-# Language UndecidableInstances #-}
@@ -61,10 +63,13 @@ module Data.HKD.Distributive
 -- * Uniqueness of logarithms
 , flogToFLogarithm
 , flogFromFLogarithm
+, geqFLog
+, gcompareFLog
 
 -- * Logarithm lens
 , _flogarithm
 , _flog
+, _flogGEq
 
 -- * LKD
 , LKD(..)
@@ -130,7 +135,7 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   default ftabulate
     :: (Generic1 f, DefaultFTabulate f)
     => (FLog f ~> a) -> f a
-  ftabulate = defaultFTabulate (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) 3))
+  ftabulate = defaultFTabulate @(ContainsSelfRec1 (Rep1 f) 3)
   {-# inline ftabulate #-}
 
   -- | A higher-kinded 'index'
@@ -138,7 +143,7 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   default findex
      :: (Generic1 f, DefaultFIndex f)
      => f a -> FLog f ~> a
-  findex = defaultFIndex (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) 3))
+  findex = defaultFIndex @(ContainsSelfRec1 (Rep1 f) 3)
   {-# inline findex #-}
 
 -- | A higher-kinded 'distrib'
@@ -207,25 +212,25 @@ type family DefaultFImplC (containsRec1 :: Bool) f :: Constraint where
 
 -- individual type classes, so there is GHC needs to less work
 class DefaultFImplC containsRec1 f => DefaultFTabulate' (containsRec1 :: Bool) f where
-  defaultFTabulate :: Proxy containsRec1 -> (FLog f ~> a) -> f a
+  defaultFTabulate :: (FLog f ~> a) -> f a
 
 instance DefaultFImplC 'True f => DefaultFTabulate' 'True f where
-  defaultFTabulate = \_ -> ftabulateFLogarithm
+  defaultFTabulate = ftabulateFLogarithm
   {-# inline defaultFTabulate #-}
 
 instance DefaultFImplC 'False f => DefaultFTabulate' 'False f where
-  defaultFTabulate = \_ -> ftabulateRep
+  defaultFTabulate = ftabulateRep
   {-# inline defaultFTabulate #-}
 
 class DefaultFImplC containsRec1 f => DefaultFIndex' (containsRec1 :: Bool) f where
-  defaultFIndex :: Proxy containsRec1 -> f a -> FLog f ~> a
+  defaultFIndex :: f a -> FLog f ~> a
 
 instance DefaultFImplC 'True f => DefaultFIndex' 'True f where
-  defaultFIndex = \_ -> findexFLogarithm
+  defaultFIndex = findexFLogarithm
   {-# inline defaultFIndex #-}
 
 instance DefaultFImplC 'False f => DefaultFIndex' 'False f where
-  defaultFIndex = \_ -> findexRep
+  defaultFIndex = findexRep
   {-# inline defaultFIndex #-}
 
 type DefaultFLog f = DefaultFLog' (ContainsSelfRec1 (Rep1 f) 3) f
@@ -544,7 +549,7 @@ instance FTraversable f => Traversable (LKD f) where
 
 -- Assumes FRepeat is FApplicative
 instance FRepeat f => Applicative (LKD f) where
-  (<*>) = \(LKD fab) (LKD fa) -> LKD (fzipWith coerce fab fa)
+  (<*>) = \(LKD fab) -> LKD #. fzipWith coerce fab .# runLKD
   {-# inline (<*>) #-}
   pure = \a -> LKD $ frepeat (Const a)
   {-# inline pure #-}
@@ -592,6 +597,14 @@ instance (FTraversable f, FDistributive f) => GEq (FLogarithm f) where
     then Just (unsafeCoerce Refl)
     else Nothing
 
+geqFLog :: forall f a b. (FDistributive f, FTraversable f) => FLog f a -> FLog f b -> Maybe (a :~: b)
+geqFLog x y = geq (flogFPath @f x) (flogFPath @f y)
+{-# inline geqFLog #-}
+
+gcompareFLog :: forall f a b. (FDistributive f, FTraversable f) => FLog f a -> FLog f b -> GOrdering a b
+gcompareFLog x y = gcompare (flogFPath @f x) (flogFPath @f y)
+{-# inline gcompareFLog #-}
+
 instance (FTraversable f, FDistributive f) => TestEquality (FLogarithm f) where
   testEquality = geq
   {-# inline testEquality #-}
@@ -605,11 +618,30 @@ instance (FTraversable f, FDistributive f) => GCompare (FLogarithm f) where
     LT -> GLT
     EQ -> unsafeCoerce GEQ
     GT -> GGT
+  {-# inline gcompare #-}
+
+flogFPath :: forall f. (FDistributive f, FTraversable f) => FLog f ~> FPath Proxy
+flogFPath = findex $ runTrail (ftraverse fend $ frepeatFDist @f Proxy) id
+{-# inline flogFPath #-}
 
 type Lens' s a = forall f. Functor f => (a -> f a) -> s -> f s
 
 type role FPath representational nominal
 data FPath f a = FPath (f a) Path
+
+instance GEq (FPath f) where
+  geq = \(FPath _ x) (FPath _ y) ->
+    if x == y
+    then Just (unsafeCoerce Refl)
+    else Nothing
+  {-# inline geq #-}
+
+instance GCompare (FPath f) where
+  gcompare = \(FPath _ x) (FPath _ y) -> case compare x y of
+    LT -> GLT
+    EQ -> unsafeCoerce GEQ
+    GT -> GGT
+  {-# inline gcompare #-}
 
 fend :: f a -> Trail (FPath f a)
 fend a = FPath a <$> end
