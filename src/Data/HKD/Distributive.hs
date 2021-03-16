@@ -89,17 +89,20 @@ import Data.Data
 import Data.Distributive
 import Data.Distributive.Coerce
 import Data.Distributive.Util
+import Data.Foldable.WithIndex
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
 import Data.Functor.Contravariant
+import Data.Functor.WithIndex
 import Data.GADT.Compare
 import qualified Data.Monoid as Monoid
 import Data.Kind
 import Data.HKD
 import Data.HKD.WithIndex
 import Data.Some
+import Data.Traversable.WithIndex
 import Data.Type.Coercion
 import Data.Type.Equality
 import Data.Void
@@ -568,6 +571,12 @@ instance Applicative f => FRepeat (HKD f) where
   frepeat f = HKD $ pure f
   {-# inline frepeat #-}
 
+-- data At a i j where
+--   At :: a -> At a k k
+
+-- instance FunctorWithIndex i f => FFunctorWithIndex (HKD f) where
+
+
 data HKDFLog f (a :: i) where
   HKDFLog :: Log f -> HKDFLog f Any
 
@@ -597,6 +606,9 @@ instance FFunctor f => Functor (LKD f) where
   fmap = \f -> LKD #. ffmap (Const #. f .# getConst) .# runLKD
   {-# inline fmap #-}
 
+instance FFunctorWithIndex i f => FunctorWithIndex (Some i) (LKD f) where
+  imap = \f -> LKD #. ifmap (\i -> Const #. f (Some i) .# getConst) .# runLKD
+
 instance FContravariant f => Contravariant (LKD f) where
   contramap = \f -> LKD #. fcontramap (Const #. f .# getConst) .# runLKD
   {-# inline contramap #-}
@@ -605,9 +617,17 @@ instance FFoldable f => Foldable (LKD f) where
   foldMap = \f -> ffoldMap (f .# getConst) .# runLKD
   {-# inline foldMap #-}
 
+instance FFoldableWithIndex i f => FoldableWithIndex (Some i) (LKD f) where
+  ifoldMap = \f -> iffoldMap (\i -> f (Some i) .# getConst) .# runLKD
+  {-# inline ifoldMap #-}
+
 instance FTraversable f => Traversable (LKD f) where
   traverse = \f -> fmap LKD . ftraverse (fmap Const . f .# getConst) .# runLKD
   {-# inline traverse #-}
+
+instance FTraversableWithIndex i f => TraversableWithIndex (Some i) (LKD f) where
+  itraverse = \f -> fmap LKD . iftraverse (\i -> fmap Const . f (Some i) .# getConst) .# runLKD
+  {-# inline itraverse #-}
 
 -- Assumes FRepeat is FApplicative
 instance FRepeat f => Applicative (LKD f) where
