@@ -23,7 +23,7 @@
 -- |
 -- Copyright :  (c) 2019-2021 Edward Kmett
 --              (c) 2019 Oleg Grenrus
---              (c) 2017-2021 Aaron Vargo 
+--              (c) 2017-2021 Aaron Vargo
 -- License   :  BSD-2-Clause OR Apache-2.0
 -- Maintainer:  Oleg Grenrus <oleg.grenrus@iki.fi>
 -- Stability :  experimental
@@ -376,7 +376,7 @@ class FFunctor t => FZip t where
 
 class FZip t => FRepeat t where
   frepeat :: (forall x. f x) -> t f
-  default frepeat :: (Generic1 t, FRepeat (Rep1 t)) => (forall x. f x) -> t f 
+  default frepeat :: (Generic1 t, FRepeat (Rep1 t)) => (forall x. f x) -> t f
   frepeat fx = to1 $ frepeat fx
   {-# inline frepeat #-}
 
@@ -584,9 +584,9 @@ instance FTraversable f => FTraversable (Backwards f) where
   {-# inline ftraverse #-}
 
 instance FTraversable f => FTraversable (Monoid.Alt f) where
-  ftraverse = \f -> fmap Monoid.Alt . ftraverse f .# Monoid.getAlt 
+  ftraverse = \f -> fmap Monoid.Alt . ftraverse f .# Monoid.getAlt
   {-# inline ftraverse #-}
-  
+
 #if MIN_VERSION_base(4,12,0)
 deriving newtype instance FFunctor f => FFunctor (Monoid.Ap f)
 deriving newtype instance FContravariant f => FContravariant (Monoid.Ap f)

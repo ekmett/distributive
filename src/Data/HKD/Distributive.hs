@@ -607,9 +607,6 @@ instance Distributive f => FDistributive (HKD f x) where
 -------------------------------------------------------------------------------
 -- probably belongs in HKD, but then the Distributive instance becomes an orphan
 
--- also consider adding Raise :: (Type -> Type) -> (() -> Type) -> Type
--- in the other direction?
-
 -- | Forget higher-kindedness. Unffctor? Lower?
 -- Generally, if @f@ is an @FThing@ then @'LKD' f@ is a @Thing@
 type role LKD representational nominal
