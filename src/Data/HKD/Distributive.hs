@@ -85,6 +85,9 @@ module Data.HKD.Distributive
 -- * HKD
 , HKD(..)
 , Atkey(..)
+
+-- * FLogAppCompose
+, FLogAppCompose(..)
 ) where
 
 import Control.Applicative
@@ -395,6 +398,27 @@ instance FDistributive Limit where
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
 
+-- this is similar to AppCompose. could probably be derived more generally
+newtype AppAppCompose w g f
+  = AppAppCompose { runAppAppCompose :: w (AppCompose g f) }
+
+instance FFunctor w => FFunctor (AppAppCompose w g) where
+  ffmap = \f -> AppAppCompose #. ffmap (mapAppCompose f) .# runAppAppCompose
+  {-# inline ffmap #-}
+
+data FLogAppCompose g w a where
+  FLogAppCompose :: FLog w a -> FLogAppCompose g w (g a)
+
+instance FDistributive w => FDistributive (AppCompose g w) where
+  type FLog (AppCompose g w) = FLogAppCompose g w
+  fscatter = \k g ->
+    AppCompose #. fscatter (Comp1 #. k . ffmap coerce .# runAppAppCompose) id . AppAppCompose #. ffmap g
+  {-# inline fscatter #-}
+  findex = \(AppCompose fa) (FLogAppCompose x) -> unComp1 $ findex fa x
+  {-# inline findex #-}
+  ftabulate = \f -> AppCompose $ ftabulate (Comp1 #. f . FLogAppCompose)
+  {-# inline ftabulate #-}
+
 instance FDistributive (D2 a b) where
   type FLog (D2 a b) = FLogarithm (D2 a b)
   findex = findexFLogarithm
@@ -606,9 +630,6 @@ instance Distributive f => FDistributive (HKD f x) where
 -- LKD
 -------------------------------------------------------------------------------
 -- probably belongs in HKD, but then the Distributive instance becomes an orphan
-
--- also consider adding Raise :: (Type -> Type) -> (() -> Type) -> Type
--- in the other direction?
 
 -- | Forget higher-kindedness. Unffctor? Lower?
 -- Generally, if @f@ is an @FThing@ then @'LKD' f@ is a @Thing@

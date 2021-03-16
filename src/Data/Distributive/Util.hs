@@ -29,7 +29,6 @@ module Data.Distributive.Util
 ( (<&>)
 , type ContainsSelfRec1
 , DCompose(..)
-, AppCompose(..)
 , D2(..)
 , D3(..)
 , D4(..)
@@ -80,12 +79,6 @@ type role DCompose nominal representational nominal
 newtype DCompose a f g = DCompose { runDCompose :: f (g a) }
 instance Functor f => FFunctor (DCompose a f) where
   ffmap f = DCompose #. (fmap f .# runDCompose)
-  {-# inline ffmap #-}
-
-type role AppCompose representational nominal nominal
-newtype AppCompose w g f = AppCompose { runAppCompose :: w (f :.: g) }
-instance FFunctor w => FFunctor (AppCompose w g) where
-  ffmap f = AppCompose #. ffmap (Comp1 #. f .# unComp1) .# runAppCompose
   {-# inline ffmap #-}
 
 type role D2 nominal nominal representational
