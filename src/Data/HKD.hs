@@ -55,8 +55,6 @@ module Data.HKD
    type (~>)
 -- * Functor
 , FFunctor(..)
--- * Contravariant
-, FContravariant(..)
 -- * Foldable
 , FFoldable(..)
 , flength
@@ -76,32 +74,34 @@ module Data.HKD
 , Element(..)
 , NT(..)
 , Limit(..)
+-- * Contravariant functors
+, FContravariant(..)
+, FEquivalence(..)
+, FComparison(..)
+, FOp(..)
 ) where
 
-import Data.Kind (Type)
 import Control.Applicative
 import Control.Applicative.Backwards
-import qualified Data.Monoid as Monoid
-import Data.Semigroup (Semigroup (..))
 import Data.Proxy (Proxy (..))
-import Data.Functor.Constant
-import Data.Functor.Identity (Identity (..))
-import Data.Functor.Reverse
-import Data.Monoid (Monoid (..))
-
-import GHC.Generics
-import Data.Functor.Confusing
-
 import Data.Coerce (coerce)
+import Data.Functor.Constant
 import Data.Functor.Compose (Compose (..))
+import Data.Functor.Confusing
+import Data.Functor.Identity (Identity (..))
 import Data.Functor.Product (Product (..))
+import Data.Functor.Reverse
 import Data.Functor.Sum (Sum (..))
-
+import Data.GADT.Compare
+import qualified Data.Monoid as Monoid
+import Data.Kind (Type)
+import Data.Semigroup (Semigroup (..))
 import Data.Some.GADT (Some (..), mapSome, foldSome)
 import qualified Data.Some.Newtype as N
 import qualified Data.Some.Church as C
-
 import Data.Distributive.Coerce
+import Data.Type.Equality
+import GHC.Generics
 import Unsafe.Coerce
 
 -------------------------------------------------------------------------------
@@ -200,7 +200,7 @@ ffor_ tf k = ftraverse_ k tf
 {-# inline ffor_ #-}
 
 instance FFoldable Proxy where
-  ffoldMap _ = Data.Monoid.mempty
+  ffoldMap _ = mempty
   flengthAcc = const
   {-# inline ffoldMap #-}
   {-# inline flengthAcc #-}
@@ -334,10 +334,8 @@ instance FTraversable U1 where
   {-# inline ftraverse #-}
 
 instance FTraversable V1 where
-#ifndef HLINT
   ftraverse _ = \case
   {-# inline ftraverse #-}
-#endif
 
 instance FTraversable f => FTraversable (M1 i c f) where
   ftraverse f = fmap M1 . ftraverse f .# unM1
@@ -533,10 +531,8 @@ instance FContravariant U1 where
   {-# inline fcontramap #-}
 
 instance FContravariant V1 where
-#ifndef HLINT
   fcontramap _ = \case
   {-# inline fcontramap #-}
-#endif
 
 instance (Functor f, FContravariant g) => FContravariant (f :.: g) where
   fcontramap f = Comp1 #. fmap (fcontramap f) .# unComp1
@@ -697,3 +693,28 @@ instance FTraversable Limit where
   ftraverse f (Limit m) = unsafeCoerce <$> f m
   {-# inline ftraverse #-}
 
+-------------------------------------------------------------------------------
+-- FEquivalence
+-------------------------------------------------------------------------------
+
+newtype FEquivalence a = FEquivalence
+  { getFEquivalence :: forall x y. a x -> a y -> Maybe (x :~: y)
+  }
+
+instance FContravariant FEquivalence where
+  fcontramap f (FEquivalence g) = FEquivalence $ \i j -> g (f i) (f j)
+  {-# inline fcontramap #-}
+
+newtype FComparison a = FComparison
+  { getFComparison :: forall x y. a x -> a y -> GOrdering x y
+  }
+
+instance FContravariant FComparison where
+  fcontramap f (FComparison g) = FComparison $ \i j -> g (f i) (f j)
+  {-# inline fcontramap #-}
+
+newtype FOp b f = FOp { getFOp :: forall x. f x -> b }
+
+instance FContravariant (FOp b) where
+  fcontramap f (FOp g) = FOp (g . f)
+  {-# inline fcontramap #-}

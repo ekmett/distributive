@@ -1,7 +1,10 @@
 {-# Language LambdaCase #-}
 {-# Language EmptyCase #-}
 {-# Language ScopedTypeVariables #-}
+{-# Language PolyKinds #-}
+{-# Language DataKinds #-}
 {-# Language TypeOperators #-}
+{-# Language TypeFamilies #-}
 {-# Language InstanceSigs #-}
 {-# Language Trustworthy #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -12,6 +15,14 @@ import Data.GADT.Compare
 import Data.Type.Coercion
 import Data.Type.Equality
 import GHC.Generics
+
+instance Semigroup (GOrdering a b) where
+  GLT <> _ = GLT
+  GEQ <> x = x
+  GGT <> _ = GGT
+
+instance a ~ b => Monoid (GOrdering a b) where
+  mempty = GEQ
 
 instance (GEq f, GEq g) => GEq (f :+: g) where
   geq (L1 x) (L1 y) = geq x y
