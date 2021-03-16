@@ -892,7 +892,7 @@ duplicateDistBy = \t f -> tabulate $ \i -> tabulate $ \j -> index f (t i j)
 -- | A default definition for 'ask' from 'MonadReader' in terms of 'Distributive'
 askDist :: Distributive f => f (Log f)
 askDist = tabulate id
-{-# inline askDist #-}
+{-# noinline[0] askDist #-}
 
 -- | A default definition for 'local' from 'MonadReader' in terms of 'Distributive'
 localDist :: Distributive f => (Log f -> Log f) -> f a -> f a

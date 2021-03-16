@@ -491,6 +491,7 @@ frepeatFDist = \ax -> fscatter (\x -> runLimit (getConst x)) id (Const (Limit ax
 
 faskFDist :: FDistributive f => f (FLog f)
 faskFDist = ftabulate id
+{-# noinline[0] faskFDist #-}
 
 ftraceFDist :: FDistributive f => FLog f a -> f g -> g a
 ftraceFDist = \x y -> findex y x
@@ -555,6 +556,7 @@ instance Traversable f => FTraversable (HKD f) where
 instance Applicative f => FZip (HKD f) where
   fzipWith = \f (HKD fab) (HKD fa) -> HKD (liftA2 f fab fa)
   {-# inline fzipWith #-}
+
 instance Applicative f => FRepeat (HKD f) where
   frepeat = HKD #. pure
   {-# inline frepeat #-}
@@ -590,6 +592,7 @@ instance FFunctor f => Functor (LKD f) where
 
 instance FContravariant f => Contravariant (LKD f) where
   contramap = \f -> LKD #. fcontramap (Const #. f .# getConst) .# runLKD
+  {-# inline contramap #-}
 
 instance FFoldable f => Foldable (LKD f) where
   foldMap = \f -> ffoldMap (f .# getConst) .# runLKD
@@ -622,12 +625,6 @@ instance FDistributive f => Distributive (LKD f) where
   tabulate = \f -> LKD $ ftabulate (Const #. f . Some)
   {-# inline tabulate #-}
 
--- maybe this could be replaced with `Some FLogarithm`, either using Flexible instances,
--- or if we had EqSome and OrdSome classes, with EqSome f => Eq (Some f), etc.
-
--- | @'Some' 'FLogarithm'@, but with 'Eq' and 'Ord' instances
---data SomeFLogarithm f = forall a. SomeFLogarithm { runSomeFLogarithm :: FLogarithm f a }
-
 lowerLogarithm :: FLogarithm f x -> Logarithm (LKD f)
 lowerLogarithm = \(FLogarithm f) -> Logarithm $ getConst #. f .# runLKD
 {-# inline lowerLogarithm #-}
@@ -638,9 +635,11 @@ liftLogarithm = \(Logarithm f) -> f $ LKD $ ftabulateFLogarithm (Const #. Some)
 
 instance (FTraversable f, FDistributive f) => Eq (FLogarithm f a) where
   (==) = on (==) lowerLogarithm
+  {-# inline (==) #-}
 
 instance (FTraversable f, FDistributive f) => Ord (FLogarithm f a) where
   compare = on compare lowerLogarithm
+  {-# inline compare #-}
 
 -- safer than it looks
 instance (FTraversable f, FDistributive f) => GEq (FLogarithm f) where
@@ -648,6 +647,7 @@ instance (FTraversable f, FDistributive f) => GEq (FLogarithm f) where
     if lowerLogarithm x == lowerLogarithm y
     then Just (unsafeCoerce Refl)
     else Nothing
+  {-# inline geq #-}
 
 geqFLog :: forall f a b. (FDistributive f, FTraversable f) => FLog f a -> FLog f b -> Maybe (a :~: b)
 geqFLog x y = geq (flogFPath @f x) (flogFPath @f y)
