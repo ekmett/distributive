@@ -379,9 +379,9 @@ instance FDistributive (D2 a b) where
   type FLog (D2 a b) = FLogarithm (D2 a b)
   findex = findexFLogarithm
   ftabulate = ftabulateFLogarithm
-  fscatter = \k f w ->
-     D2 (k $ ffmap (\(f -> D2 x _) -> Element x) w)
-        (k $ ffmap (\(f -> D2 _ y) -> Element y) w)
+  fscatter = \k f (ffmap f -> w) ->
+     D2 (k $ ffmap (\(D2 x _) -> Element x) w)
+        (k $ ffmap (\(D2 _ y) -> Element y) w)
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
@@ -396,10 +396,10 @@ instance FDistributive (D3 a b c) where
   type FLog (D3 a b c) = FLogarithm (D3 a b c)
   findex = findexFLogarithm
   ftabulate = ftabulateFLogarithm
-  fscatter = \k f w ->
-     D3 (k $ ffmap (\(f -> D3 x _ _) -> Element x) w)
-        (k $ ffmap (\(f -> D3 _ x _) -> Element x) w)
-        (k $ ffmap (\(f -> D3 _ _ x) -> Element x) w)
+  fscatter = \k f (ffmap f -> w) ->
+     D3 (k $ ffmap (\(D3 x _ _) -> Element x) w)
+        (k $ ffmap (\(D3 _ x _) -> Element x) w)
+        (k $ ffmap (\(D3 _ _ x) -> Element x) w)
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
@@ -408,11 +408,11 @@ instance FDistributive (D4 a b c d) where
   type FLog (D4 a b c d) = FLogarithm (D4 a b c d)
   findex = findexFLogarithm
   ftabulate = ftabulateFLogarithm
-  fscatter = \k f w ->
-     D4 (k $ ffmap (\(f -> D4 x _ _ _) -> Element x) w)
-        (k $ ffmap (\(f -> D4 _ x _ _) -> Element x) w)
-        (k $ ffmap (\(f -> D4 _ _ x _) -> Element x) w)
-        (k $ ffmap (\(f -> D4 _ _ _ x) -> Element x) w)
+  fscatter = \k f (ffmap f -> w) ->
+     D4 (k $ ffmap (\(D4 x _ _ _) -> Element x) w)
+        (k $ ffmap (\(D4 _ x _ _) -> Element x) w)
+        (k $ ffmap (\(D4 _ _ x _) -> Element x) w)
+        (k $ ffmap (\(D4 _ _ _ x) -> Element x) w)
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
@@ -421,12 +421,12 @@ instance FDistributive (D5 a b c d e) where
   type FLog (D5 a b c d e) = FLogarithm (D5 a b c d e)
   findex = findexFLogarithm
   ftabulate = ftabulateFLogarithm
-  fscatter = \k f w ->
-     D5 (k $ ffmap (\(f -> D5 x _ _ _ _) -> Element x) w)
-        (k $ ffmap (\(f -> D5 _ x _ _ _) -> Element x) w)
-        (k $ ffmap (\(f -> D5 _ _ x _ _) -> Element x) w)
-        (k $ ffmap (\(f -> D5 _ _ _ x _) -> Element x) w)
-        (k $ ffmap (\(f -> D5 _ _ _ _ x) -> Element x) w)
+  fscatter = \k f (ffmap f -> w) ->
+     D5 (k $ ffmap (\(D5 x _ _ _ _) -> Element x) w)
+        (k $ ffmap (\(D5 _ x _ _ _) -> Element x) w)
+        (k $ ffmap (\(D5 _ _ x _ _) -> Element x) w)
+        (k $ ffmap (\(D5 _ _ _ x _) -> Element x) w)
+        (k $ ffmap (\(D5 _ _ _ _ x) -> Element x) w)
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
@@ -435,9 +435,9 @@ instance FDistributive (DBind x y) where
   type FLog (DBind x y) = FLogarithm (DBind x y)
   findex = findexFLogarithm
   ftabulate = ftabulateFLogarithm
-  fscatter = \k f w ->
-    DBind (      k $ ffmap (\(f -> DBind x _)  -> Element x     ) w)
-          (\a -> k $ ffmap (\(f -> DBind _ fx) -> Element $ fx a) w)
+  fscatter = \k f (ffmap f -> w) ->
+    DBind (      k $ ffmap (\(DBind x _)  -> Element x     ) w)
+          (\a -> k $ ffmap (\(DBind _ fx) -> Element $ fx a) w)
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
