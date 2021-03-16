@@ -1,6 +1,7 @@
 {-# Language CPP #-}
 {-# Language DataKinds #-}
 {-# Language DeriveFunctor #-}
+{-# Language DeriveGeneric #-}
 {-# Language PatternSynonyms #-}
 {-# Language LambdaCase #-}
 {-# Language PolyKinds #-}

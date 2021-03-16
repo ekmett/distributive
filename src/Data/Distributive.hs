@@ -1,4 +1,5 @@
 {-# Language CPP #-}
+{-# Language AllowAmbiguousTypes #-}
 {-# Language ConstraintKinds #-}
 {-# Language DataKinds #-}
 {-# Language DefaultSignatures #-}
@@ -22,6 +23,7 @@
 {-# Language StandaloneDeriving #-}
 {-# Language Trustworthy #-}
 {-# Language TupleSections #-}
+{-# Language TypeApplications #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
 {-# Language UndecidableInstances #-}
@@ -83,6 +85,13 @@ module Data.Distributive
 , logFromLogarithm
 , logToLogarithm
 , _log
+, eqLog
+, neLog
+, gtLog
+, geLog
+, ltLog
+, leLog
+, compareLog
 -- ** via DerivingVia
 , Dist(..)
 -- ** for other classes
@@ -140,12 +149,14 @@ import Data.Complex
 import Data.Distributive.Coerce
 import Data.Distributive.Util
 import Data.Foldable (fold)
+import Data.Foldable.WithIndex
 import Data.Function (on)
 import Data.Functor.Classes
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
+import Data.Functor.WithIndex
 import Data.Kind
 import qualified Data.Monoid as Monoid
 import qualified Data.Semigroup as Semigroup
@@ -153,6 +164,7 @@ import Data.HKD
 import Data.Ord (Down(..))
 import Data.Orphans ()
 import Data.Proxy
+import Data.Traversable.WithIndex
 import Data.Void
 import GHC.Generics
 import Numeric
@@ -198,7 +210,7 @@ class Functor f => Distributive f where
   default tabulate
     :: (Generic1 f, DefaultTabulate f)
     => (Log f -> a) -> f a
-  tabulate = defaultTabulate (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) 3))
+  tabulate = defaultTabulate @(ContainsSelfRec1 (Rep1 f) 3)
   {-# inline tabulate #-}
 
   -- | Defaults to 'indexRep when @f@ is non-recursive, otherwise to 'indexLogarithm'.
@@ -206,7 +218,7 @@ class Functor f => Distributive f where
   default index
      :: (Generic1 f, DefaultIndex f)
      => f a -> Log f -> a
-  index = defaultIndex (Proxy :: Proxy (ContainsSelfRec1 (Rep1 f) 3))
+  index = defaultIndex @(ContainsSelfRec1 (Rep1 f) 3)
   {-# inline index #-}
 
   -- | Scatter the contents of an 'FFunctor'. This admittedly complicated operation
@@ -266,25 +278,25 @@ type family DefaultImplC (containsRec1 :: Bool) f :: Constraint where
 
 -- individual type classes, so there is GHC needs to less work
 class DefaultImplC containsRec1 f => DefaultTabulate' (containsRec1 :: Bool) f where
-  defaultTabulate :: Proxy containsRec1 -> (Log f -> a) -> f a
+  defaultTabulate :: (Log f -> a) -> f a
 
 instance DefaultImplC 'True f => DefaultTabulate' 'True f where
-  defaultTabulate = const tabulateLogarithm
+  defaultTabulate = tabulateLogarithm
   {-# inline defaultTabulate #-}
 
 instance DefaultImplC 'False f => DefaultTabulate' 'False f where
-  defaultTabulate = const tabulateRep
+  defaultTabulate = tabulateRep
   {-# inline defaultTabulate #-}
 
 class DefaultImplC containsRec1 f => DefaultIndex' (containsRec1 :: Bool) f where
-  defaultIndex :: Proxy containsRec1 -> f a -> Log f -> a
+  defaultIndex :: f a -> Log f -> a
 
 instance DefaultImplC 'True f => DefaultIndex' 'True f where
-  defaultIndex = const indexLogarithm
+  defaultIndex = indexLogarithm
   {-# inline defaultIndex #-}
 
 instance DefaultImplC 'False f => DefaultIndex' 'False f where
-  defaultIndex = const indexRep
+  defaultIndex = indexRep
   {-# inline defaultIndex #-}
 
 type DefaultLog f = DefaultLog' (ContainsSelfRec1 (Rep1 f) 3) f
@@ -321,7 +333,7 @@ scatterDefault = \k phi wg ->
   tabulate $ \x -> k $ ffmap (\g -> Identity $ index (phi g) x) wg
 {-# inline scatterDefault #-}
 
--- | Default definition for 'tabulate' in when 'Log f' = 'Logarithm f'. Can be used
+-- | Default definition for 'tabulate' in when @'Log' f@ = @'Logarithm' f@. Can be used
 -- to manipulate 'Logarithm's regardless of the choice of 'Log' for your distributive
 -- functor.
 tabulateLogarithm :: Distributive f => (Logarithm f -> a) -> f a
@@ -896,6 +908,10 @@ traceDist = flip index
 
 -- * FunctorWithIndex
 
+instance (Distributive f, Log f ~ i) => FunctorWithIndex i (Dist f) where
+  imap = imapDist
+  {-# inline imap #-}
+
 -- | A default definition for 'imap' from @FunctorWithIndex@ in terms of 'Distributive'
 imapDist
   :: Distributive f
@@ -904,6 +920,10 @@ imapDist = \f xs -> tabulate (f <*> index xs)
 {-# inline imapDist #-}
 
 -- * FoldableWithIndex
+
+instance (Distributive f, Foldable f, Log f ~ i) => FoldableWithIndex i (Dist f) where
+  ifoldMap = ifoldMapDist
+  {-# inline ifoldMap #-}
 
 -- | A default definition for 'ifoldMap' from @FoldableWithIndex@ in terms of 'Distributive'
 ifoldMapDist
@@ -914,6 +934,10 @@ ifoldMapDist = \ix xs -> fold (tabulate (\i -> ix i $ index xs i) :: f m)
 {-# inline ifoldMapDist #-}
 
 -- * TraversableWithIndex
+
+instance (Distributive f, Traversable f, Log f ~ i) => TraversableWithIndex i (Dist f) where
+  itraverse = itraverseDist
+  {-# inline itraverse #-}
 
 -- | A default definition for 'itraverse' from @TraversableWithIndex@ in terms of 'Distributive'
 itraverseDist
@@ -931,27 +955,68 @@ rightAdjunctDist :: Distributive u => (a -> u b) -> (a, Log u) -> b
 rightAdjunctDist = \f ~(a, k) -> f a `index` k
 {-# inline rightAdjunctDist #-}
 
-logPath :: (Distributive f, Traversable f) => Logarithm f -> Path
-logPath = \(Logarithm f) -> f $ runTrail (traverse id $ pureDist end) id
+logarithmPath :: (Distributive f, Traversable f) => Logarithm f -> Path
+logarithmPath = \ f -> runLogarithm f $ runTrail (traverse id $ pureDist end) id
+{-# inline logarithmPath #-}
+
+-- AllowAmbiguousTypes?
+--logPath :: forall f. (Distributive f, Traversable f) => Proxy f -> Log f -> Path
+--logPath = \ _ f -> index (runTrail (traverse id $ pureDist end) id :: f Path) f
+logPath :: forall f. (Distributive f, Traversable f) => Log f -> Path
+logPath = \ f -> index (runTrail (traverse id $ pureDist end) id :: f Path) f
 {-# inline logPath #-}
 
 -- unfortunate orphans, caused by having @hkd@ export the data type
 -- rather than making it up here.
 instance (Distributive f, Traversable f) => Eq (Logarithm f) where
-  (==) = on (==) logPath
+  (==) = on (==) logarithmPath
   {-# inline (==) #-}
 
 instance (Distributive f, Traversable f) => Ord (Logarithm f) where
-  (<) = on (<) logPath
-  (<=) = on (<=) logPath
-  (>=) = on (>=) logPath
-  (>) = on (>) logPath
-  compare = on compare logPath
+  (<) = on (<) logarithmPath
+  (<=) = on (<=) logarithmPath
+  (>=) = on (>=) logarithmPath
+  (>) = on (>) logarithmPath
+  compare = on compare logarithmPath
   {-# inline compare #-}
   {-# inline (<) #-}
   {-# inline (<=) #-}
   {-# inline (>=) #-}
   {-# inline (>) #-}
+
+-- | Use explicit type application to call this function. e.g. @'eqLog' \@f@
+--
+-- Compare two logarithms for equality
+eqLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+eqLog = on (==) (logPath @f)
+
+-- | Use explicit type application to call this function. e.g. @'neLog' \@f@
+--
+-- Compare two logarithms for disequality
+neLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+neLog = on (/=) (logPath @f)
+
+-- | Use explicit type application to call this function. e.g. @'ltLog' \@f@
+ltLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+ltLog = on (<) (logPath @f)
+
+-- | Use explicit type application to call this function. e.g. @'leLog' \@f@
+leLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+leLog = on (<=) (logPath @f)
+
+-- | Use explicit type application to call this function. e.g. @'gtLog' \@f@
+gtLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+gtLog = on (>) (logPath @f)
+
+-- | Use explicit type application to call this function. e.g. @'geLog' \@f@
+geLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+geLog = on (>=) (logPath @f)
+
+-- | Use explicit type application to call this function. e.g. @'compareLog' \@f@
+--
+-- Compare two logarithms
+compareLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Ordering
+compareLog = on compare (logPath @f)
 
 type Lens' s a = forall f. Functor f => (a -> f a) -> s -> f s
 

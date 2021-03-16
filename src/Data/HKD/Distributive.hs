@@ -56,6 +56,7 @@ module Data.HKD.Distributive
 , ftabulateRep
 , findexRep
 , fscatterRep
+, fscatterDefault
 
 -- * Uniqueness of logarithms
 , flogToFLogarithm
@@ -87,6 +88,8 @@ import qualified Data.Monoid as Monoid
 import Data.Kind
 import Data.HKD
 import Data.Some
+import Data.Type.Coercion
+import Data.Type.Equality
 import Data.Void
 import GHC.Generics
 import Data.Coerce
@@ -179,6 +182,15 @@ fscatterRep
   => (w % Element ~> r) -> (g ~> f) -> w g -> f r
 fscatterRep = \k phi -> to1 . fscatter k (from1 . phi)
 {-# inline fscatterRep #-}
+
+fscatterDefault
+  :: (FDistributive f, FFunctor w)
+  => (w % Element ~> r)
+  -> (g ~> f)
+  -> w g -> f r
+fscatterDefault = \k phi wg ->
+  ftabulate $ \x -> k $ ffmap (\g -> Element $ findex (phi g) x) wg
+{-# inline fscatterDefault #-}
 
 -- | A higher-kinded 'Tabulate'
 pattern FTabulate :: FDistributive f => (FLog f ~> a) -> f a
@@ -303,7 +315,7 @@ instance FDistributive f => FDistributive (Rec1 f) where
 
 instance (Distributive f, FDistributive g) => FDistributive (f :.: g) where
   type FLog (f :.: g) = Const (Log f) :*: FLog g
-  fscatter = \k phi wg -> Comp1 $ 
+  fscatter = \k phi wg -> Comp1 $
     scatter (fscatter k coerce .# runAppCompose) id $ AppCompose (ffmap phi wg)
   findex = \(Comp1 f) (Const x :*: y) -> findex (index f x) y
   ftabulate = \f -> Comp1 $ tabulate $ \i -> ftabulate $ \j -> f (Const i :*: j)
@@ -335,6 +347,100 @@ deriving newtype instance FDistributive f => FDistributive (Monoid.Alt f)
 -- Ap was only added in base 4.12 ghc 8.6
 deriving newtype instance FDistributive f => FDistributive (Monoid.Ap f)
 #endif
+
+instance FDistributive (Element a) where
+  type FLog (Element a) = (:~:) a
+  fscatter = \k f w -> Element $ k $ ffmap f w
+  findex = \f Refl -> runElement f
+  ftabulate = \f -> Element (f Refl)
+  {-# inline fscatter #-}
+  {-# inline findex #-}
+  {-# inline ftabulate #-}
+
+instance FDistributive (NT f) where
+  type FLog (NT f) = f
+  fscatter = fscatterDefault
+  ftabulate = NT
+  findex = runNT
+  {-# inline findex #-}
+  {-# inline ftabulate #-}
+  {-# inline fscatter #-}
+
+instance FDistributive Limit where
+  type FLog Limit = Proxy
+  fscatter = \k f w -> Limit $ k $ ffmap (Element #. runLimit . f) w
+  findex = const . runLimit
+  ftabulate = \f -> Limit $ f (Proxy)
+  {-# inline findex #-}
+  {-# inline ftabulate #-}
+  {-# inline fscatter #-}
+
+instance FDistributive (D2 a b) where
+  type FLog (D2 a b) = FLogarithm (D2 a b)
+  findex = findexFLogarithm
+  ftabulate = ftabulateFLogarithm
+  fscatter = \k f w ->
+     D2 (k $ ffmap (\(f -> D2 x _) -> Element x) w)
+        (k $ ffmap (\(f -> D2 _ y) -> Element y) w)
+  {-# inline findex #-}
+  {-# inline ftabulate #-}
+  {-# inline fscatter #-}
+
+  -- type FLog (D2 a b) = (:~:) a :+: (:~:) b
+  -- findex = \(D2 x y) -> \case
+  --  L1 Refl -> x
+  --  R1 Refl -> y
+  -- ftabulate = \f -> D2 (f $ L1 Refl) (f $ R1 Refl)
+
+instance FDistributive (D3 a b c) where
+  type FLog (D3 a b c) = FLogarithm (D3 a b c)
+  findex = findexFLogarithm
+  ftabulate = ftabulateFLogarithm
+  fscatter = \k f w ->
+     D3 (k $ ffmap (\(f -> D3 x _ _) -> Element x) w)
+        (k $ ffmap (\(f -> D3 _ x _) -> Element x) w)
+        (k $ ffmap (\(f -> D3 _ _ x) -> Element x) w)
+  {-# inline findex #-}
+  {-# inline ftabulate #-}
+  {-# inline fscatter #-}
+
+instance FDistributive (D4 a b c d) where
+  type FLog (D4 a b c d) = FLogarithm (D4 a b c d)
+  findex = findexFLogarithm
+  ftabulate = ftabulateFLogarithm
+  fscatter = \k f w ->
+     D4 (k $ ffmap (\(f -> D4 x _ _ _) -> Element x) w)
+        (k $ ffmap (\(f -> D4 _ x _ _) -> Element x) w)
+        (k $ ffmap (\(f -> D4 _ _ x _) -> Element x) w)
+        (k $ ffmap (\(f -> D4 _ _ _ x) -> Element x) w)
+  {-# inline findex #-}
+  {-# inline ftabulate #-}
+  {-# inline fscatter #-}
+
+instance FDistributive (D5 a b c d e) where
+  type FLog (D5 a b c d e) = FLogarithm (D5 a b c d e)
+  findex = findexFLogarithm
+  ftabulate = ftabulateFLogarithm
+  fscatter = \k f w ->
+     D5 (k $ ffmap (\(f -> D5 x _ _ _ _) -> Element x) w)
+        (k $ ffmap (\(f -> D5 _ x _ _ _) -> Element x) w)
+        (k $ ffmap (\(f -> D5 _ _ x _ _) -> Element x) w)
+        (k $ ffmap (\(f -> D5 _ _ _ x _) -> Element x) w)
+        (k $ ffmap (\(f -> D5 _ _ _ _ x) -> Element x) w)
+  {-# inline findex #-}
+  {-# inline ftabulate #-}
+  {-# inline fscatter #-}
+
+instance FDistributive (DBind x y) where
+  type FLog (DBind x y) = FLogarithm (DBind x y)
+  findex = findexFLogarithm
+  ftabulate = ftabulateFLogarithm
+  fscatter = \k f w ->
+    DBind (      k $ ffmap (\(f -> DBind x _)  -> Element x     ) w)
+          (\a -> k $ ffmap (\(f -> DBind _ fx) -> Element $ fx a) w)
+  {-# inline findex #-}
+  {-# inline ftabulate #-}
+  {-# inline fscatter #-}
 
 -- | A higher-kinded 'Dist'
 type role FDist representational nominal
@@ -481,12 +587,21 @@ instance (FTraversable f, FDistributive f) => Ord (FLogarithm f a) where
 
 -- safer than it looks
 instance (FTraversable f, FDistributive f) => GEq (FLogarithm f) where
-  geq x y
-    | lowerLogarithm x == lowerLogarithm y = Just (unsafeCoerce Refl)
-    | otherwise = Nothing
+  geq = \x y ->
+    if lowerLogarithm x == lowerLogarithm y
+    then Just (unsafeCoerce Refl)
+    else Nothing
+
+instance (FTraversable f, FDistributive f) => TestEquality (FLogarithm f) where
+  testEquality = geq
+  {-# inline testEquality #-}
+
+instance (FTraversable f, FDistributive f) => TestCoercion (FLogarithm f) where
+  testCoercion = \x y -> repr <$> geq x y
+  {-# inline testCoercion #-}
 
 instance (FTraversable f, FDistributive f) => GCompare (FLogarithm f) where
-  gcompare x y = case compare (lowerLogarithm x) (lowerLogarithm y) of
+  gcompare = \x y -> case compare (lowerLogarithm x) (lowerLogarithm y) of
     LT -> GLT
     EQ -> unsafeCoerce GEQ
     GT -> GGT
@@ -519,9 +634,10 @@ _flogGEq = \i a2ga fa -> a2ga (findex fa i) <&> \a' -> imapFDist (\j a -> case g
 {-# inline _flogGEq #-}
 
 imapFDist
-  :: FDistributive f
+  :: forall f a b. FDistributive f
   => (forall x. FLog f x -> a x -> b x) -> f a -> f b
-imapFDist = \f xs -> ftabulate $ f <*> findex xs
+imapFDist = \f -> fzipWithFDist f is
+  where is = faskFDist :: f (FLog f)
 {-# inline imapFDist #-}
 
 -- | A default definition for 'ifoldMap' from @FoldableWithIndex@ in terms of 'Distributive'
@@ -529,17 +645,15 @@ ifoldMapFDist
   :: forall f m a.
      (FDistributive f, FFoldable f, Monoid m)
   => (forall x. FLog f x -> a x -> m) -> f a -> m
-ifoldMapFDist = \f xs ->
-  ffoldMap getConst (ftabulate (\i -> Const $ f i (findex xs i)) :: f (Const m))
+ifoldMapFDist = \f -> ffoldMap getConst . imapFDist (\i -> Const #. f i)
 {-# inline ifoldMapFDist #-}
 
 itraverseFDist
   :: forall f m a b.
      (FDistributive f, FTraversable f, Applicative m)
   => (forall x. FLog f x -> a x -> m (b x)) -> f a -> m (f b)
-itraverseFDist = \f xs -> ftraverse getCompose $ ftabulate (\i -> Compose $ f i (findex xs i))
+itraverseFDist = \f -> ftraverse getCompose . imapFDist (\i -> Compose #. f i)
 {-# inline itraverseFDist #-}
-
 
 {-
 
@@ -550,7 +664,5 @@ _flogPath :: (FDistributive
 --flogPath :: (FDistributive f, Traversable f) => FLogarithm f a -> Path
 --flogPath = \(FLogarithm f) -> getConst $ f $ runTrail (ftraverse id $ pureDist end) id
 --{-# inline flogPath #-}
-
--- instance TestEquality (FLogarithm f)
 
 -}
