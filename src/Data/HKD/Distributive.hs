@@ -81,6 +81,10 @@ module Data.HKD.Distributive
 , LKD(..)
 , lowerLogarithm
 , liftLogarithm
+
+-- * HKD
+, HKD(..)
+, Atkey(..)
 ) where
 
 import Control.Applicative
@@ -535,58 +539,67 @@ flogToFLogarithm = \f -> FLogarithm (ftraceFDist f)
 -- HKD
 -------------------------------------------------------------------------------
 
-newtype HKD (f :: Type -> Type) (a :: i -> Type) = HKD { runHKD :: f (a GHC.Types.Any) }
+type role HKD nominal representational nominal
+newtype HKD (x :: i) (f :: Type -> Type) (a :: i -> Type) = HKD { runHKD :: f (a x) }
 
-mapHKD :: (f (a GHC.Types.Any) -> g (b GHC.Types.Any)) -> HKD f a -> HKD g b
+mapHKD :: (f (a x) -> g (b x)) -> HKD x f a -> HKD x g b
 mapHKD = \f -> HKD #. f .# runHKD
 {-# inline mapHKD #-}
 
-newtype DHKD w f = DHKD { runDHKD :: w (HKD f) }
+type role DHKD representational nominal nominal
+newtype DHKD w x f = DHKD { runDHKD :: w (HKD x f) }
 
-instance FFunctor w => FFunctor (DHKD w) where
+type role Atkey representational nominal nominal
+data Atkey a i j where
+  Atkey :: a -> Atkey a k k
+
+instance FFunctor w => FFunctor (DHKD w x) where
   ffmap f = DHKD #. ffmap (mapHKD f) .# runDHKD
   {-# inline ffmap #-}
 
-instance Functor f => FFunctor (HKD f) where
+instance Functor f => FFunctor (HKD x f) where
   ffmap = \f -> mapHKD (fmap f)
   {-# inline ffmap #-}
 
-instance Contravariant f => FContravariant (HKD f) where
+instance FunctorWithIndex i f => FFunctorWithIndex (Atkey i x) (HKD x f) where
+  ifmap = \f -> mapHKD (imap (f . Atkey))
+  {-# inline ifmap #-}
+
+instance Contravariant f => FContravariant (HKD x f) where
   fcontramap = \f -> HKD #. contramap f .# runHKD
   {-# inline fcontramap #-}
 
-instance Foldable f => FFoldable (HKD f) where
+instance Foldable f => FFoldable (HKD x f) where
   ffoldMap = \f -> foldMap f .# runHKD
   {-# inline ffoldMap #-}
 
-instance Traversable f => FTraversable (HKD f) where
+instance FoldableWithIndex i f => FFoldableWithIndex (Atkey i x) (HKD x f) where
+  iffoldMap = \f -> ifoldMap (f . Atkey) .# runHKD
+  {-# inline iffoldMap #-}
+
+instance Traversable f => FTraversable (HKD x f) where
   ftraverse = \f -> fmap HKD . traverse f .# runHKD
   {-# inline ftraverse #-}
 
-instance Applicative f => FZip (HKD f) where
+instance TraversableWithIndex i f => FTraversableWithIndex (Atkey i x) (HKD x f) where
+  iftraverse = \f -> fmap HKD . itraverse (f . Atkey) .# runHKD
+  {-# inline iftraverse #-}
+
+instance Applicative f => FZip (HKD x f) where
   fzipWith = \f (HKD fab) (HKD fa) -> HKD (liftA2 f fab fa)
   {-# inline fzipWith #-}
 
-instance Applicative f => FRepeat (HKD f) where
+instance Applicative f => FRepeat (HKD x f) where
   frepeat f = HKD $ pure f
   {-# inline frepeat #-}
 
--- data At a i j where
---   At :: a -> At a k k
-
--- instance FunctorWithIndex i f => FFunctorWithIndex (HKD f) where
-
-
-data HKDFLog f (a :: i) where
-  HKDFLog :: Log f -> HKDFLog f Any
-
-instance Distributive f => FDistributive (HKD f) where
-  type FLog (HKD f) = HKDFLog f
+instance Distributive f => FDistributive (HKD x f) where
+  type FLog (HKD x f) = Atkey (Log f) x
   fscatter = \k g w -> HKD $ distrib (DHKD (ffmap g w)) $ k . ffmap coerce .# runDHKD
   {-# inline fscatter #-}
-  findex = \(HKD fa) (HKDFLog lg) -> index fa lg
+  findex = \(HKD fa) (Atkey lg) -> index fa lg
   {-# inline findex #-}
-  ftabulate = \f -> HKD $ tabulate (f . HKDFLog)
+  ftabulate = \f -> HKD $ tabulate (f . Atkey)
   {-# inline ftabulate #-}
 
 -------------------------------------------------------------------------------
