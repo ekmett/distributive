@@ -24,6 +24,7 @@
 {-# Language Trustworthy #-}
 {-# Language TypeApplications #-}
 {-# Language TypeFamilies #-}
+{-# Language TypeInType #-}
 {-# Language TypeOperators #-}
 {-# Language UndecidableInstances #-}
 {-# Language UndecidableSuperClasses #-}
@@ -102,6 +103,7 @@ import Data.Type.Coercion
 import Data.Type.Equality
 import Data.Void
 import GHC.Generics
+import GHC.Types
 import Data.Coerce
 import Data.Function
 import Unsafe.Coerce
@@ -529,9 +531,9 @@ flogToFLogarithm = \f -> FLogarithm (ftraceFDist f)
 -- HKD
 -------------------------------------------------------------------------------
 
-newtype HKD (f :: Type -> Type) (a :: () -> Type) = HKD { runHKD :: f (a '()) }
+newtype HKD (f :: Type -> Type) (a :: i -> Type) = HKD { runHKD :: f (a GHC.Types.Any) }
 
-mapHKD :: (f (a '()) -> g (b '())) -> HKD f a -> HKD g b
+mapHKD :: (f (a GHC.Types.Any) -> g (b GHC.Types.Any)) -> HKD f a -> HKD g b
 mapHKD = \f -> HKD #. f .# runHKD
 {-# inline mapHKD #-}
 
@@ -565,8 +567,8 @@ instance Applicative f => FRepeat (HKD f) where
   frepeat = HKD #. pure
   {-# inline frepeat #-}
 
-data HKDFLog f (a :: ()) where
-  HKDFLog :: Log f -> HKDFLog f '()
+data HKDFLog f (a :: i) where
+  HKDFLog :: Log f -> HKDFLog f Any
 
 instance Distributive f => FDistributive (HKD f) where
   type FLog (HKD f) = HKDFLog f
