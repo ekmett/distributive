@@ -601,16 +601,16 @@ instance FRepeat f => Applicative (LKD f) where
   pure = \a -> LKD $ frepeat (Const a)
   {-# inline pure #-}
 
-type role DScatter representational nominal
-newtype DScatter w f = DScatter { runDScatter :: w (LKD f) }
+type role DLKD representational nominal
+newtype DLKD w f = DLKD { runDLKD :: w (LKD f) }
 
-instance FFunctor w => FFunctor (DScatter w) where
-  ffmap = \f -> DScatter #. ffmap (LKD #. f .# runLKD) .# runDScatter
+instance FFunctor w => FFunctor (DLKD w) where
+  ffmap = \f -> DLKD #. ffmap (LKD #. f .# runLKD) .# runDLKD
   {-# inline ffmap #-}
 
 instance FDistributive f => Distributive (LKD f) where
   type Log (LKD f) = Some (FLog f)
-  scatter = \k g -> LKD . fscatter (Const #. k .  ffmap coerce .# runDScatter) id . DScatter . ffmap g
+  scatter = \k g -> LKD . fscatter (Const #. k .  ffmap coerce .# runDLKD) id . DLKD . ffmap g
   {-# inline scatter #-}
   index = \fa (Some lg) -> getConst (findex (runLKD fa) lg)
   {-# inline index #-}
