@@ -210,13 +210,13 @@ class Functor f => Distributive f where
   type Log f
   type Log f = DefaultLog f
 
-  -- | Defaults to 'tabulateRep' when @f@ is non-recursive, otherwise to 'tabulateLogarithm'.
+  -- | Defaults to 'tabulateLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'tabulateRep'
   tabulate :: (Log f -> a) -> f a
   default tabulate :: DefaultTabulate f => (Log f -> a) -> f a
   tabulate = defaultTabulate
   {-# inline tabulate #-}
 
-  -- | Defaults to 'indexRep when @f@ is non-recursive, otherwise to 'indexLogarithm'.
+  -- | Defaults to 'indexLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'indexRep'
   index :: f a -> Log f -> a
   default index :: DefaultIndex f => f a -> Log f -> a
   index = defaultIndex
@@ -350,7 +350,7 @@ scatterDefault = \k phi wg ->
   tabulate $ \x -> k $ ffmap (\g -> Identity $ index (phi g) x) wg
 {-# inline scatterDefault #-}
 
--- | Default definition for 'tabulate' in when @'Log' f@ = @'Logarithm' f@. Can be used
+-- | Default definition for 'tabulate' when @'Log' f@ = @'Logarithm' f@. Can be used
 -- to manipulate 'Logarithm's regardless of the choice of 'Log' for your distributive
 -- functor.
 tabulateLogarithm :: Distributive f => (Logarithm f -> a) -> f a
@@ -358,16 +358,30 @@ tabulateLogarithm = \ f ->
   distrib (Tab f) $ \(Tab f') -> f' (Logarithm runIdentity)
 {-# inline tabulateLogarithm #-}
 
--- | A logarithm.
+-- | @'Logarithm' f = f ~> 'Identity'@
 --
--- Recall that function arrow, @->@ is an exponential object. If we take @f = (->) r@, then
+-- When @f@ is 'Distributive', this is the representation/logarithm of @f@, up to isomorphism. i.e.
+--
+-- @f a ≅ Logarithm f -> a@
+--
+-- Consider the case where @f = (->) r@. It follows from the yoneda lemma that
+--
+-- @(->) r '~>' 'Identity' ≅ r@
+--
+-- i.e. we have
+--
+-- @'Logarithm' ((->) r) = forall a. (r -> a) -> a ≅ r@
+--
+-- This works more generally for any 'Distributive' functor. E.g. given
+--
+-- @data V2 a = V2 a a@
+--
+-- we have
 --
 -- @
--- 'Logarithm' ((->) r) ≅ forall a. (r -> a) -> a ≅ r
+-- V2 a ≅ Bool -> a
+-- 'Logarithm' V2 ≅ Bool
 -- @
---
--- and this works for all 'Distributive' / 'Representable' functors.
-
 type role Logarithm representational
 newtype Logarithm f = Logarithm { runLogarithm :: forall a. f a -> a }
 
