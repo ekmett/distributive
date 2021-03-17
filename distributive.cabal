@@ -56,6 +56,7 @@ library
     ghc-prim,
     indexed-traversable >= 0.1 && < 0.2,
     mtl          >= 2.2 && < 2.3,
+    primitive    >= 0.6.2 && < 0.8,
     some         >= 1.0 && < 1.1,
     transformers >= 0.3 && < 0.6
 
@@ -68,6 +69,7 @@ library
     Data.Distributive.Coyoneda
     Data.Distributive.Endo
     Data.Distributive.Orphans
+    Data.Distributive.Vec
     Data.Functor.Confusing
     Data.HKD
     Data.HKD.Distributive
@@ -82,15 +84,7 @@ library
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1
 
-  if impl(ghc>=7.2 && < 7.6)
-    build-depends: ghc-prim
-
-  if impl(ghc < 8.0)
-    if flag(semigroups)
-      build-depends: semigroups >= 0.13 && < 1
-
-
-  ghc-options: -Wall
+  ghc-options: -Wall -fexpose-all-unfoldings -fspecialize-aggressively
 
   if impl(ghc >= 9.0)
     -- these flags may abort compilation with GHC-8.10

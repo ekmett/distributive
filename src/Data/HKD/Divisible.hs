@@ -1,3 +1,4 @@
+{-# Language CPP #-}
 {-# Language AllowAmbiguousTypes #-}
 {-# Language ConstraintKinds #-}
 {-# Language DataKinds #-}
@@ -7,13 +8,21 @@
 {-# Language FlexibleInstances #-}
 {-# Language GADTs #-}
 {-# Language InstanceSigs #-}
+{-# Language LambdaCase #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language PolyKinds #-}
 {-# Language RankNTypes #-}
 {-# Language ScopedTypeVariables #-}
 {-# Language Trustworthy #-}
+{-# Language TypeApplications #-}
 {-# Language TypeOperators #-}
+{-# Language StandaloneDeriving #-}
+{-# Language DerivingStrategies #-}
+{-# Language GeneralizedNewtypeDeriving #-}
 
+#ifndef MIN_VERSION_base
+#define MIN_VERSION_base(_x,_y,_z) 1
+#endif
 
 module Data.HKD.Divisible
 ( FSemidivisible(..)
@@ -33,10 +42,11 @@ import Control.Applicative
 import Data.Coerce
 import Data.Distributive.Coerce
 import Data.Distributive.Orphans ()
+import Data.Functor.Product
+import Data.Functor.Sum
+import qualified Data.Monoid as Monoid
 import Data.GADT.Compare
 import Data.HKD
-import Data.Kind
-import Data.Proxy
 -- import Data.Semigroup
 import GHC.Generics
 
@@ -55,7 +65,6 @@ fconquered = fconquer
 {-# inline fconquered #-}
 
 fliftDiv :: FDivisible f => (a ~> b) -> f b -> f a
-
 fliftDiv f = fdivide ((:*:) U1 . f) fconquer
 {-# inline fliftDiv #-}
 
@@ -98,15 +107,16 @@ instance FSemidecidable FEquivalence where
   {-# inline flose #-}
 
 instance FSemidivisible FComparison where
-  fdivide f g h = FComparison $ \a a' -> case f a of
+  fdivide = \f g h -> FComparison $ \a a' -> case f a of
     b :*: c -> case f a' of
       b' :*: c' -> case getFComparison g b b' of
-        GLT -> GLT 
+        GLT -> GLT
         GEQ -> getFComparison h c c'
         GGT -> GGT
+  {-# inline fdivide #-}
 
 instance FSemidecidable FComparison where
-  fchoose f g h = FComparison $ \a a' -> case f a of
+  fchoose = \f g h -> FComparison $ \a a' -> case f a of
     L1 b -> case f a' of
       L1 b' -> getFComparison g b b'
       _ -> GLT
@@ -115,11 +125,11 @@ instance FSemidecidable FComparison where
       _ -> GGT
   {-# inline fchoose #-}
 
-  flose f = FComparison $ \a -> case f a of
+  flose = \f -> FComparison $ \a -> case f a of
   {-# inline flose #-}
- 
+
 instance Semigroup b => FSemidivisible (FOp b) where
-  fdivide f g h = FOp $ \x -> case f x of
+  fdivide = \f g h -> FOp $ \x -> case f x of
     b :*: c -> getFOp g b <> getFOp h c
   {-# inline fdivide #-}
 
@@ -128,7 +138,7 @@ instance Monoid b => FDivisible (FOp b) where
   {-# inline fconquer #-}
 
 instance Semigroup c => FSemidivisible (K1 i c) where
-  fdivide _ (K1 m) (K1 n) = K1 (m <> n)
+  fdivide = \_ (K1 m) (K1 n) -> K1 (m <> n)
   {-# inline fdivide #-}
 
 instance Monoid c => FDivisible (K1 i c) where
@@ -184,7 +194,7 @@ instance Semigroup b => FSemidecidable (FOp b) where
     R1 b -> getFOp h b
   {-# inline fchoose #-}
 
-  flose f = FOp (\x -> case f x of)
+  flose = \f -> FOp (\x -> case f x of)
   {-# inline flose #-}
 
 instance FSemidecidable U1 where
@@ -223,26 +233,48 @@ instance (Applicative f, FSemidecidable g) => FSemidecidable (f :.: g) where
   flose = \x -> Comp1 $ pure $ flose x
   {-# inline flose #-}
 
-class FSemideciding (t :: (k -> Type) -> Type) where
+class FSemideciding q t where
   fsemideciding
-    :: forall q f p. FSemidecidable f
-    => p q 
+    :: FSemidecidable f
+    => (s ~> t)
     -> (forall b. q b => f b)
-    -> f t
+    -> f s
   default fsemideciding
-    :: (Generic1 t, FSemideciding (Rep1 t), FSemidecidable f)
-    => p q
+    :: (Generic1 t, FSemideciding q (Rep1 t), FSemidecidable f)
+    => (s ~> t)
     -> (forall b. q b => f b)
-    -> f t
-  fsemideciding _ _ = undefined
+    -> f s
+  fsemideciding = \ _ _ -> undefined
 
+instance (FSemideciding q s, FSemideciding q t) => FSemideciding q (Product s t)
+instance (FSemideciding q s, FSemideciding q t) => FSemideciding q (Sum s t)
+deriving newtype instance FSemideciding q f => FSemideciding q (Monoid.Alt f)
+#if MIN_VERSION_base(4,12,0)
+deriving newtype instance FSemideciding q f => FSemideciding q (Monoid.Ap f)
+#endif
+-- deriving newtype instance FSemideciding q f => FSemideciding q (Backwards f)
+-- deriving newtype instance FSemideciding q f => FSemideciding q (Reverse f)
 
-instance (FSemideciding s, FSemideciding t) => FSemideciding (s :*: t) where
-  fsemideciding :: forall q f p. FSemidecidable f => p q -> (forall b. q b => f b) -> f (s :*: t)
-  fsemideciding _ k = fdivided (fsemideciding (Proxy :: Proxy q) k)
-                               (fsemideciding (Proxy :: Proxy q) k)
-  
+instance (FSemideciding q s, FSemideciding q t) => FSemideciding q (s :*: t) where
+  fsemideciding = \k f -> fdivide k (fsemideciding @q id f) (fsemideciding @q id f)
 
+instance (FSemideciding q s, FSemideciding q t) => FSemideciding q (s :+: t) where
+  fsemideciding = \k f -> fchoose k (fsemideciding @q id f) (fsemideciding @q id f)
+
+instance FSemideciding q V1 where
+  fsemideciding = \k _ -> flose $ \x -> case k x of
+
+instance FSemideciding q f => FSemideciding q (M1 i c f) where
+  fsemideciding = \k f -> fsemideciding @q (M1 #. k) f
+
+-- instance q f => FSemideciding q (Rec1 f) where
+--  fsemideciding k f = fcontramap (unRec1 #. k) f
+
+instance FSemideciding q f => FSemideciding q (Rec1 f) where
+  fsemideciding = \k f -> fsemideciding @q (unRec1 #. k) f
+
+instance q (Const c) => FSemideciding q (K1 i c) where
+  fsemideciding k f = fcontramap ((Const . unK1) #. k) f
 
 --class FSemideciding q t => FDeciding q t where
 --  fdeciding :: FSemidecidable f => p q -> (forall b. q b => f b) -> f (t a)
