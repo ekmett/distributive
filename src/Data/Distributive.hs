@@ -151,9 +151,9 @@ import Control.Monad.Trans.Identity
 import Control.Monad.Zip
 import Data.Coerce
 import Data.Complex
-import Data.Distributive.Coerce
-import Data.Distributive.Util
+import Data.Distributive.Internal.Coerce
 import Data.Distributive.Internal.Orphans ()
+import Data.Distributive.Util
 import Data.Foldable (fold)
 import Data.Foldable.WithIndex
 import Data.Function (on)

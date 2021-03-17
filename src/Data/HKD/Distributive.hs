@@ -92,7 +92,7 @@ import Control.Applicative
 import Control.Applicative.Backwards
 import Data.Data
 import Data.Distributive
-import Data.Distributive.Coerce
+import Data.Distributive.Internal.Coerce
 import Data.Distributive.Util
 import Data.Foldable.WithIndex
 import Data.Functor.Compose

@@ -19,6 +19,7 @@
 {-# Language UnboxedTuples #-}
 {-# Language Unsafe #-}
 {-# Language ViewPatterns #-}
+{-# options_haddock hide #-}
 
 module Data.Distributive.Internal.Fin
 ( Fin(UnsafeFin,Fin,FinZ,FinS)
@@ -29,7 +30,9 @@ module Data.Distributive.Internal.Fin
 ) where
 
 import Control.Monad
+import Data.Distributive.Internal.Coerce
 import Data.GADT.Compare
+import Data.GADT.Show
 import Data.Type.Coercion
 import Data.Type.Equality
 import GHC.Exts
@@ -46,8 +49,11 @@ type role Fin nominal
 newtype Fin (n :: Nat) = UnsafeFin { fromFin :: Int }
   deriving (Eq, Ord)
 
+instance GShow Fin where
+  gshowsPrec = showsPrec
+
 instance Show (Fin n) where
-  showsPrec d (UnsafeFin n) = showsPrec d n
+  showsPrec = \d -> showsPrec d .# fromFin
 
 instance KnownNat n => Read (Fin n) where
   readPrec = do
@@ -55,13 +61,14 @@ instance KnownNat n => Read (Fin n) where
     UnsafeFin i <$ guard (i < int @n)
 
 instance GEq Fin where
-  geq (UnsafeFin x) (UnsafeFin y)
-    | x == y = Just (unsafeCoerce Refl)
-    | otherwise = Nothing
+  geq = \(UnsafeFin x) (UnsafeFin y) ->
+    if x == y 
+    then Just (unsafeCoerce Refl)
+    else Nothing
   {-# inline geq #-}
 
 instance GCompare Fin where
-  gcompare (UnsafeFin x) (UnsafeFin y) = case compare x y of
+  gcompare = \(UnsafeFin x) (UnsafeFin y) -> case compare x y of
     LT -> GLT
     EQ -> unsafeCoerce GEQ
     GT -> GGT
@@ -72,7 +79,7 @@ instance TestEquality Fin where
   {-# inline testEquality #-}
 
 instance TestCoercion Fin where
-  testCoercion a b = repr <$> geq a b
+  testCoercion = \a b -> repr <$> geq a b
   {-# inline testCoercion #-}
 
 pattern Fin :: Int -> Fin n
@@ -83,6 +90,7 @@ toFin :: forall n. KnownNat n => Int -> Maybe (Fin n)
 toFin i
   | i < int @n = Just (UnsafeFin i)
   | otherwise  = Nothing
+{-# inline toFin #-}
 
 pattern IntFin :: KnownNat n => Fin n -> Int
 pattern IntFin i <- (toFin -> Just i) where
@@ -97,6 +105,7 @@ data Fin' (n :: Nat) where
 upFin :: Fin n -> Fin' n
 upFin (UnsafeFin 0) = unsafeCoerce FinZ'
 upFin (UnsafeFin n) = unsafeCoerce $ FinS' $ UnsafeFin (n-1)
+{-# inline[0] upFin #-}
 
 pattern FinZ :: () => forall m. (n ~ S m) => Fin n
 pattern FinZ <- (upFin -> FinZ') where

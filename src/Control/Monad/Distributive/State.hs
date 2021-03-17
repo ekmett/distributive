@@ -57,7 +57,7 @@ import Control.Monad.Trans.Class
 import Control.Monad.Writer.Class
 import Data.Coerce
 import Data.Distributive
-import Data.Distributive.Coerce
+import Data.Distributive.Internal.Coerce
 import Data.Distributive.Util
 import Data.Functor.Contravariant
 import Data.Functor.Identity

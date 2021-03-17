@@ -63,22 +63,23 @@ library
 
   hs-source-dirs:  src
   other-modules:
-    Data.Distributive.Coerce
     Data.Distributive.Util
+    Data.Distributive.Internal.Orphans
   exposed-modules:
     Data.Distributive
     Data.Distributive.Coyoneda
     Data.Distributive.Endo
+    Data.Distributive.Internal.Coerce
     Data.Distributive.Internal.Fin
     Data.Distributive.Internal.Vec
-    Data.Distributive.Internal.Orphans
     Data.Distributive.Vec
     Data.Functor.Confusing
     Data.HKD
     Data.HKD.Distributive
     Data.HKD.Distributive.Endo
-    Data.HKD.Distributive.Internal.Fin
-    Data.HKD.Distributive.Internal.Vec
+    Data.HKD.Distributive.Internal.Index
+    Data.HKD.Distributive.Internal.Record
+    Data.HKD.Distributive.Record
     Data.HKD.Divisible
     Data.HKD.WithIndex
     Data.Machine.Moore

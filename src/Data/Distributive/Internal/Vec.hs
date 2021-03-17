@@ -25,6 +25,7 @@
 {-# Language UnboxedTuples #-}
 {-# Language Unsafe #-}
 {-# Language ViewPatterns #-}
+{-# options_haddock hide #-}
 
 module Data.Distributive.Internal.Vec
 ( Vec(UnsafeVec,Vec,toVector)
@@ -38,7 +39,7 @@ import Control.Monad.Reader.Class
 import Control.Monad.Fix
 import Control.Monad.Zip
 import Data.Distributive
-import Data.Distributive.Coerce
+import Data.Distributive.Internal.Coerce
 import Data.Distributive.Internal.Fin
 import Data.Foldable.WithIndex
 import Data.Functor.Classes

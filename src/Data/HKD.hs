@@ -99,7 +99,7 @@ import Data.Semigroup (Semigroup (..))
 import Data.Some.GADT (Some (..), mapSome, foldSome)
 import qualified Data.Some.Newtype as N
 import qualified Data.Some.Church as C
-import Data.Distributive.Coerce
+import Data.Distributive.Internal.Coerce
 import Data.Type.Equality
 import GHC.Generics
 import Unsafe.Coerce

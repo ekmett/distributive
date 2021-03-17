@@ -7,7 +7,8 @@
 {-# Language TypeFamilies #-}
 {-# Language InstanceSigs #-}
 {-# Language Trustworthy #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# options_ghc -Wno-orphans #-}
+{-# options_haddock hide #-}
 module Data.Distributive.Internal.Orphans where
 
 import Data.Coerce

@@ -27,7 +27,7 @@ import Control.Applicative
 import Control.Applicative.Backwards
 import Data.Coerce
 import Data.HKD
-import Data.Distributive.Coerce
+import Data.Distributive.Internal.Coerce
 import Data.Functor.Compose
 import Data.Functor.Constant
 import Data.Functor.Identity

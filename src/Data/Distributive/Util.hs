@@ -42,7 +42,7 @@ module Data.Distributive.Util
 , runEvil
 ) where
 
-import Data.Distributive.Coerce
+import Data.Distributive.Internal.Coerce
 import Data.HKD
 import Data.Kind
 import Data.Type.Bool (type (||))
