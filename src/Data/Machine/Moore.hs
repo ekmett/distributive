@@ -35,6 +35,7 @@ import Control.Monad.Fix
 import Control.Monad.Zip
 import Control.Monad.Reader.Class
 import Data.Distributive
+import Data.Functor.WithIndex
 import qualified Data.Monoid as Monoid
 #if __GLASGOW_HASKELL__ < 804
 import qualified Data.Semigroup as Semigroup
@@ -47,13 +48,17 @@ import Prelude
 -- data Moore a b where
 --   Moore :: Distributive f => f b -> (a -> Endo f) -> Log f -> Moore a b
 
+-- [a] -> b
+
 -- | obvious 'Moore' machines
 data Moore a b = Moore b (a -> Moore a b)
   deriving stock (Functor, Generic1)
 #if __GLASGOW_HASKELL__ >= 806
   deriving
     ( Applicative, Monad, MonadFix
-    , MonadZip, MonadReader [a]
+    , MonadZip
+    , MonadReader [a]
+    , FunctorWithIndex [a]
     ) via Dist (Moore a)
   deriving
     ( Semigroup
