@@ -25,6 +25,12 @@ module Data.Distributive
   ( Distributive(..)
   , cotraverse
   , comapM
+
+  -- * Applicative defaults
+
+  , defaultPure
+  , defaultApply
+  , defaultLiftA2
   ) where
 
 import Control.Applicative
@@ -281,3 +287,26 @@ instance Distributive f => Distributive (M1 i c f) where
     :: forall g a b . Functor g
     => (a -> M1 i c f b) -> g a -> M1 i c f (g b)
 #endif
+
+-- | A valid definition of 'pure' for any valid 'Distributive'
+-- instance.
+defaultPure :: Distributive g => a -> g a
+defaultPure x = getConst <$> distribute (Const x)
+
+data Two a = Two a a
+instance Functor Two where
+  fmap f (Two a b) = Two (f a) (f b)
+
+-- | A valid definition of '<*>' or '<.>' for any valid 'Distributive'
+-- instance. See also 'Data.Distributive.Unsafe.unsafeDefaultApply' for a
+-- more efficient version.
+defaultApply :: Distributive g => g (a -> b) -> g a -> g b
+defaultApply = defaultLiftA2 ($)
+
+
+-- | A valid definition of 'liftA2' for any valid 'Distributive'
+-- instance. See also 'Data.Distributive.Unsafe.unsafeDefaultLiftA2' for a
+-- more efficient version.
+defaultLiftA2 :: Distributive g => (a -> b -> c) -> g a -> g b -> g c
+defaultLiftA2 f xs ys = (\(Two (Left x) (Right y)) -> f x y)
+                        <$> distribute (Two (Left <$> xs) (Right <$> ys))
