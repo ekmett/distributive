@@ -35,6 +35,7 @@ import Data.Functor.WithIndex
 import Data.Functor.Sum
 import Data.Functor.Product
 import Data.Functor.Reverse
+import Data.HKD.Distributive.Internal.Index
 import Data.Proxy
 import qualified Data.Monoid as Monoid
 import Data.Foldable.WithIndex
@@ -295,3 +296,28 @@ instance FTraversableWithIndex i f => FTraversableWithIndex i (Reverse f) where
   iftraverse = \f -> forwards #. fmap Reverse . iftraverse (\i -> Backwards #. f i) .# getReverse
   {-# inline iftraverse #-}
 
+instance FFunctorWithIndex (Index '[]) F0 where
+  ifmap _ = coerce
+  {-# inline ifmap #-}
+
+instance FFoldableWithIndex (Index '[]) F0 where
+  iffoldMap _ = mempty
+  {-# inline iffoldMap #-}
+
+instance FTraversableWithIndex (Index '[]) F0 where
+  iftraverse _ F0 = pure F0
+  {-# inline iftraverse #-}
+
+{-
+instance FFunctorWithIndex (Index '[a]) (F1 a) where
+  ifmap _ = coerce
+  {-# inline ifmap #-}
+
+instance FFoldableWithIndex (Index '[a]) (F1 a) where
+  iffoldMap _ = mempty
+  {-# inline iffoldMap #-}
+
+instance FTraversableWithIndex (Index '[a]) (F1 a) where
+  iftraverse _ F0 = pure F0
+  {-# inline iftraverse #-}
+-}

@@ -427,7 +427,7 @@ instance FFunctor (Tab a) where
 distribute
   :: (Functor f, Distributive g)
   => f (g a) -> g (f a)
-distribute = \f -> distrib (DCompose f) $ \(DCompose f') -> runIdentity <$> f'
+distribute = \f -> distrib (FCompose f) $ \(FCompose f') -> runIdentity <$> f'
 {-# inline distribute #-}
 
 -- |
@@ -440,7 +440,7 @@ collect
   :: (Functor f, Distributive g)
   => (a -> g b)
   -> f a -> g (f b)
-collect = \ f fa -> distrib (DCompose f) $ \(DCompose f') -> coerce f' <$> fa
+collect = \ f fa -> distrib (FCompose f) $ \(FCompose f') -> coerce f' <$> fa
 {-# inline collect #-}
 
 -- | The dual of 'Data.Traversable.traverse'
@@ -453,7 +453,7 @@ cotraverse
   => (f a -> b)
   -> f (g a) -> g b
 cotraverse = \fab fga ->
-  distrib (DCompose fga) $ \(DCompose f') -> fab (runIdentity <$> f')
+  distrib (FCompose fga) $ \(FCompose f') -> fab (runIdentity <$> f')
 {-# inline cotraverse #-}
 
 
@@ -664,7 +664,7 @@ instance Distributive f => Functor (Dist f) where
 
 -- | A default definition for 'fmap' from 'Functor' in terms of 'Distributive'
 fmapDist :: Distributive f => (a -> b) -> f a -> f b
-fmapDist = \ f fa -> distrib (Element fa) $ \(Element a) -> coerce f a
+fmapDist = \ f fa -> distrib (F1 fa) $ \(F1 a) -> coerce f a
 {-# inline fmapDist #-}
 
 instance Distributive f => Distributive (Dist f) where
@@ -699,31 +699,31 @@ pureDist = scatter getConst id .# Const
 -- | A default definition for '(<*>)' from 'Applicative' in terms of 'Distributive'
 apDist :: Distributive f => f (a -> b) -> f a -> f b
 apDist = \fab fa ->
-  distrib (D2 fab fa) $ \(D2 ab a) -> coerce ab a
+  distrib (F2 fab fa) $ \(F2 ab a) -> coerce ab a
 {-# inline apDist #-}
 
 -- | A default definition 'liftA2' from 'Applicative' in terms of 'Distributive'
 liftD2 :: Distributive f => (a -> b -> c) -> f a -> f b -> f c
 liftD2 = \f fa fb ->
-  distrib (D2 fa fb) $ \(D2 a b) -> coerce f a b
+  distrib (F2 fa fb) $ \(F2 a b) -> coerce f a b
 {-# inline liftD2 #-}
 
 -- | An implementation of 'liftA3' in terms of 'Distributive'.
 liftD3 :: Distributive f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
 liftD3 = \ f fa fb fc ->
-  distrib (D3 fa fb fc) $ \(D3 a b c) -> coerce f a b c
+  distrib (F3 fa fb fc) $ \(F3 a b c) -> coerce f a b c
 {-# inline liftD3 #-}
 
 -- | An implementation of 'liftA4' in terms of 'Distributive'.
 liftD4 :: Distributive f => (a -> b -> c -> d -> e) -> f a -> f b -> f c -> f d -> f e
 liftD4 = \f fa fb fc fd ->
-  distrib (D4 fa fb fc fd) $ \(D4 a b c d) -> coerce f a b c d
+  distrib (F4 fa fb fc fd) $ \(F4 a b c d) -> coerce f a b c d
 {-# inline liftD4 #-}
 
 -- | An implementation of 'liftA5' in terms of 'Distributive'.
 liftD5 :: Distributive f => (a -> b -> c -> d -> e -> x) -> f a -> f b -> f c -> f d -> f e -> f x
 liftD5 = \f fa fb fc fd fe ->
-  distrib (D5 fa fb fc fd fe) $ \(D5 a b c d e) -> coerce f a b c d e
+  distrib (F5 fa fb fc fd fe) $ \(F5 a b c d e) -> coerce f a b c d e
 {-# inline liftD5 #-}
 
 -- * Monad
@@ -734,7 +734,7 @@ instance Distributive f => Monad (Dist f) where
 
 -- | A default implementation of '(>>=)' in terms of 'Distributive'
 bindDist :: Distributive f => f a -> (a -> f b) -> f b
-bindDist = \ m f -> distrib (DBind m f) $ \(DBind a f') -> coerce f' a
+bindDist = \ m f -> distrib (FBind m f) $ \(FBind a f') -> coerce f' a
 {-# inline bindDist #-}
 
 -- * MonadFix
@@ -745,7 +745,7 @@ instance Distributive f => MonadFix (Dist f) where
 
 -- | A default definition for 'mfix' in terms of 'Distributive'
 mfixDist :: Distributive f => (a -> f a) -> f a
-mfixDist = \ama -> distrib (DCompose ama) (fix . coerce)
+mfixDist = \ama -> distrib (FCompose ama) (fix . coerce)
 {-# inline mfixDist #-}
 
 instance Distributive f => MonadZip (Dist f) where

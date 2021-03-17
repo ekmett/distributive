@@ -142,10 +142,10 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   type FLog f = DefaultFLog f
 
   -- | A higher-kinded 'scatter'
-  fscatter :: FFunctor w => (w % Element ~> r) -> (g ~> f) -> w g -> f r
+  fscatter :: FFunctor w => (w % F1 ~> r) -> (g ~> f) -> w g -> f r
   default fscatter
     :: (Generic1 f, FDistributive (Rep1 f), FFunctor w)
-    => (w % Element ~> r) -> (g ~> f) -> w g -> f r
+    => (w % F1 ~> r) -> (g ~> f) -> w g -> f r
   fscatter = fscatterRep
   {-# inline fscatter #-}
 
@@ -168,14 +168,14 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
 -- | A higher-kinded 'cotrav'
 fcotrav
   :: (FFunctor w, FDistributive f)
-  => (w % Element ~> r) -> w f -> f r
+  => (w % F1 ~> r) -> w f -> f r
 fcotrav = \k -> fscatter k id
 {-# inline fcotrav #-}
 
 -- | A higher-kinded 'distrib'
 fdistrib
   :: (FFunctor w, FDistributive f)
-  => w f -> (w % Element ~> r) -> f r
+  => w f -> (w % F1 ~> r) -> f r
 fdistrib = \ w k -> fscatter k id w
 {-# inline fdistrib #-}
 
@@ -183,7 +183,7 @@ fdistrib = \ w k -> fscatter k id w
 ftabulateFLogarithm
   :: FDistributive f => (FLogarithm f ~> a) -> f a
 ftabulateFLogarithm
-  = \f -> fdistrib (FTab f) $ \(FTab f') -> f' (FLogarithm runElement)
+  = \f -> fdistrib (FTab f) $ \(FTab f') -> f' (FLogarithm runF1)
 {-# inline ftabulateFLogarithm #-}
 
 -- | A higher-kinded 'indexLogarithm'
@@ -210,17 +210,17 @@ findexRep = \fa flog -> findex (from1 fa) (coerce flog)
 -- | A higher-kinded 'scatterRep'
 fscatterRep
   :: (FDistributive (Rep1 f), Generic1 f, FFunctor w)
-  => (w % Element ~> r) -> (g ~> f) -> w g -> f r
+  => (w % F1 ~> r) -> (g ~> f) -> w g -> f r
 fscatterRep = \k phi -> to1 . fscatter k (from1 . phi)
 {-# inline fscatterRep #-}
 
 fscatterDefault
   :: (FDistributive f, FFunctor w)
-  => (w % Element ~> r)
+  => (w % F1 ~> r)
   -> (g ~> f)
   -> w g -> f r
 fscatterDefault = \k phi wg ->
-  ftabulate $ \x -> k $ ffmap (\g -> Element $ findex (phi g) x) wg
+  ftabulate $ \x -> k $ ffmap (\g -> F1 $ findex (phi g) x) wg
 {-# inline fscatterDefault #-}
 
 -- | A higher-kinded 'Tabulate'
@@ -272,7 +272,7 @@ fdistribute
   :: (Functor f, FDistributive g)
   => f (g a) -> g (Compose f a)
 fdistribute = \f ->
-  fdistrib (DCompose f) $ \(DCompose f') ->
+  fdistrib (FCompose f) $ \(FCompose f') ->
     Compose $ fmap coerce f'
 {-# inline fdistribute #-}
 
@@ -286,7 +286,7 @@ fcollect
   => (a -> g b)
   -> f a -> g (Compose f b)
 fcollect = \f fa ->
-  fdistrib (DCompose f) $ \(DCompose f') ->
+  fdistrib (FCompose f) $ \(FCompose f') ->
     Compose $ fmap (coerce f') fa
 {-# inline fcollect #-}
 
@@ -300,7 +300,7 @@ fcotraverse
   => (f % a ~> b)
   -> f (g a) -> g b
 fcotraverse = \fab fga ->
-  fdistrib (DCompose fga) $ \(DCompose f') ->
+  fdistrib (FCompose fga) $ \(FCompose f') ->
     fab (fmap coerce f')
 {-# inline fcotraverse #-}
 
@@ -379,11 +379,11 @@ deriving newtype instance FDistributive f => FDistributive (Monoid.Alt f)
 deriving newtype instance FDistributive f => FDistributive (Monoid.Ap f)
 #endif
 
-instance FDistributive (Element a) where
-  type FLog (Element a) = (:~:) a
-  fscatter = \k f w -> Element $ k $ ffmap f w
-  findex = \f Refl -> runElement f
-  ftabulate = \f -> Element (f Refl)
+instance FDistributive (F1 a) where
+  type FLog (F1 a) = (:~:) a
+  fscatter = \k f w -> F1 $ k $ ffmap f w
+  findex = \f Refl -> runF1 f
+  ftabulate = \f -> F1 (f Refl)
   {-# inline fscatter #-}
   {-# inline findex #-}
   {-# inline ftabulate #-}
@@ -399,20 +399,20 @@ instance FDistributive (NT f) where
 
 instance FDistributive Limit where
   type FLog Limit = Proxy
-  fscatter = \k f w -> Limit $ k $ ffmap (\x -> Element $ runLimit $ f x) w
+  fscatter = \k f w -> Limit $ k $ ffmap (\x -> F1 $ runLimit $ f x) w
   findex f = const $ runLimit f
   ftabulate = \f -> Limit $ f (Proxy)
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
 
-instance FDistributive (D2 a b) where
-  type FLog (D2 a b) = FLogarithm (D2 a b)
+instance FDistributive (F2 a b) where
+  type FLog (F2 a b) = FLogarithm (F2 a b)
   findex = findexFLogarithm
   ftabulate = ftabulateFLogarithm
   fscatter = \k f (ffmap f -> w) ->
-     D2 (k $ ffmap (\(D2 x _) -> Element x) w)
-        (k $ ffmap (\(D2 _ y) -> Element y) w)
+     F2 (k $ ffmap (\(F2 x _) -> F1 x) w)
+        (k $ ffmap (\(F2 _ y) -> F1 y) w)
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
@@ -423,52 +423,52 @@ instance FDistributive (D2 a b) where
   --  R1 Refl -> y
   -- ftabulate = \f -> D2 (f $ L1 Refl) (f $ R1 Refl)
 
-instance FDistributive (D3 a b c) where
-  type FLog (D3 a b c) = FLogarithm (D3 a b c)
+instance FDistributive (F3 a b c) where
+  type FLog (F3 a b c) = FLogarithm (F3 a b c)
   findex = findexFLogarithm
   ftabulate = ftabulateFLogarithm
   fscatter = \k f (ffmap f -> w) ->
-     D3 (k $ ffmap (\(D3 x _ _) -> Element x) w)
-        (k $ ffmap (\(D3 _ x _) -> Element x) w)
-        (k $ ffmap (\(D3 _ _ x) -> Element x) w)
+     F3 (k $ ffmap (\(F3 x _ _) -> F1 x) w)
+        (k $ ffmap (\(F3 _ x _) -> F1 x) w)
+        (k $ ffmap (\(F3 _ _ x) -> F1 x) w)
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
 
-instance FDistributive (D4 a b c d) where
-  type FLog (D4 a b c d) = FLogarithm (D4 a b c d)
+instance FDistributive (F4 a b c d) where
+  type FLog (F4 a b c d) = FLogarithm (F4 a b c d)
   findex = findexFLogarithm
   ftabulate = ftabulateFLogarithm
   fscatter = \k f (ffmap f -> w) ->
-     D4 (k $ ffmap (\(D4 x _ _ _) -> Element x) w)
-        (k $ ffmap (\(D4 _ x _ _) -> Element x) w)
-        (k $ ffmap (\(D4 _ _ x _) -> Element x) w)
-        (k $ ffmap (\(D4 _ _ _ x) -> Element x) w)
+     F4 (k $ ffmap (\(F4 x _ _ _) -> F1 x) w)
+        (k $ ffmap (\(F4 _ x _ _) -> F1 x) w)
+        (k $ ffmap (\(F4 _ _ x _) -> F1 x) w)
+        (k $ ffmap (\(F4 _ _ _ x) -> F1 x) w)
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
 
-instance FDistributive (D5 a b c d e) where
-  type FLog (D5 a b c d e) = FLogarithm (D5 a b c d e)
+instance FDistributive (F5 a b c d e) where
+  type FLog (F5 a b c d e) = FLogarithm (F5 a b c d e)
   findex = findexFLogarithm
   ftabulate = ftabulateFLogarithm
   fscatter = \k f (ffmap f -> w) ->
-     D5 (k $ ffmap (\(D5 x _ _ _ _) -> Element x) w)
-        (k $ ffmap (\(D5 _ x _ _ _) -> Element x) w)
-        (k $ ffmap (\(D5 _ _ x _ _) -> Element x) w)
-        (k $ ffmap (\(D5 _ _ _ x _) -> Element x) w)
-        (k $ ffmap (\(D5 _ _ _ _ x) -> Element x) w)
+     F5 (k $ ffmap (\(F5 x _ _ _ _) -> F1 x) w)
+        (k $ ffmap (\(F5 _ x _ _ _) -> F1 x) w)
+        (k $ ffmap (\(F5 _ _ x _ _) -> F1 x) w)
+        (k $ ffmap (\(F5 _ _ _ x _) -> F1 x) w)
+        (k $ ffmap (\(F5 _ _ _ _ x) -> F1 x) w)
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
 
-instance FDistributive (DBind x y) where
-  type FLog (DBind x y) = FLogarithm (DBind x y)
+instance FDistributive (FBind x y) where
+  type FLog (FBind x y) = FLogarithm (FBind x y)
   findex = findexFLogarithm
   ftabulate = ftabulateFLogarithm
   fscatter = \k f (ffmap f -> w) ->
-    DBind (      k $ ffmap (\(DBind x _)  -> Element x     ) w)
-          (\a -> k $ ffmap (\(DBind _ fx) -> Element $ fx a) w)
+    FBind (      k $ ffmap (\(FBind x _)  -> F1 x     ) w)
+          (\a -> k $ ffmap (\(FBind _ fx) -> F1 $ fx a) w)
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
@@ -487,7 +487,7 @@ deriving newtype instance FDistributive f => FDistributive (FDist f)
 
 -- | A default definition for 'ffmap' from 'FFunctor' in terms of 'FDistributive'
 ffmapFDist :: FDistributive f => (a ~> b) -> f a -> f b
-ffmapFDist = \f -> fscatter (f .# (runElement . runElement)) id .# Element
+ffmapFDist = \f -> fscatter (f .# (runF1 . runF1)) id .# F1
 {-# inline ffmapFDist #-}
 
 instance FDistributive f => FFunctor (FDist f) where
@@ -501,7 +501,7 @@ instance FDistributive f => FZip (FDist f) where
 -- | A default definition of 'fzipWith' from 'FZip' in terms of 'FDistributive'
 fzipWithFDist :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
 fzipWithFDist = \f m n ->
-  fdistrib (D2 m n) $ \(D2 (Element m') (Element n')) -> f m' n'
+  fdistrib (F2 m n) $ \(F2 (F1 m') (F1 n')) -> f m' n'
 {-# inline fzipWithFDist #-}
 
 instance FDistributive f => FRepeat (FDist f) where
@@ -831,3 +831,9 @@ iftraverseFDist
   => (forall x. FLog f x -> a x -> m (b x)) -> f a -> m (f b)
 iftraverseFDist = \f -> ftraverse getCompose . ifmapFDist (\i -> Compose #. f i)
 {-# inline iftraverseFDist #-}
+
+instance FDistributive (FConstrained p) where
+  type FLog (FConstrained p) = Dict1 p
+  fscatter = \k f (ffmap f -> w) -> FConstrained $ k $ ffmap (\(FConstrained x) -> F1 x) w
+  ftabulate = \f -> FConstrained $ f Dict1
+  findex = \(FConstrained x) Dict1 -> x

@@ -34,7 +34,6 @@ module Data.HKD.Distributive.Internal.Record where
 import Control.Applicative
 import Data.Distributive
 import Data.Distributive.Internal.Coerce
-import Data.Distributive.Util
 import Data.Functor.Classes
 import Data.Functor.Compose
 import Data.Functor.Product
@@ -106,7 +105,7 @@ instance KnownLength as => FDistributive (Record as) where
   fscatter k f (ffmap f -> w) =
     UnsafeRecord $
     generate (len @as) $ \i ->
-    Any $ k $ ffmap (\r -> Element $ findex r (UnsafeIndex i)) w
+    Any $ k $ ffmap (\r -> F1 $ findex r (UnsafeIndex i)) w
   {-# inline fscatter #-}
   findex (UnsafeRecord as) (UnsafeIndex i) = unsafeCoerce (as ! i)
   {-# inline findex #-}
@@ -146,28 +145,6 @@ withLen v r = case someNatVal (fromIntegral $ V.length (safeRecord v)) of
     (Refl :: Length as :~: n') -> r
 {-# inline withLen #-}
 
-data Dict1 p a where
-  Dict1 :: p a => Dict1 p a
-
-newtype Dicts p f = Dicts
-  { runDicts :: f (Dict1 p)
-  }
-
-instance FFunctor (Dicts p) where
-  ffmap = \ f -> Dicts #. f .# runDicts
-  {-# inline ffmap #-}
-
-newtype DConstrained p f = DConstrained { runDConstrained :: forall x. p x => f x }
-
-instance FFunctor (DConstrained p) where
-  ffmap = \f x -> DConstrained (f $ runDConstrained x)
-  {-# inline ffmap #-}
-
-instance FDistributive (DConstrained p) where
-  type FLog (DConstrained p) = Dict1 p
-  fscatter = \k f (ffmap f -> w) -> DConstrained $ k $ ffmap (\(DConstrained x) -> Element x) w
-  ftabulate = \f -> DConstrained $ f Dict1
-  findex = \(DConstrained x) Dict1 -> x
 
 class GAll (p :: i -> Constraint) (f :: (i -> Type) -> Type) where
   gall :: f (Dict1 p)
@@ -189,16 +166,16 @@ instance GAll p Proxy
 
 instance a ~ Dict1 p => GAll p ((:~:) a) where
   gall = Refl
-instance p a => GAll p (Element a) where
-  gall = Element Dict1
-instance (p a, p b) => GAll p (D2 a b) where
-  gall = D2 Dict1 Dict1
-instance (p a, p b, p c) => GAll p (D3 a b c) where
-  gall = D3 Dict1 Dict1 Dict1
-instance (p a, p b, p c, p d) => GAll p (D4 a b c d) where
-  gall = D4 Dict1 Dict1 Dict1 Dict1
-instance (p a, p b, p c, p d, p e) => GAll p (D5 a b c d e) where
-  gall = D5 Dict1 Dict1 Dict1 Dict1 Dict1
+instance p a => GAll p (F1 a) where
+  gall = F1 Dict1
+instance (p a, p b) => GAll p (F2 a b) where
+  gall = F2 Dict1 Dict1
+instance (p a, p b, p c) => GAll p (F3 a b c) where
+  gall = F3 Dict1 Dict1 Dict1
+instance (p a, p b, p c, p d) => GAll p (F4 a b c d) where
+  gall = F4 Dict1 Dict1 Dict1 Dict1
+instance (p a, p b, p c, p d, p e) => GAll p (F5 a b c d e) where
+  gall = F5 Dict1 Dict1 Dict1 Dict1 Dict1
 instance q (Dict1 p) => GAll p (Dict1 q) where
   gall = Dict1
 
@@ -210,11 +187,11 @@ instance (GAll p f, GAll p g) => GAll p (Product f g)
 -- this is arguably any existential constraint
 instance (forall a. p a) => GAll p Some where gall = Some Dict1
 instance (forall a. p a) => GAll p Limit where gall = Limit Dict1
-instance (forall a. q a => p a) => GAll p (DConstrained q) where
-  gall = DConstrained Dict1
+instance (forall a. q a => p a) => GAll p (FConstrained q) where
+  gall = FConstrained Dict1
 #else
-instance p ~ q => GAll p (DConstrained q) where
-  gall = DConstrained Dict1
+instance p ~ q => GAll p (FConstrained q) where
+  gall = FConstrained Dict1
 #endif
 
 data IRec (f :: i -> Type) (as :: [i]) = IRec {-# unpack #-} !Int [Any]
@@ -223,7 +200,7 @@ gcfdistrib
   :: forall i (p :: i -> Constraint) (f :: (i -> Type) -> Type) (r :: i -> Type) w.
      (GAll p f, FFunctor w)
   => w f
-  -> (forall x. p x => w (Element x) -> r x)
+  -> (forall x. p x => w (F1 x) -> r x)
   -> f r
 gcfdistrib _ _ = undefined
 
@@ -232,7 +209,7 @@ cfdistrib
   :: forall i (p :: i -> Constraint) (as :: [i]) (r :: i -> Type) w.
      (All p as, KnownLength as, FFunctor w)
   => w (Record as)
-  -> (forall x. p x => w (Element x) -> r x)
+  -> (forall x. p x => w (F1 x) -> r x)
   -> Record as r
 cfdistrib w k = case len @as of
   n ->
@@ -242,7 +219,7 @@ cfdistrib w k = case len @as of
         IRec i $
           (Any $ k $
             ffmap
-              (\(r :: Record as a) -> Element $ findex r (UnsafeIndex i) :: Element b a)
+              (\(r :: Record as a) -> F1 $ findex r (UnsafeIndex i) :: F1 b a)
               w
           ) : t
     of
@@ -255,16 +232,16 @@ instance (Eq1 f, All Eq as) => Eq (Record as f) where
     Monoid.getAll $
     ffoldMap getConst $
     withLen xs $
-    cfdistrib @Type @Eq (D2 xs ys) $
-    \(D2 (Element x) (Element y)) ->
+    cfdistrib @Type @Eq (F2 xs ys) $
+    \(F2 (F1 x) (F1 y)) ->
     Const $ Monoid.All $ liftEq (==) x y
 
 instance (Ord1 f, All Ord as, All Eq as) => Ord (Record as f) where
   compare xs ys =
     ffoldMap getConst $
     withLen xs $
-    cfdistrib @Type @Ord (D2 xs ys) $
-    \(D2 (Element x) (Element y)) ->
+    cfdistrib @Type @Ord (F2 xs ys) $
+    \(F2 (F1 x) (F1 y)) ->
     Const $ liftCompare compare x y
 
 data Record' :: [i] -> (i -> Type) -> Type where

@@ -2,10 +2,12 @@
 {-# language FlexibleContexts #-}
 {-# language FlexibleInstances #-}
 {-# language DefaultSignatures #-}
+{-# language ConstraintKinds #-}
 {-# language GADTs #-}
 {-# language MultiParamTypeClasses #-}
 {-# language PolyKinds #-}
 {-# language StandaloneDeriving #-}
+{-# language RoleAnnotations #-}
 {-# language DerivingStrategies #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# language RankNTypes #-}
@@ -71,9 +73,18 @@ module Data.HKD
 , FRepeat(..)
 -- * Higher kinded data
 -- | See also "Data.Some" in @some@ package. @hkd@ provides instances for it.
-, Element(..)
+, F0(..)
+, F1(..)
+, F2(..)
+, F3(..)
+, F4(..)
+, F5(..)
+, FConstrained(..)
+, FCompose(..)
+, FBind(..)
 , NT(..)
 , Limit(..)
+, Dict1(..)
 -- * Contravariant functors
 , FContravariant(..)
 , FEquivalence(..)
@@ -386,12 +397,12 @@ instance FRepeat Proxy where
   frepeat _ = Proxy
   {-# inline frepeat #-}
 
-instance FZip (Element a) where
-  fzipWith f (Element x) (Element y) = Element (f x y)
+instance FZip (F1 a) where
+  fzipWith f (F1 x) (F1 y) = F1 (f x y)
   {-# inline fzipWith #-}
 
-instance FRepeat (Element a) where
-  frepeat x = Element x
+instance FRepeat (F1 a) where
+  frepeat x = F1 x
   {-# inline frepeat #-}
 
 instance FZip (NT f) where
@@ -599,21 +610,51 @@ instance FTraversable f => FTraversable (Monoid.Ap f) where
 -- Elements
 -------------------------------------------------------------------------------
 
--- | Element in @f@
-newtype Element a f = Element { runElement :: f a }
+data F0 f = F0
 
-instance FFunctor (Element a) where
-  ffmap = \f -> Element #. f .# runElement
+instance Functor F0 where
+  fmap = \_ -> coerce
+  {-# inline fmap #-}
+
+instance FFunctor F0 where
+  ffmap _ = coerce
   {-# inline ffmap #-}
 
-instance FFoldable (Element a) where
-  ffoldMap f = f .# runElement
+instance FFoldable F0 where
+  ffoldMap _ F0 = mempty
+  {-# inline ffoldMap #-}
+
+instance FTraversable F0 where
+  ftraverse _ F0 = pure F0
+  {-# inline ftraverse #-}
+
+instance FContravariant F0 where
+  fcontramap _ = coerce
+  {-# inline fcontramap #-}
+
+instance FRepeat F0 where
+  frepeat = \ _ -> F0
+  {-# inline frepeat #-}
+
+instance FZip F0 where
+  fzipWith = \_ F0 -> coerce
+  {-# inline fzipWith #-} 
+
+-- | 
+newtype F1 a f = F1 { runF1 :: f a }
+
+instance FFunctor (F1 a) where
+  ffmap = \f -> F1 #. f .# runF1
+  {-# inline ffmap #-}
+
+instance FFoldable (F1 a) where
+  ffoldMap f = f .# runF1
   flengthAcc acc _ = acc + 1
   {-# inline ffoldMap #-}
   {-# inline flengthAcc #-}
 
-instance FTraversable (Element a) where
-  ftraverse f = fmap Element . f .# runElement
+instance FTraversable (F1 a) where
+  ftraverse f = fmap F1 . f .# runF1
   {-# inline ftraverse #-}
 
 -------------------------------------------------------------------------------
@@ -692,6 +733,62 @@ instance FFoldable Limit where
 instance FTraversable Limit where
   ftraverse f (Limit m) = unsafeCoerce <$> f m
   {-# inline ftraverse #-}
+
+-- * Dicts
+
+data Dict1 p a where
+  Dict1 :: p a => Dict1 p a
+
+newtype Dicts p f = Dicts
+  { runDicts :: f (Dict1 p)
+  }
+
+instance FFunctor (Dicts p) where
+  ffmap = \ f -> Dicts #. f .# runDicts
+  {-# inline ffmap #-}
+
+newtype FConstrained p f = FConstrained { runFConstrained :: forall x. p x => f x }
+
+instance FFunctor (FConstrained p) where
+  ffmap = \f x -> FConstrained (f $ runFConstrained x)
+  {-# inline ffmap #-}
+
+type role FCompose nominal representational nominal
+newtype FCompose a f g = FCompose { runFCompose :: f (g a) }
+instance Functor f => FFunctor (FCompose a f) where
+  ffmap f = FCompose #. (fmap f .# runFCompose)
+  {-# inline ffmap #-}
+
+type role F2 nominal nominal representational
+data F2 a b f = F2 (f a) (f b)
+instance FFunctor (F2 a b) where
+  ffmap f (F2 a b) = F2 (f a) (f b)
+  {-# inline ffmap #-}
+
+type role F3 nominal nominal nominal representational
+data F3 a b c f = F3 (f a) (f b) (f c)
+instance FFunctor (F3 a b c) where
+  ffmap f (F3 a b c) = F3 (f a) (f b) (f c)
+  {-# inline ffmap #-}
+
+type role F4 nominal nominal nominal nominal representational
+data F4 a b c d f = F4 (f a) (f b) (f c) (f d)
+instance FFunctor (F4 a b c d) where
+  ffmap f (F4 a b c d) = F4 (f a) (f b) (f c) (f d)
+  {-# inline ffmap #-}
+
+type role F5 nominal nominal nominal nominal nominal representational
+data F5 a b c d e f = F5 (f a) (f b) (f c) (f d) (f e)
+instance FFunctor (F5 a b c d e) where
+  ffmap f (F5 a b c d e) = F5 (f a) (f b) (f c) (f d) (f e)
+  {-# inline ffmap #-}
+
+type role FBind nominal nominal representational
+data FBind x y f = FBind (f x) (x -> f y)
+instance FFunctor (FBind x y) where
+  ffmap f (FBind l r) = FBind (f l) (f . r)
+  {-# inline ffmap #-}
+
 
 -------------------------------------------------------------------------------
 -- FEquivalence

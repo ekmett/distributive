@@ -58,7 +58,6 @@ import Control.Monad.Writer.Class
 import Data.Coerce
 import Data.Distributive
 import Data.Distributive.Internal.Coerce
-import Data.Distributive.Util
 import Data.Functor.Contravariant
 import Data.Functor.Identity
 import Data.HKD
@@ -272,7 +271,7 @@ liftCatch = \catchE (StateDistT m) h ->
 instance (Distributive f, MonadFix m) => MonadFix (StateT f m) where
   -- mfix f = StateT $ \s -> mfix \ ~(a, _) -> runStateT (f a) s
   mfix = \f ->
-    StateDistT $ distrib (DCompose (runStateDistT #. f)) $ \f' -> mfix (coerce f' . fst)
+    StateDistT $ distrib (FCompose (runStateDistT #. f)) $ \f' -> mfix (coerce f' . fst)
   {-# inline mfix #-}
 
 instance (Distributive f, Contravariant m) => Contravariant (StateT f m) where
