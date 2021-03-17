@@ -29,14 +29,14 @@
 {-# Language QuantifiedConstraints #-}
 #endif
 {-# options_haddock hide #-}
-module Data.HKD.Distributive.Internal.Record where
+module Data.HKD.Internal.Record where
 
 import Control.Applicative
 import Data.Distributive.Internal.Coerce
 import Data.Functor.Classes
 import Data.HKD
 import Data.HKD.Distributive
-import Data.HKD.Distributive.Internal.Index
+import Data.HKD.Internal.Index
 import Data.HKD.WithIndex
 import Data.Kind
 import qualified Data.Monoid as Monoid

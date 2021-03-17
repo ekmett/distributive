@@ -35,7 +35,7 @@ import Data.Functor.WithIndex
 import Data.Functor.Sum
 import Data.Functor.Product
 import Data.Functor.Reverse
-import Data.HKD.Distributive.Internal.Index
+import Data.HKD.Internal.Index
 import Data.Proxy
 import qualified Data.Monoid as Monoid
 import Data.Foldable.WithIndex

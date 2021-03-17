@@ -77,10 +77,10 @@ library
     Data.HKD
     Data.HKD.Distributive
     Data.HKD.Distributive.Endo
-    Data.HKD.Distributive.Internal.Index
-    Data.HKD.Distributive.Internal.Record
-    Data.HKD.Distributive.Record
     Data.HKD.Divisible
+    Data.HKD.Internal.Index
+    Data.HKD.Internal.Record
+    Data.HKD.Record
     Data.HKD.WithIndex
     Data.Machine.Moore
     Control.Monad.Distributive.Reader

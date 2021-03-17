@@ -1,6 +1,6 @@
 {-# Language ExplicitNamespaces #-}
 {-# Language Trustworthy #-}
-module Data.HKD.Distributive.Record
+module Data.HKD.Record
 ( Index(Index, IndexZ, IndexS)
 , toIndex
 , Length
@@ -12,5 +12,5 @@ module Data.HKD.Distributive.Record
 , All
 ) where
 
-import Data.HKD.Distributive.Internal.Index
-import Data.HKD.Distributive.Internal.Record
+import Data.HKD.Internal.Index
+import Data.HKD.Internal.Record

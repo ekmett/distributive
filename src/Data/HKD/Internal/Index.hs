@@ -19,7 +19,7 @@
 {-# Language FlexibleContexts #-}
 {-# options_haddock hide #-}
 
-module Data.HKD.Distributive.Internal.Index
+module Data.HKD.Internal.Index
 ( Index(UnsafeIndex,Index,IndexZ,IndexS)
 , lowerFin, liftFin
 , pattern IntIndex
