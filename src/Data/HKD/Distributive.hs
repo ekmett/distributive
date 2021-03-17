@@ -39,6 +39,7 @@ module Data.HKD.Distributive
 ( type (%)
 , FDistributive(..)
 , fdistribute
+, fcotrav
 , fdistrib
 , fcollect
 , fcotraverse
@@ -163,6 +164,13 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
      => f a -> FLog f ~> a
   findex = defaultFIndex @(ContainsSelfRec1 (Rep1 f) 3)
   {-# inline findex #-}
+
+-- | A higher-kinded 'cotrav'
+fcotrav
+  :: (FFunctor w, FDistributive f)
+  => (w % Element ~> r) -> w f -> f r
+fcotrav = \k -> fscatter k id
+{-# inline fcotrav #-}
 
 -- | A higher-kinded 'distrib'
 fdistrib
