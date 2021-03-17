@@ -358,16 +358,30 @@ tabulateLogarithm = \ f ->
   distrib (Tab f) $ \(Tab f') -> f' (Logarithm runIdentity)
 {-# inline tabulateLogarithm #-}
 
--- | A logarithm.
+-- | @'Logarithm' f = f ~> 'Identity'@
 --
--- Recall that function arrow, @->@ is an exponential object. If we take @f = (->) r@, then
+-- When @f@ is 'Distributive', this is the representation/logarithm of @f@, up to isomorphism. i.e.
+--
+-- @f a ≅ Logarithm f -> a@
+--
+-- Consider the case where @f = (->) r@. It follows from the yoneda lemma that
+--
+-- @(->) r '~>' 'Identity' ≅ r@
+--
+-- i.e. we have
+--
+-- @'Logarithm' ((->) r) = forall a. (r -> a) -> a ≅ r@
+--
+-- This works more generally for any 'Distributive' functor. E.g. given
+--
+-- @data V2 a = V2 a a@
+--
+-- we have
 --
 -- @
--- 'Logarithm' ((->) r) ≅ forall a. (r -> a) -> a ≅ r
+-- V2 a ≅ Bool -> a
+-- 'Logarithm' V2 ≅ Bool
 -- @
---
--- and this works for all 'Distributive' / 'Representable' functors.
-
 type role Logarithm representational
 newtype Logarithm f = Logarithm { runLogarithm :: forall a. f a -> a }
 
