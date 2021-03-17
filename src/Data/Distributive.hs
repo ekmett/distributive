@@ -153,6 +153,7 @@ import Data.Coerce
 import Data.Complex
 import Data.Distributive.Coerce
 import Data.Distributive.Util
+import Data.Distributive.Internal.Orphans ()
 import Data.Foldable (fold)
 import Data.Foldable.WithIndex
 import Data.Function (on)

@@ -41,7 +41,7 @@ module Data.HKD.Divisible
 import Control.Applicative
 import Data.Coerce
 import Data.Distributive.Coerce
-import Data.Distributive.Orphans ()
+import Data.Distributive.Internal.Orphans ()
 import Data.Functor.Product
 import Data.Functor.Sum
 import qualified Data.Monoid as Monoid

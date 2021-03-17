@@ -1,0 +1,117 @@
+{-# Language AllowAmbiguousTypes #-}
+{-# Language DataKinds #-}
+{-# Language DerivingStrategies #-}
+{-# Language DerivingVia #-}
+{-# Language GADTs #-}
+{-# Language KindSignatures #-}
+{-# Language BangPatterns #-}
+{-# Language MagicHash #-}
+{-# Language MultiParamTypeClasses #-}
+{-# Language PatternSynonyms #-}
+{-# Language PolyKinds #-}
+{-# Language RankNTypes #-}
+{-# Language RoleAnnotations #-}
+{-# Language ScopedTypeVariables #-}
+{-# Language StandaloneDeriving #-}
+{-# Language TypeApplications #-}
+{-# Language TypeFamilies #-}
+{-# Language TypeOperators #-}
+{-# Language UnboxedTuples #-}
+{-# Language Unsafe #-}
+{-# Language ViewPatterns #-}
+
+module Data.Distributive.Internal.Fin
+( Fin(UnsafeFin,UnsafeFin#,Fin,Fin#,FZ,FS)
+, pattern IntFin
+, toFin
+, int
+, S
+) where
+
+import Control.Monad
+import Data.GADT.Compare
+import Data.Type.Coercion
+import Data.Type.Equality
+import GHC.Exts
+import GHC.TypeNats
+import Unsafe.Coerce
+import Text.Read
+
+int :: forall n. KnownNat n => Int
+int = fromIntegral $ natVal' (proxy# @n)
+
+type S n = 1 + n
+
+type role Fin nominal
+newtype Fin (n :: Nat) = UnsafeFin { fromFin :: Int }
+  deriving (Eq, Ord)
+
+instance Show (Fin n) where
+  showsPrec d (UnsafeFin n) = showsPrec d n
+
+instance KnownNat n => Read (Fin n) where
+  readPrec = do
+    i <- readPrec
+    UnsafeFin i <$ guard (i < int @n)
+
+pattern UnsafeFin# :: Int# -> Fin n
+pattern UnsafeFin# i = UnsafeFin (I# i)
+{-# complete UnsafeFin# :: Fin #-}
+
+pattern Fin# :: Int# -> Fin n
+pattern Fin# i <- UnsafeFin# i
+{-# complete Fin# :: Fin #-}
+
+instance GEq Fin where
+  geq (UnsafeFin x) (UnsafeFin y)
+    | x == y = Just (unsafeCoerce Refl)
+    | otherwise = Nothing
+  {-# inline geq #-}
+
+instance GCompare Fin where
+  gcompare (UnsafeFin x) (UnsafeFin y) = case compare x y of
+    LT -> GLT
+    EQ -> unsafeCoerce GEQ
+    GT -> GGT
+  {-# inline gcompare #-}
+
+instance TestEquality Fin where
+  testEquality = geq
+  {-# inline testEquality #-}
+
+instance TestCoercion Fin where
+  testCoercion a b = repr <$> geq a b
+  {-# inline testCoercion #-}
+
+pattern Fin :: Int -> Fin n
+pattern Fin n <- UnsafeFin n
+{-# complete Fin #-}
+
+toFin :: forall n. KnownNat n => Int -> Maybe (Fin n)
+toFin i
+  | i < int @n = Just (UnsafeFin i)
+  | otherwise  = Nothing
+
+pattern IntFin :: KnownNat n => Fin n -> Int
+pattern IntFin i <- (toFin -> Just i) where
+  IntFin x = fromFin x
+
+-- IntFin is not complete
+
+data Fin' (n :: Nat) where
+  FZ' :: Fin' (S n)
+  FS' :: Fin n -> Fin' (S n)
+
+upFin :: Fin n -> Fin' n
+upFin (UnsafeFin 0) = unsafeCoerce FZ'
+upFin (UnsafeFin n) = unsafeCoerce $ FS' $ UnsafeFin (n-1)
+
+pattern FZ :: () => forall m. (n ~ S m) => Fin n
+pattern FZ <- (upFin -> FZ') where
+  FZ = UnsafeFin 0
+
+pattern FS :: () => forall m. (n ~ S m) => Fin m -> Fin n
+pattern FS n <- (upFin -> FS' n) where
+  FS n = UnsafeFin (fromFin n - 1)
+
+{-# complete FZ, FS :: Fin #-}

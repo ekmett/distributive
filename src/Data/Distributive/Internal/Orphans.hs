@@ -8,7 +8,7 @@
 {-# Language InstanceSigs #-}
 {-# Language Trustworthy #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-module Data.Distributive.Orphans where
+module Data.Distributive.Internal.Orphans where
 
 import Data.Coerce
 import Data.GADT.Compare

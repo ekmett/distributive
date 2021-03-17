@@ -56,9 +56,10 @@ library
     ghc-prim,
     indexed-traversable >= 0.1 && < 0.2,
     mtl          >= 2.2 && < 2.3,
-    primitive    >= 0.6.2 && < 0.8,
     some         >= 1.0 && < 1.1,
-    transformers >= 0.3 && < 0.6
+    transformers >= 0.3 && < 0.6,
+    vector       >= 0.12 && < 0.13
+  --  primitive    >= 0.6.2 && < 0.8,
 
   hs-source-dirs:  src
   other-modules:
@@ -68,7 +69,9 @@ library
     Data.Distributive
     Data.Distributive.Coyoneda
     Data.Distributive.Endo
-    Data.Distributive.Orphans
+    Data.Distributive.Internal.Fin
+    Data.Distributive.Internal.Vec
+    Data.Distributive.Internal.Orphans
     Data.Distributive.Vec
     Data.Functor.Confusing
     Data.HKD
