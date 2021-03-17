@@ -21,7 +21,7 @@
 {-# Language ViewPatterns #-}
 
 module Data.Distributive.Internal.Fin
-( Fin(UnsafeFin,UnsafeFin#,Fin,Fin#,FZ,FS)
+( Fin(UnsafeFin,Fin,FinZ,FinS)
 , pattern IntFin
 , toFin
 , int
@@ -34,8 +34,8 @@ import Data.Type.Coercion
 import Data.Type.Equality
 import GHC.Exts
 import GHC.TypeNats
-import Unsafe.Coerce
 import Text.Read
+import Unsafe.Coerce
 
 int :: forall n. KnownNat n => Int
 int = fromIntegral $ natVal' (proxy# @n)
@@ -53,14 +53,6 @@ instance KnownNat n => Read (Fin n) where
   readPrec = do
     i <- readPrec
     UnsafeFin i <$ guard (i < int @n)
-
-pattern UnsafeFin# :: Int# -> Fin n
-pattern UnsafeFin# i = UnsafeFin (I# i)
-{-# complete UnsafeFin# :: Fin #-}
-
-pattern Fin# :: Int# -> Fin n
-pattern Fin# i <- UnsafeFin# i
-{-# complete Fin# :: Fin #-}
 
 instance GEq Fin where
   geq (UnsafeFin x) (UnsafeFin y)
@@ -99,19 +91,19 @@ pattern IntFin i <- (toFin -> Just i) where
 -- IntFin is not complete
 
 data Fin' (n :: Nat) where
-  FZ' :: Fin' (S n)
-  FS' :: Fin n -> Fin' (S n)
+  FinZ' :: Fin' (S n)
+  FinS' :: Fin n -> Fin' (S n)
 
 upFin :: Fin n -> Fin' n
-upFin (UnsafeFin 0) = unsafeCoerce FZ'
-upFin (UnsafeFin n) = unsafeCoerce $ FS' $ UnsafeFin (n-1)
+upFin (UnsafeFin 0) = unsafeCoerce FinZ'
+upFin (UnsafeFin n) = unsafeCoerce $ FinS' $ UnsafeFin (n-1)
 
-pattern FZ :: () => forall m. (n ~ S m) => Fin n
-pattern FZ <- (upFin -> FZ') where
-  FZ = UnsafeFin 0
+pattern FinZ :: () => forall m. (n ~ S m) => Fin n
+pattern FinZ <- (upFin -> FinZ') where
+  FinZ = UnsafeFin 0
 
-pattern FS :: () => forall m. (n ~ S m) => Fin m -> Fin n
-pattern FS n <- (upFin -> FS' n) where
-  FS n = UnsafeFin (fromFin n - 1)
+pattern FinS :: () => forall m. (n ~ S m) => Fin m -> Fin n
+pattern FinS n <- (upFin -> FinS' n) where
+  FinS n = UnsafeFin (fromFin n - 1)
 
-{-# complete FZ, FS :: Fin #-}
+{-# complete FinZ, FinS :: Fin #-}

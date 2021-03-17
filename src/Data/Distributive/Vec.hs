@@ -2,7 +2,7 @@
 {-# Language Trustworthy #-}
 
 module Data.Distributive.Vec
-( Fin(Fin,FZ,FS)
+( Fin(Fin,FinZ,FinS)
 , pattern IntFin
 , toFin
 , Vec(Vec,toVector)

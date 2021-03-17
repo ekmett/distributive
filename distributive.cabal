@@ -77,6 +77,8 @@ library
     Data.HKD
     Data.HKD.Distributive
     Data.HKD.Distributive.Endo
+    Data.HKD.Distributive.Internal.Fin
+    Data.HKD.Distributive.Internal.Vec
     Data.HKD.Divisible
     Data.HKD.WithIndex
     Data.Machine.Moore
