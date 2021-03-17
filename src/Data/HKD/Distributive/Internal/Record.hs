@@ -1,3 +1,4 @@
+{-# Language CPP #-}
 {-# Language Unsafe #-}
 {-# Language BangPatterns #-}
 {-# Language KindSignatures #-}
@@ -7,6 +8,7 @@
 {-# Language RankNTypes #-}
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
+{-# Language DefaultSignatures #-}
 {-# Language UndecidableInstances #-}
 {-# Language MagicHash #-}
 {-# Language RoleAnnotations #-}
@@ -22,13 +24,20 @@
 {-# Language ConstraintKinds #-}
 {-# Language DerivingVia #-}
 {-# Language TypeOperators #-}
+{-# Language GeneralizedNewtypeDeriving #-}
+#if __GLASGOW_HASKELL__ >= 806
+{-# Language QuantifiedConstraints #-}
+#endif
 {-# options_haddock hide #-}
 module Data.HKD.Distributive.Internal.Record where
 
 import Control.Applicative
+import Data.Distributive
 import Data.Distributive.Internal.Coerce
 import Data.Distributive.Util
 import Data.Functor.Classes
+import Data.Functor.Compose
+import Data.Functor.Product
 import Data.HKD
 import Data.HKD.Distributive
 import Data.HKD.Distributive.Internal.Index
@@ -36,10 +45,12 @@ import Data.HKD.WithIndex
 import Data.Kind
 import qualified Data.Monoid as Monoid
 import Data.Proxy
+import Data.Some
 import Data.Traversable.WithIndex
 import Data.Type.Equality
 import Data.Vector as V
 import GHC.Exts
+import GHC.Generics
 import GHC.TypeNats
 import Unsafe.Coerce
 
@@ -49,44 +60,60 @@ newtype Record (as :: [i]) (f :: i -> Type) = UnsafeRecord
   }
 
 instance FFunctor (Record as) where
-  ffmap f = UnsafeRecord #. V.map (unsafeCoerce f) .# safeRecord
+  ffmap f =
+    UnsafeRecord #.
+    V.map (unsafeCoerce f) .#
+    safeRecord
   {-# inline ffmap #-}
 
 instance FFunctorWithIndex (Index as) (Record as) where
-  ifmap f = UnsafeRecord #. V.imap (unsafeCoerce f) .# safeRecord
+  ifmap f =
+    UnsafeRecord #.
+    V.imap (unsafeCoerce f) .#
+    safeRecord
   {-# inline ifmap #-}
 
 instance FFoldable (Record as) where
-  ffoldMap f = V.foldMap (unsafeCoerce f) .# safeRecord
+  ffoldMap f =
+    V.foldMap (unsafeCoerce f) .#
+    safeRecord
   {-# inline ffoldMap #-}
 
 instance FFoldableWithIndex (Index as) (Record as) where
-  iffoldMap f = V.ifoldr (\i a r -> f (UnsafeIndex i) (unsafeCoerce a) <> r) mempty .# safeRecord
+  iffoldMap f =
+    V.ifoldr (\i a r -> f (UnsafeIndex i) (unsafeCoerce a) <> r) mempty .#
+    safeRecord
   {-# inline iffoldMap #-}
 
 instance FTraversable (Record as) where
   ftraverse = \(f :: forall x. f x -> m (g x)) ->
     fmap UnsafeRecord .
-    traverse (\a -> Any <$> f (unsafeCoerce a)) .# safeRecord
+    traverse(\a -> Any <$> f (unsafeCoerce a)) .#
+    safeRecord
   {-# inline ftraverse #-}
 
 instance FTraversableWithIndex (Index as) (Record as) where
   iftraverse = \f (UnsafeRecord xs) ->
     let !n = V.length xs
     in (UnsafeRecord #. V.fromListN n) <$>
-    itraverse (\i a -> Any <$> f (UnsafeIndex i) (unsafeCoerce a)) (V.toList xs)
+    itraverse
+      (\i a -> Any <$> f (UnsafeIndex i) (unsafeCoerce a))
+      (V.toList xs)
   {-# inline iftraverse #-}
 
 instance KnownLength as => FDistributive (Record as) where
   type FLog (Record as) = Index as
   fscatter k f (ffmap f -> w) =
     UnsafeRecord $
-      generate (len @as) $ \i ->
-        Any $ k $ ffmap (\r -> Element $ findex r (UnsafeIndex i)) w
+    generate (len @as) $ \i ->
+    Any $ k $ ffmap (\r -> Element $ findex r (UnsafeIndex i)) w
   {-# inline fscatter #-}
   findex (UnsafeRecord as) (UnsafeIndex i) = unsafeCoerce (as ! i)
   {-# inline findex #-}
-  ftabulate f = UnsafeRecord $ generate (len @as) $ \i -> Any $ f (UnsafeIndex i)
+  ftabulate f =
+    UnsafeRecord $
+    generate (len @as) $ \i ->
+    Any $ f (UnsafeIndex i)
   {-# inline ftabulate #-}
 
 instance FZip (Record as) where
@@ -107,16 +134,99 @@ class AllF p as => All (p :: i -> Constraint) (as :: [i]) where
 
 instance All p '[] where
   para nil _ = nil
+  {-# inline para #-}
 
 instance (p a, All p as) => All (p :: i -> Constraint) (a ': as) where
   para nil kons = kons (proxy# @a) (para @i @p nil kons)
+  {-# inline para #-}
 
 withLen :: forall as f r. Record as f -> (KnownLength as => r) -> r
 withLen v r = case someNatVal (fromIntegral $ V.length (safeRecord v)) of
   SomeNat (Proxy :: Proxy n') -> case unsafeCoerce Refl of
     (Refl :: Length as :~: n') -> r
+{-# inline withLen #-}
+
+data Dict1 p a where
+  Dict1 :: p a => Dict1 p a
+
+newtype Dicts p f = Dicts
+  { runDicts :: f (Dict1 p)
+  }
+
+instance FFunctor (Dicts p) where
+  ffmap = \ f -> Dicts #. f .# runDicts
+  {-# inline ffmap #-}
+
+newtype DConstrained p f = DConstrained { runDConstrained :: forall x. p x => f x }
+
+instance FFunctor (DConstrained p) where
+  ffmap = \f x -> DConstrained (f $ runDConstrained x)
+  {-# inline ffmap #-}
+
+instance FDistributive (DConstrained p) where
+  type FLog (DConstrained p) = Dict1 p
+  fscatter = \k f (ffmap f -> w) -> DConstrained $ k $ ffmap (\(DConstrained x) -> Element x) w
+  ftabulate = \f -> DConstrained $ f Dict1
+  findex = \(DConstrained x) Dict1 -> x
+
+class GAll (p :: i -> Constraint) (f :: (i -> Type) -> Type) where
+  gall :: f (Dict1 p)
+  default gall :: (Generic1 f, GAll p (Rep1 f)) => f (Dict1 p)
+  gall = to1 gall
+
+instance (GAll p f, GAll p g) => GAll p (f :*: g) where
+  gall = gall :*: gall
+
+instance (Distributive f, GAll p g) => GAll p (f :.: g) where
+  gall = Comp1 $ pureDist gall
+
+deriving newtype instance GAll p f => GAll p (M1 i c f)
+deriving newtype instance GAll p f => GAll p (Rec1 f)
+
+instance GAll p U1 where gall = U1
+
+instance GAll p Proxy
+
+instance a ~ Dict1 p => GAll p ((:~:) a) where
+  gall = Refl
+instance p a => GAll p (Element a) where
+  gall = Element Dict1
+instance (p a, p b) => GAll p (D2 a b) where
+  gall = D2 Dict1 Dict1
+instance (p a, p b, p c) => GAll p (D3 a b c) where
+  gall = D3 Dict1 Dict1 Dict1
+instance (p a, p b, p c, p d) => GAll p (D4 a b c d) where
+  gall = D4 Dict1 Dict1 Dict1 Dict1
+instance (p a, p b, p c, p d, p e) => GAll p (D5 a b c d e) where
+  gall = D5 Dict1 Dict1 Dict1 Dict1 Dict1
+instance q (Dict1 p) => GAll p (Dict1 q) where
+  gall = Dict1
+
+instance (Distributive f, GAll p g) => GAll p (Compose f g)
+
+instance (GAll p f, GAll p g) => GAll p (Product f g)
+
+#if __GLASGOW_HASKELL__ >= 806
+-- this is arguably any existential constraint
+instance (forall a. p a) => GAll p Some where gall = Some Dict1
+instance (forall a. p a) => GAll p Limit where gall = Limit Dict1
+instance (forall a. q a => p a) => GAll p (DConstrained q) where
+  gall = DConstrained Dict1
+#else
+instance p ~ q => GAll p (DConstrained q) where
+  gall = DConstrained Dict1
+#endif
 
 data IRec (f :: i -> Type) (as :: [i]) = IRec {-# unpack #-} !Int [Any]
+
+gcfdistrib
+  :: forall i (p :: i -> Constraint) (f :: (i -> Type) -> Type) (r :: i -> Type) w.
+     (GAll p f, FFunctor w)
+  => w f
+  -> (forall x. p x => w (Element x) -> r x)
+  -> f r
+gcfdistrib _ _ = undefined
+
 
 cfdistrib
   :: forall i (p :: i -> Constraint) (as :: [i]) (r :: i -> Type) w.
@@ -125,12 +235,17 @@ cfdistrib
   -> (forall x. p x => w (Element x) -> r x)
   -> Record as r
 cfdistrib w k = case len @as of
-  n -> case para @i @p @as (IRec n [])
-          $ \ (_ :: Proxy# b) (IRec (subtract 1 -> i) t) ->
-              IRec i $
-                (Any $ k $ ffmap (\(r :: Record as a) ->
-                Element $ findex r (UnsafeIndex i) :: Element b a) w) : t
-         of
+  n ->
+    case
+      para @i @p @as (IRec n []) $
+      \ (_ :: Proxy# b) (IRec (subtract 1 -> i) t) ->
+        IRec i $
+          (Any $ k $
+            ffmap
+              (\(r :: Record as a) -> Element $ findex r (UnsafeIndex i) :: Element b a)
+              w
+          ) : t
+    of
     IRec 0 r -> UnsafeRecord $ V.fromListN n r
     _ -> error "cfdistrib: the impossible happened"
 {-# inline cfdistrib #-}
