@@ -1,11 +1,19 @@
-{-# Language RankNTypes #-}
-{-# Language EmptyCase #-}
-{-# Language PolyKinds #-}
+{-# Language AllowAmbiguousTypes #-}
+{-# Language ConstraintKinds #-}
 {-# Language DataKinds #-}
+{-# Language DefaultSignatures #-}
+{-# Language EmptyCase #-}
+{-# Language FlexibleContexts #-}
+{-# Language FlexibleInstances #-}
 {-# Language GADTs #-}
+{-# Language InstanceSigs #-}
+{-# Language MultiParamTypeClasses #-}
+{-# Language PolyKinds #-}
+{-# Language RankNTypes #-}
+{-# Language ScopedTypeVariables #-}
 {-# Language Trustworthy #-}
 {-# Language TypeOperators #-}
-{-# Language FlexibleInstances #-}
+
 
 module Data.HKD.Divisible
 ( FSemidivisible(..)
@@ -17,6 +25,8 @@ module Data.HKD.Divisible
 , FDecidable
 , flost
 , fchosen
+--, FDeciding(..)
+, FSemideciding(..)
 ) where
 
 import Control.Applicative
@@ -25,6 +35,8 @@ import Data.Distributive.Coerce
 import Data.Distributive.Orphans ()
 import Data.GADT.Compare
 import Data.HKD
+import Data.Kind
+import Data.Proxy
 -- import Data.Semigroup
 import GHC.Generics
 
@@ -210,3 +222,27 @@ instance (Applicative f, FSemidecidable g) => FSemidecidable (f :.: g) where
 
   flose = \x -> Comp1 $ pure $ flose x
   {-# inline flose #-}
+
+class FSemideciding (t :: (k -> Type) -> Type) where
+  fsemideciding
+    :: forall q f p. FSemidecidable f
+    => p q 
+    -> (forall b. q b => f b)
+    -> f t
+  default fsemideciding
+    :: (Generic1 t, FSemideciding (Rep1 t), FSemidecidable f)
+    => p q
+    -> (forall b. q b => f b)
+    -> f t
+  fsemideciding _ _ = undefined
+
+
+instance (FSemideciding s, FSemideciding t) => FSemideciding (s :*: t) where
+  fsemideciding :: forall q f p. FSemidecidable f => p q -> (forall b. q b => f b) -> f (s :*: t)
+  fsemideciding _ k = fdivided (fsemideciding (Proxy :: Proxy q) k)
+                               (fsemideciding (Proxy :: Proxy q) k)
+  
+
+
+--class FSemideciding q t => FDeciding q t where
+--  fdeciding :: FSemidecidable f => p q -> (forall b. q b => f b) -> f (t a)

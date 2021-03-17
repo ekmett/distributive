@@ -319,10 +319,10 @@ instance FDistributive f => FDistributive (M1 i c f) where
   {-# inline findex #-}
 
 instance FDistributive U1 where
-  type FLog U1 = Const Void
+  type FLog U1 = V1
   fscatter = \_ _ _ -> U1
   ftabulate = \_ -> U1
-  findex = \_ -> absurd .# getConst
+  findex = \_ -> \case
   {-# inline fscatter #-}
   {-# inline ftabulate #-}
   {-# inline findex #-}
