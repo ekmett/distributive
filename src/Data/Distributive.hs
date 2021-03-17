@@ -70,6 +70,7 @@
 module Data.Distributive
 ( Distributive(..)
 , distribute
+, cotrav
 , distrib
 , dist
 , collect
@@ -321,11 +322,24 @@ defaultIndex :: forall f a. DefaultIndex f => f a -> (Log f -> a)
 defaultIndex = defaultIndex' @(LogIsLogarithm f)
 {-# inline defaultIndex #-}
 
--- | A helper for the most common usage pattern when working with higher-kinded data.
+-- | A helper for the most common usage pattern when working with 'scatter'.
+--
+-- @
+-- 'cotrav' k ≡ 'scatter' k id
+-- @
+--
+-- flipped version of 'distrib'
+cotrav :: (Distributive f, FFunctor w) => (w Identity -> r) -> w f -> f r
+cotrav = \ k w -> scatter k id w
+{-# inline cotrav #-}
+
+-- | A helper for the most common usage pattern when working with 'scatter'.
 --
 -- @
 -- 'distrib' w k ≡ 'scatter' k id w
 -- @
+--
+-- flipped version of 'cotrav'
 distrib :: (Distributive f, FFunctor w) => w f -> (w Identity -> r) -> f r
 distrib = \ w k -> scatter k id w
 {-# inline distrib #-}
