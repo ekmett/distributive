@@ -62,15 +62,14 @@ library
   --  primitive    >= 0.6.2 && < 0.8,
 
   hs-source-dirs:  src
-  other-modules:
-    Data.Distributive.Util
-    Data.Distributive.Internal.Orphans
   exposed-modules:
     Data.Distributive
     Data.Distributive.Coyoneda
     Data.Distributive.Endo
+    Data.Distributive.Internal
     Data.Distributive.Internal.Coerce
     Data.Distributive.Internal.Fin
+    Data.Distributive.Internal.Orphans
     Data.Distributive.Internal.Vec
     Data.Distributive.Vec
     Data.Functor.Confusing

@@ -17,7 +17,6 @@
 #endif
 
 -- |
--- Module      : Data.Distributive.Util
 -- Copyright   : (C) 2021 Edward Kmett
 -- License     : BSD-style (see the file LICENSE)
 --
@@ -25,7 +24,7 @@
 -- Stability   : provisional
 -- Portability : non-portable (ghc 8.0+)
 
-module Data.Distributive.Util
+module Data.Distributive.Internal
 ( (<&>)
 , type ContainsSelfRec1
 , AppCompose(..)
