@@ -30,6 +30,9 @@
 {-# Language UndecidableInstances #-}
 {-# Language UndecidableSuperClasses #-}
 {-# Language ViewPatterns #-}
+#if __GLASGOW_HASKELL__ >= 806
+{-# Language QuantifiedConstraints #-}
+#endif
 
 #ifndef MIN_VERSION_base
 #define MIN_VERSION_Base(_x,_y,_z) 1
@@ -87,6 +90,10 @@ module Data.HKD.Distributive
 -- * HKD
 , HKD(..)
 , Atkey(..)
+
+-- * Constrained Distributive operations
+, FAll(..)
+, cfdistrib
 ) where
 
 import Control.Applicative
@@ -837,3 +844,69 @@ instance FDistributive (FConstrained p) where
   fscatter = \k f (ffmap f -> w) -> FConstrained $ k $ ffmap (\(FConstrained x) -> F1 x) w
   ftabulate = \f -> FConstrained $ f Dict1
   findex = \(FConstrained x) Dict1 -> x
+
+class FAll (p :: i -> Constraint) (f :: (i -> Type) -> Type) where
+  fall :: f (Dict1 p)
+  default fall :: (Generic1 f, FAll p (Rep1 f)) => f (Dict1 p)
+  fall = to1 fall
+
+instance (FAll p f, FAll p g) => FAll p (f :*: g) where
+  fall = fall :*: fall
+
+instance (Distributive f, FAll p g) => FAll p (f :.: g) where
+  fall = Comp1 $ pureDist fall
+
+deriving newtype instance FAll p f => FAll p (M1 i c f)
+deriving newtype instance FAll p f => FAll p (Rec1 f)
+
+instance FAll p U1 where fall = U1
+
+instance FAll p Proxy
+
+instance a ~ Dict1 p => FAll p ((:~:) a) where
+  fall = Refl
+
+instance p a => FAll p (F1 a) where
+  fall = F1 Dict1
+
+instance (p a, p b) => FAll p (F2 a b) where
+  fall = F2 Dict1 Dict1
+
+instance (p a, p b, p c) => FAll p (F3 a b c) where
+  fall = F3 Dict1 Dict1 Dict1
+
+instance (p a, p b, p c, p d) => FAll p (F4 a b c d) where
+  fall = F4 Dict1 Dict1 Dict1 Dict1
+
+instance (p a, p b, p c, p d, p e) => FAll p (F5 a b c d e) where
+  fall = F5 Dict1 Dict1 Dict1 Dict1 Dict1
+
+instance q (Dict1 p) => FAll p (Dict1 q) where
+  fall = Dict1
+
+instance (Distributive f, FAll p g) => FAll p (Compose f g)
+
+instance (FAll p f, FAll p g) => FAll p (Product f g)
+
+#if __GLASGOW_HASKELL__ >= 806
+-- this is arguably any existential constraint
+instance (forall a. p a) => FAll p Some where fall = Some Dict1
+instance (forall a. p a) => FAll p Limit where fall = Limit Dict1
+instance (forall a. q a => p a) => FAll p (FConstrained q) where
+  fall = FConstrained Dict1
+#else
+instance p ~ q => FAll p (FConstrained q) where
+  fall = FConstrained Dict1
+#endif
+ 
+fzipWithW :: (FDistributive f, FFunctor w) => (forall x. a x -> w (F1 x) -> r x) -> f a -> w f -> f r
+fzipWithW f fa w = fdistrib (F1 fa :*: w) $ \(F1 (F1 a) :*: w') -> f a w'
+
+cfdistrib
+  :: forall i (p :: i -> Constraint) (f :: (i -> Type) -> Type) (r :: i -> Type) w.
+     (FAll p f, FFunctor w, FDistributive f)
+  => w f
+  -> (forall x. p x => w (F1 x) -> r x)
+  -> f r
+cfdistrib w k = fzipWithW (\Dict1 -> k) (fall @i @p) w
+

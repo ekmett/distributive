@@ -32,11 +32,8 @@
 module Data.HKD.Distributive.Internal.Record where
 
 import Control.Applicative
-import Data.Distributive
 import Data.Distributive.Internal.Coerce
 import Data.Functor.Classes
-import Data.Functor.Compose
-import Data.Functor.Product
 import Data.HKD
 import Data.HKD.Distributive
 import Data.HKD.Distributive.Internal.Index
@@ -44,12 +41,10 @@ import Data.HKD.WithIndex
 import Data.Kind
 import qualified Data.Monoid as Monoid
 import Data.Proxy
-import Data.Some
 import Data.Traversable.WithIndex
 import Data.Type.Equality
 import Data.Vector as V
 import GHC.Exts
-import GHC.Generics
 import GHC.TypeNats
 import Unsafe.Coerce
 
@@ -145,73 +140,16 @@ withLen v r = case someNatVal (fromIntegral $ V.length (safeRecord v)) of
     (Refl :: Length as :~: n') -> r
 {-# inline withLen #-}
 
-
-class GAll (p :: i -> Constraint) (f :: (i -> Type) -> Type) where
-  gall :: f (Dict1 p)
-  default gall :: (Generic1 f, GAll p (Rep1 f)) => f (Dict1 p)
-  gall = to1 gall
-
-instance (GAll p f, GAll p g) => GAll p (f :*: g) where
-  gall = gall :*: gall
-
-instance (Distributive f, GAll p g) => GAll p (f :.: g) where
-  gall = Comp1 $ pureDist gall
-
-deriving newtype instance GAll p f => GAll p (M1 i c f)
-deriving newtype instance GAll p f => GAll p (Rec1 f)
-
-instance GAll p U1 where gall = U1
-
-instance GAll p Proxy
-
-instance a ~ Dict1 p => GAll p ((:~:) a) where
-  gall = Refl
-instance p a => GAll p (F1 a) where
-  gall = F1 Dict1
-instance (p a, p b) => GAll p (F2 a b) where
-  gall = F2 Dict1 Dict1
-instance (p a, p b, p c) => GAll p (F3 a b c) where
-  gall = F3 Dict1 Dict1 Dict1
-instance (p a, p b, p c, p d) => GAll p (F4 a b c d) where
-  gall = F4 Dict1 Dict1 Dict1 Dict1
-instance (p a, p b, p c, p d, p e) => GAll p (F5 a b c d e) where
-  gall = F5 Dict1 Dict1 Dict1 Dict1 Dict1
-instance q (Dict1 p) => GAll p (Dict1 q) where
-  gall = Dict1
-
-instance (Distributive f, GAll p g) => GAll p (Compose f g)
-
-instance (GAll p f, GAll p g) => GAll p (Product f g)
-
-#if __GLASGOW_HASKELL__ >= 806
--- this is arguably any existential constraint
-instance (forall a. p a) => GAll p Some where gall = Some Dict1
-instance (forall a. p a) => GAll p Limit where gall = Limit Dict1
-instance (forall a. q a => p a) => GAll p (FConstrained q) where
-  gall = FConstrained Dict1
-#else
-instance p ~ q => GAll p (FConstrained q) where
-  gall = FConstrained Dict1
-#endif
-
 data IRec (f :: i -> Type) (as :: [i]) = IRec {-# unpack #-} !Int [Any]
 
-gcfdistrib
-  :: forall i (p :: i -> Constraint) (f :: (i -> Type) -> Type) (r :: i -> Type) w.
-     (GAll p f, FFunctor w)
-  => w f
-  -> (forall x. p x => w (F1 x) -> r x)
-  -> f r
-gcfdistrib _ _ = undefined
 
-
-cfdistrib
+cfdistribRecord
   :: forall i (p :: i -> Constraint) (as :: [i]) (r :: i -> Type) w.
      (All p as, KnownLength as, FFunctor w)
   => w (Record as)
   -> (forall x. p x => w (F1 x) -> r x)
   -> Record as r
-cfdistrib w k = case len @as of
+cfdistribRecord w k = case len @as of
   n ->
     case
       para @i @p @as (IRec n []) $
@@ -225,14 +163,14 @@ cfdistrib w k = case len @as of
     of
     IRec 0 r -> UnsafeRecord $ V.fromListN n r
     _ -> error "cfdistrib: the impossible happened"
-{-# inline cfdistrib #-}
+{-# inline cfdistribRecord #-}
 
 instance (Eq1 f, All Eq as) => Eq (Record as f) where
   xs == ys =
     Monoid.getAll $
     ffoldMap getConst $
     withLen xs $
-    cfdistrib @Type @Eq (F2 xs ys) $
+    cfdistribRecord @Type @Eq (F2 xs ys) $
     \(F2 (F1 x) (F1 y)) ->
     Const $ Monoid.All $ liftEq (==) x y
 
@@ -240,7 +178,7 @@ instance (Ord1 f, All Ord as, All Eq as) => Ord (Record as f) where
   compare xs ys =
     ffoldMap getConst $
     withLen xs $
-    cfdistrib @Type @Ord (F2 xs ys) $
+    cfdistribRecord @Type @Ord (F2 xs ys) $
     \(F2 (F1 x) (F1 y)) ->
     Const $ liftCompare compare x y
 
