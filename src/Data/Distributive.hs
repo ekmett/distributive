@@ -210,13 +210,13 @@ class Functor f => Distributive f where
   type Log f
   type Log f = DefaultLog f
 
-  -- | Defaults to 'tabulateRep' when @f@ is non-recursive, otherwise to 'tabulateLogarithm'.
+  -- | Defaults to 'tabulateLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'tabulateRep'
   tabulate :: (Log f -> a) -> f a
   default tabulate :: DefaultTabulate f => (Log f -> a) -> f a
   tabulate = defaultTabulate
   {-# inline tabulate #-}
 
-  -- | Defaults to 'indexRep when @f@ is non-recursive, otherwise to 'indexLogarithm'.
+  -- | Defaults to 'indexLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'indexRep'
   index :: f a -> Log f -> a
   default index :: DefaultIndex f => f a -> Log f -> a
   index = defaultIndex
@@ -350,7 +350,7 @@ scatterDefault = \k phi wg ->
   tabulate $ \x -> k $ ffmap (\g -> Identity $ index (phi g) x) wg
 {-# inline scatterDefault #-}
 
--- | Default definition for 'tabulate' in when @'Log' f@ = @'Logarithm' f@. Can be used
+-- | Default definition for 'tabulate' when @'Log' f@ = @'Logarithm' f@. Can be used
 -- to manipulate 'Logarithm's regardless of the choice of 'Log' for your distributive
 -- functor.
 tabulateLogarithm :: Distributive f => (Logarithm f -> a) -> f a
