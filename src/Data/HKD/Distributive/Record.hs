@@ -9,7 +9,6 @@ module Data.HKD.Distributive.Record
 , len
 , Record(Nil, Cons)
 , withLen
-, cfdistribRecord
 , All
 ) where
 

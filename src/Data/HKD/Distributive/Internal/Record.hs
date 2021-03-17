@@ -142,45 +142,34 @@ withLen v r = case someNatVal (fromIntegral $ V.length (safeRecord v)) of
 
 data IRec (f :: i -> Type) (as :: [i]) = IRec {-# unpack #-} !Int [Any]
 
-
-cfdistribRecord
-  :: forall i (p :: i -> Constraint) (as :: [i]) (r :: i -> Type) w.
-     (All p as, KnownLength as, FFunctor w)
-  => w (Record as)
-  -> (forall x. p x => w (F1 x) -> r x)
-  -> Record as r
-cfdistribRecord w k = case len @as of
-  n ->
-    case
-      para @i @p @as (IRec n []) $
+instance (KnownLength as, All p as) => FAll (p :: i -> Constraint) (Record as) where
+  fall = case len @as of
+    n ->
+      case para @i @p @as (IRec n []) $
       \ (_ :: Proxy# b) (IRec (subtract 1 -> i) t) ->
-        IRec i $
-          (Any $ k $
-            ffmap
-              (\(r :: Record as a) -> F1 $ findex r (UnsafeIndex i) :: F1 b a)
-              w
-          ) : t
-    of
-    IRec 0 r -> UnsafeRecord $ V.fromListN n r
-    _ -> error "cfdistrib: the impossible happened"
-{-# inline cfdistribRecord #-}
+        IRec i $ (Any (Dict1 :: Dict1 p b)) : t
+      of
+      IRec 0 r -> UnsafeRecord $ V.fromListN n r
+      _ -> error "cfdistrib: the impossible happened"
+  {-# inline[0] fall #-}
 
-instance (Eq1 f, All Eq as) => Eq (Record as f) where
-  xs == ys =
-    Monoid.getAll $
+instance (Eq1 f, All Eq as) => Eq (Record (as :: [Type]) f) where
+  xs == ys = Monoid.getAll $
     ffoldMap getConst $
     withLen xs $
-    cfdistribRecord @Type @Eq (F2 xs ys) $
-    \(F2 (F1 x) (F1 y)) ->
-    Const $ Monoid.All $ liftEq (==) x y
+    fliftD3
+      (\Dict1 x y -> Const $ Monoid.All $ liftEq (==) x y)
+      (fall @Type @Eq) xs ys
+  {-# inline (==) #-}
 
-instance (Ord1 f, All Ord as, All Eq as) => Ord (Record as f) where
+instance (Ord1 f, All Ord as, All Eq as) => Ord (Record (as :: [Type]) f) where
   compare xs ys =
     ffoldMap getConst $
     withLen xs $
-    cfdistribRecord @Type @Ord (F2 xs ys) $
-    \(F2 (F1 x) (F1 y)) ->
-    Const $ liftCompare compare x y
+    fliftD3
+      (\Dict1 x y -> Const $ liftCompare compare x y)
+      (fall @Type @Ord) xs ys
+  {-# inline compare #-}
 
 data Record' :: [i] -> (i -> Type) -> Type where
   Nil' :: Record' '[] f

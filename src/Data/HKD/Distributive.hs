@@ -47,6 +47,10 @@ module Data.HKD.Distributive
 , fcollect
 , fcotraverse
 , pattern FTabulate
+, fliftD2
+, fliftD3
+, fliftD4
+, fliftD5
 -- * DerivingVia
 , FDist(..)
 -- * FFunctor
@@ -507,9 +511,29 @@ instance FDistributive f => FZip (FDist f) where
 
 -- | A default definition of 'fzipWith' from 'FZip' in terms of 'FDistributive'
 fzipWithFDist :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
-fzipWithFDist = \f m n ->
-  fdistrib (F2 m n) $ \(F2 (F1 m') (F1 n')) -> f m' n'
+fzipWithFDist = fliftD2
 {-# inline fzipWithFDist #-}
+
+fliftD2 :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
+fliftD2 = \f m n ->
+  fdistrib (F2 m n) $ \(F2 (F1 m') (F1 n')) -> f m' n'
+{-# inline fliftD2 #-}
+
+fliftD3 :: FDistributive f => (forall x. a x -> b x -> c x -> d x) -> f a -> f b -> f c -> f d
+fliftD3 = \f m n o ->
+  fdistrib (F3 m n o) $ \(F3 (F1 m') (F1 n') (F1 o')) -> f m' n' o'
+{-# inline fliftD3 #-}
+
+fliftD4 :: FDistributive f => (forall x. a x -> b x -> c x -> d x -> e x) -> f a -> f b -> f c -> f d -> f e
+fliftD4 = \f m n o p ->
+  fdistrib (F4 m n o p) $ \(F4 (F1 m') (F1 n') (F1 o') (F1 p')) -> f m' n' o' p'
+{-# inline fliftD4 #-}
+
+fliftD5 :: FDistributive f => (forall x. a x -> b x -> c x -> d x -> e x -> r x) -> f a -> f b -> f c -> f d -> f e -> f r
+fliftD5 = \f m n o p q ->
+  fdistrib (F5 m n o p q) $ \(F5 (F1 m') (F1 n') (F1 o') (F1 p') (F1 q')) -> f m' n' o' p' q'
+{-# inline fliftD5 #-}
+
 
 instance FDistributive f => FRepeat (FDist f) where
   frepeat = frepeatFDist
@@ -898,7 +922,7 @@ instance (forall a. q a => p a) => FAll p (FConstrained q) where
 instance p ~ q => FAll p (FConstrained q) where
   fall = FConstrained Dict1
 #endif
- 
+
 fzipWithW :: (FDistributive f, FFunctor w) => (forall x. a x -> w (F1 x) -> r x) -> f a -> w f -> f r
 fzipWithW f fa w = fdistrib (F1 fa :*: w) $ \(F1 (F1 a) :*: w') -> f a w'
 
