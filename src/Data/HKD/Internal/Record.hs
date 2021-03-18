@@ -104,14 +104,14 @@ instance KnownLength as => FDistributive (Record as) where
     generate (len @as) (Any . f .# UnsafeIndex)
   {-# inline ftabulate #-}
 
-instance FZip (Record as) where
-  fzipWith f as =
+instance FApply (Record as) where
+  fliftA2 f as =
     UnsafeRecord #.
     V.zipWith (unsafeCoerce f) (safeRecord as) .#
     safeRecord
-  {-# inline fzipWith #-}
+  {-# inline fliftA2 #-}
 
-deriving via FDist (Record as) instance KnownLength as => FRepeat (Record as)
+deriving via FDist (Record as) instance KnownLength as => FApplicative (Record as)
 
 type family AllF (p :: i -> Constraint) (as :: [i]) :: Constraint where
   AllF _ '[] = ()

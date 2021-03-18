@@ -43,18 +43,18 @@
 --   } deriving ('Generic1', 'FFunctor', 'FFoldable', 'FTraversable')
 -- @
 --
--- Generically derived 'FZip' and 'FRepeat':
+-- Generically derived 'FApply' and 'FApplicative':
 --
 -- @
 -- data Record f = Record
 --   { fieldInt    :: f Int
 --   , fieldString :: f String
---   } deriving ('Generic1', 'FZip', 'FRepeat')
+--   } deriving ('Generic1', 'FApply', 'FApplicative')
 -- @
 module Data.HKD
 (
 -- * "Natural" transformation
-   type (~>)
+  type (~>)
 -- * Functor
 , FFunctor(..)
 , gffmap
@@ -71,8 +71,8 @@ module Data.HKD
 , ffor
 , fsequence
 -- * Zip & Repeat
-, FZip(..)
-, FRepeat(..)
+, FApply(..)
+, FApplicative(..)
 -- * Higher kinded data
 -- | See also "Data.Some" in @some@ package. This package provides instances for it.
 , F0(..)
@@ -101,7 +101,6 @@ import Data.Functor.Reverse
 import Data.Functor.Sum (Sum (..))
 import qualified Data.Monoid as Monoid
 import Data.Kind (Type)
-import Data.Semigroup (Semigroup (..))
 import qualified Data.Some.GADT as G
 import Data.Some.Newtype (Some (..), mapSome, foldSome, withSome)
 import qualified Data.Some.Church as C
@@ -358,129 +357,129 @@ instance (FTraversable f, FTraversable g) => FTraversable (f :+: g) where
   {-# inline ftraverse #-}
 
 -------------------------------------------------------------------------------
--- FZip
+-- FApply
 -------------------------------------------------------------------------------
 
-class FFunctor t => FZip t where
-  fzipWith :: (forall x. f x -> g x -> h x) -> t f -> t g -> t h
-  default fzipWith :: (Generic1 t, FZip (Rep1 t)) => (forall x. f x -> g x -> h x) -> t f -> t g -> t h
-  fzipWith nt x y = to1 (fzipWith nt (from1 x) (from1 y))
-  {-# inline fzipWith #-}
+class FFunctor t => FApply t where
+  fliftA2 :: (forall x. f x -> g x -> h x) -> t f -> t g -> t h
+  default fliftA2 :: (Generic1 t, FApply (Rep1 t)) => (forall x. f x -> g x -> h x) -> t f -> t g -> t h
+  fliftA2 nt x y = to1 (fliftA2 nt (from1 x) (from1 y))
+  {-# inline fliftA2 #-}
 
-class FZip t => FRepeat t where
-  frepeat :: (forall x. f x) -> t f
-  default frepeat :: (Generic1 t, FRepeat (Rep1 t)) => (forall x. f x) -> t f 
-  frepeat fx = to1 $ frepeat fx
-  {-# inline frepeat #-}
+class FApply t => FApplicative t where
+  fpure :: (forall x. f x) -> t f
+  default fpure :: (Generic1 t, FApplicative (Rep1 t)) => (forall x. f x) -> t f 
+  fpure fx = to1 $ fpure fx
+  {-# inline fpure #-}
 
-instance FZip Proxy where
-  fzipWith _ _ _ = Proxy
-  {-# inline fzipWith #-}
+instance FApply Proxy where
+  fliftA2 _ _ _ = Proxy
+  {-# inline fliftA2 #-}
 
-instance FRepeat Proxy where
-  frepeat _ = Proxy
-  {-# inline frepeat #-}
+instance FApplicative Proxy where
+  fpure _ = Proxy
+  {-# inline fpure #-}
 
-instance FZip Limit where
-  fzipWith f (Limit x) (Limit y) = Limit (f x y)
-  {-# inline fzipWith #-}
+instance FApply Limit where
+  fliftA2 f (Limit x) (Limit y) = Limit (f x y)
+  {-# inline fliftA2 #-}
 
-instance FRepeat Limit where
-  frepeat x = Limit x
-  {-# inline frepeat #-}
+instance FApplicative Limit where
+  fpure x = Limit x
+  {-# inline fpure #-}
 
-instance Data.Semigroup.Semigroup a => FZip (Const a) where
-  fzipWith _ (Const a) (Const b) = Const (a <> b)
-  {-# inline fzipWith #-}
+instance Semigroup a => FApply (Const a) where
+  fliftA2 _ (Const a) (Const b) = Const (a <> b)
+  {-# inline fliftA2 #-}
 
-instance (Monoid a, Semigroup a) => FRepeat (Const a) where
-  frepeat _ = Const mempty
-  {-# inline frepeat #-}
+instance Monoid a => FApplicative (Const a) where
+  fpure _ = Const mempty
+  {-# inline fpure #-}
 
-instance (FZip f, FZip g) => FZip (Product f g) where
-  fzipWith f (Pair x y) (Pair x' y') = Pair (fzipWith f x x') (fzipWith f y y')
-  {-# inline fzipWith #-}
+instance (FApply f, FApply g) => FApply (Product f g) where
+  fliftA2 f (Pair x y) (Pair x' y') = Pair (fliftA2 f x x') (fliftA2 f y y')
+  {-# inline fliftA2 #-}
 
-instance (FRepeat f, FRepeat g) => FRepeat (Product f g) where
-  frepeat x = Pair (frepeat x) (frepeat x)
-  {-# inline frepeat #-}
-
--- | We only need an 'Apply' part of an 'Applicative'.
-instance (Applicative f, FZip g) => FZip (Compose f g) where
-  fzipWith f (Compose x) (Compose y) = Compose (liftA2 (fzipWith f) x y)
-  {-# inline fzipWith #-}
-
-instance (Applicative f, FRepeat g) => FRepeat (Compose f g) where
-  frepeat x = Compose (pure (frepeat x))
-  {-# inline frepeat #-}
-
-instance FZip U1 where
-  fzipWith _ _ _ =  U1
-  {-# inline fzipWith #-}
-
-instance FRepeat U1 where
-  frepeat _ = U1
-  {-# inline frepeat #-}
-
-instance FZip V1 where
-  fzipWith _ x _ = case x of
-  {-# inline fzipWith #-}
-
-instance FZip f => FZip (M1 i c f) where
-  fzipWith f (M1 x) (M1 y) = M1 $ fzipWith f x y
-  {-# inline fzipWith #-}
-
-instance FZip f => FZip (Rec1 f) where
-  fzipWith f (Rec1 x) (Rec1 y) = Rec1 $ fzipWith f x y
-  {-# inline fzipWith #-}
-
-instance Data.Semigroup.Semigroup a => FZip (K1 i a) where
-  fzipWith _ (K1 a) (K1 b) = K1 (a <> b)
-  {-# inline fzipWith #-}
-
-instance (Monoid a, Semigroup a) => FRepeat (K1 i a) where
-  frepeat _ = K1 mempty
-  {-# inline frepeat #-}
-
-instance FRepeat f => FRepeat (M1 i c f) where
-  frepeat x = M1 $ frepeat x
-  {-# inline frepeat #-}
-
-instance FRepeat f => FRepeat (Rec1 f) where
-  frepeat x = Rec1 $ frepeat x
-  {-# inline frepeat #-}
-
-instance (FZip f, FZip g) => FZip (f :*: g) where
-  fzipWith f (x :*: y) (x' :*: y') = fzipWith f x x' :*: fzipWith f y y'
-  {-# inline fzipWith #-}
-
-instance (FRepeat f, FRepeat g) => FRepeat (f :*: g) where
-  frepeat x = frepeat x :*: frepeat x
-  {-# inline frepeat #-}
+instance (FApplicative f, FApplicative g) => FApplicative (Product f g) where
+  fpure x = Pair (fpure x) (fpure x)
+  {-# inline fpure #-}
 
 -- | We only need an 'Apply' part of an 'Applicative'.
-instance (Applicative f, FZip g) => FZip (f :.: g) where
-  fzipWith f (Comp1 x) (Comp1 y) = Comp1 (liftA2 (fzipWith f) x y)
-  {-# inline fzipWith #-}
+instance (Applicative f, FApply g) => FApply (Compose f g) where
+  fliftA2 f (Compose x) (Compose y) = Compose (liftA2 (fliftA2 f) x y)
+  {-# inline fliftA2 #-}
 
-instance (Applicative f, FRepeat g) => FRepeat (f :.: g) where
-  frepeat x = Comp1 (pure (frepeat x))
-  {-# inline frepeat #-}
+instance (Applicative f, FApplicative g) => FApplicative (Compose f g) where
+  fpure x = Compose (pure (fpure x))
+  {-# inline fpure #-}
+
+instance FApply U1 where
+  fliftA2 _ _ _ =  U1
+  {-# inline fliftA2 #-}
+
+instance FApplicative U1 where
+  fpure _ = U1
+  {-# inline fpure #-}
+
+instance FApply V1 where
+  fliftA2 _ x _ = case x of
+  {-# inline fliftA2 #-}
+
+instance FApply f => FApply (M1 i c f) where
+  fliftA2 f (M1 x) (M1 y) = M1 $ fliftA2 f x y
+  {-# inline fliftA2 #-}
+
+instance FApply f => FApply (Rec1 f) where
+  fliftA2 f (Rec1 x) (Rec1 y) = Rec1 $ fliftA2 f x y
+  {-# inline fliftA2 #-}
+
+instance Semigroup a => FApply (K1 i a) where
+  fliftA2 _ (K1 a) (K1 b) = K1 (a <> b)
+  {-# inline fliftA2 #-}
+
+instance Monoid a => FApplicative (K1 i a) where
+  fpure _ = K1 mempty
+  {-# inline fpure #-}
+
+instance FApplicative f => FApplicative (M1 i c f) where
+  fpure x = M1 $ fpure x
+  {-# inline fpure #-}
+
+instance FApplicative f => FApplicative (Rec1 f) where
+  fpure x = Rec1 $ fpure x
+  {-# inline fpure #-}
+
+instance (FApply f, FApply g) => FApply (f :*: g) where
+  fliftA2 f (x :*: y) (x' :*: y') = fliftA2 f x x' :*: fliftA2 f y y'
+  {-# inline fliftA2 #-}
+
+instance (FApplicative f, FApplicative g) => FApplicative (f :*: g) where
+  fpure x = fpure x :*: fpure x
+  {-# inline fpure #-}
+
+-- | We only need an 'Apply' part of an 'Applicative'.
+instance (Applicative f, FApply g) => FApply (f :.: g) where
+  fliftA2 f (Comp1 x) (Comp1 y) = Comp1 (liftA2 (fliftA2 f) x y)
+  {-# inline fliftA2 #-}
+
+instance (Applicative f, FApplicative g) => FApplicative (f :.: g) where
+  fpure x = Comp1 (pure (fpure x))
+  {-# inline fpure #-}
 
 deriving newtype instance FFunctor f => FFunctor (Backwards f)
 deriving newtype instance FFunctor f => FFunctor (Reverse f)
 deriving newtype instance FFunctor f => FFunctor (Monoid.Alt f)
 
 -- to match the behavior on Appliative
-instance FZip f => FZip (Backwards f) where
-  fzipWith = \f (Backwards xs) (Backwards ys) -> Backwards $ fzipWith (\j k -> f k j) ys xs
-  {-# inline fzipWith #-}
+instance FApply f => FApply (Backwards f) where
+  fliftA2 = \f (Backwards xs) (Backwards ys) -> Backwards $ fliftA2 (\j k -> f k j) ys xs
+  {-# inline fliftA2 #-}
 
-deriving newtype instance FZip f => FZip (Reverse f)
-deriving newtype instance FZip f => FZip (Monoid.Alt f)
-deriving newtype instance FRepeat f => FRepeat (Backwards f)
-deriving newtype instance FRepeat f => FRepeat (Reverse f)
-deriving newtype instance FRepeat f => FRepeat (Monoid.Alt f)
+deriving newtype instance FApply f => FApply (Reverse f)
+deriving newtype instance FApply f => FApply (Monoid.Alt f)
+deriving newtype instance FApplicative f => FApplicative (Backwards f)
+deriving newtype instance FApplicative f => FApplicative (Reverse f)
+deriving newtype instance FApplicative f => FApplicative (Monoid.Alt f)
 deriving newtype instance FFoldable f => FFoldable (Backwards f)
 deriving newtype instance FFoldable f => FFoldable (Monoid.Alt f)
 
@@ -501,8 +500,8 @@ instance FTraversable f => FTraversable (Monoid.Alt f) where
   {-# inline ftraverse #-}
   
 deriving newtype instance FFunctor f => FFunctor (Monoid.Ap f)
-deriving newtype instance FZip f => FZip (Monoid.Ap f)
-deriving newtype instance FRepeat f => FRepeat (Monoid.Ap f)
+deriving newtype instance FApply f => FApply (Monoid.Ap f)
+deriving newtype instance FApplicative f => FApplicative (Monoid.Ap f)
 deriving newtype instance FFoldable f => FFoldable (Monoid.Ap f)
 
 instance FTraversable f => FTraversable (Monoid.Ap f) where
@@ -514,7 +513,7 @@ instance FTraversable f => FTraversable (Monoid.Ap f) where
 type role F0 phantom
 data F0 f = F0
   deriving stock (Generic, Generic1, Functor, Foldable, Traversable)
-  deriving anyclass (FFunctor, FFoldable, FTraversable, FRepeat, FZip)
+  deriving anyclass (FFunctor, FFoldable, FTraversable, FApplicative, FApply)
 
 -- * F1
 
@@ -532,11 +531,11 @@ instance FTraversable (F1 a) where
   ftraverse f = fmap F1 . f .# runF1
   {-# inline ftraverse #-}
 
-instance FRepeat (F1 a) where
-  frepeat x = F1 x
+instance FApplicative (F1 a) where
+  fpure x = F1 x
 
-instance FZip (F1 a) where
-  fzipWith f (F1 a) (F1 b) = F1 (f a b)
+instance FApply (F1 a) where
+  fliftA2 f (F1 a) (F1 b) = F1 (f a b)
 
 type role F2 nominal nominal representational
 data F2 a b f = F2 (f a) (f b)
@@ -550,13 +549,13 @@ instance FTraversable (F2 a b) where
   ftraverse = \f (F2 a b) -> liftA2 F2 (f a) (f b)
   {-# inline ftraverse #-}
 
-instance FZip (F2 a b) where
-  fzipWith = \f (F2 a b) (F2 a' b') -> F2 (f a a') (f b b')
-  {-# inline fzipWith #-}
+instance FApply (F2 a b) where
+  fliftA2 = \f (F2 a b) (F2 a' b') -> F2 (f a a') (f b b')
+  {-# inline fliftA2 #-}
 
-instance FRepeat (F2 a b) where
-  frepeat = \x -> F2 x x
-  {-# inline frepeat #-}
+instance FApplicative (F2 a b) where
+  fpure = \x -> F2 x x
+  {-# inline fpure #-}
 
 type role F3 nominal nominal nominal representational
 data F3 a b c f = F3 (f a) (f b) (f c)
@@ -570,13 +569,13 @@ instance FTraversable (F3 a b c) where
   ftraverse = \f (F3 a b c) -> liftA2 F3 (f a) (f b) <*> f c
   {-# inline ftraverse #-}
 
-instance FZip (F3 a b c) where
-  fzipWith = \f (F3 a b c) (F3 a' b' c') -> F3 (f a a') (f b b') (f c c')
-  {-# inline fzipWith #-}
+instance FApply (F3 a b c) where
+  fliftA2 = \f (F3 a b c) (F3 a' b' c') -> F3 (f a a') (f b b') (f c c')
+  {-# inline fliftA2 #-}
 
-instance FRepeat (F3 a b c) where
-  frepeat = \x -> F3 x x x 
-  {-# inline frepeat #-}
+instance FApplicative (F3 a b c) where
+  fpure = \x -> F3 x x x 
+  {-# inline fpure #-}
 
 type role F4 nominal nominal nominal nominal representational
 data F4 a b c d f = F4 (f a) (f b) (f c) (f d)
@@ -590,13 +589,13 @@ instance FTraversable (F4 a b c d) where
   ftraverse = \f (F4 a b c d) -> liftA2 F4 (f a) (f b) <*> f c <*> f d
   {-# inline ftraverse #-}
 
-instance FZip (F4 a b c d) where
-  fzipWith = \f (F4 a b c d) (F4 a' b' c' d') -> F4 (f a a') (f b b') (f c c') (f d d')
-  {-# inline fzipWith #-}
+instance FApply (F4 a b c d) where
+  fliftA2 = \f (F4 a b c d) (F4 a' b' c' d') -> F4 (f a a') (f b b') (f c c') (f d d')
+  {-# inline fliftA2 #-}
 
-instance FRepeat (F4 a b c d) where
-  frepeat = \x -> F4 x x x x
-  {-# inline frepeat #-}
+instance FApplicative (F4 a b c d) where
+  fpure = \x -> F4 x x x x
+  {-# inline fpure #-}
 
 type role F5 nominal nominal nominal nominal nominal representational
 data F5 a b c d e f = F5 (f a) (f b) (f c) (f d) (f e)
@@ -610,13 +609,13 @@ instance FTraversable (F5 a b c d e) where
   ftraverse = \f (F5 a b c d e) -> liftA2 F5 (f a) (f b) <*> f c <*> f d <*> f e
   {-# inline ftraverse #-}
 
-instance FZip (F5 a b c d e) where
-  fzipWith = \f (F5 a b c d e) (F5 a' b' c' d' e') -> F5 (f a a') (f b b') (f c c') (f d d') (f e e')
-  {-# inline fzipWith #-}
+instance FApply (F5 a b c d e) where
+  fliftA2 = \f (F5 a b c d e) (F5 a' b' c' d' e') -> F5 (f a a') (f b b') (f c c') (f d d') (f e e')
+  {-# inline fliftA2 #-}
 
-instance FRepeat (F5 a b c d e) where
-  frepeat = \x -> F5 x x x x x
-  {-# inline frepeat #-}
+instance FApplicative (F5 a b c d e) where
+  fpure = \x -> F5 x x x x x
+  {-# inline fpure #-}
 
 -------------------------------------------------------------------------------
 -- "natural" transformations via parametricity
@@ -629,13 +628,13 @@ instance FFunctor (NT f) where
   ffmap = \f (NT g) -> NT (f . g)
   {-# inline ffmap #-}
 
-instance FZip (NT f) where
-  fzipWith = \f (NT g) (NT h) -> NT \x -> f (g x) (h x)
-  {-# inline fzipWith #-}
+instance FApply (NT f) where
+  fliftA2 = \f (NT g) (NT h) -> NT \x -> f (g x) (h x)
+  {-# inline fliftA2 #-}
 
-instance FRepeat (NT a) where
-  frepeat = \x -> NT \_ -> x
-  {-# inline frepeat #-}
+instance FApplicative (NT a) where
+  fpure = \x -> NT \_ -> x
+  {-# inline fpure #-}
 
 -------------------------------------------------------------------------------
 -- Some

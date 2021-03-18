@@ -1371,14 +1371,14 @@ instance FDistributive f => FFunctor (FDist f) where
   ffmap = ffmapFDist
   {-# inline ffmap #-}
 
-instance FDistributive f => FZip (FDist f) where
-  fzipWith = fzipWithFDist
-  {-# inline fzipWith #-}
+instance FDistributive f => FApply (FDist f) where
+  fliftA2 = fliftA2FDist
+  {-# inline fliftA2 #-}
 
--- | A default definition of 'fzipWith' from 'FZip' in terms of 'FDistributive'
-fzipWithFDist :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
-fzipWithFDist = fliftD2
-{-# inline fzipWithFDist #-}
+-- | A default definition of 'fliftA2' from 'FApply' in terms of 'FDistributive'
+fliftA2FDist :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
+fliftA2FDist = fliftD2
+{-# inline fliftA2FDist #-}
 
 fliftD2 :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
 fliftD2 = \f m n ->
@@ -1400,15 +1400,15 @@ fliftD5 = \f m n o p q ->
   fdistrib (F5 m n o p q) \(F5 (F1 m') (F1 n') (F1 o') (F1 p') (F1 q')) -> f m' n' o' p' q'
 {-# inline fliftD5 #-}
 
-instance FDistributive f => FRepeat (FDist f) where
-  frepeat = frepeatFDist
-  {-# inline frepeat #-}
+instance FDistributive f => FApplicative (FDist f) where
+  fpure = fpureFDist
+  {-# inline fpure #-}
 
--- | A default definition of 'frepeat' from 'FRepeat' in terms of 'FDistributive'
-frepeatFDist :: FDistributive f => (forall x. a x) -> f a
-frepeatFDist = \ax -> fscatter (\x -> runLimit (getConst x)) id $ Const $ Limit ax
--- frepeatDist a = fdistrib Proxy \_ -> a
-{-# inline frepeatFDist #-}
+-- | A default definition of 'fpure' from 'FApplicative' in terms of 'FDistributive'
+fpureFDist :: FDistributive f => (forall x. a x) -> f a
+fpureFDist = \ax -> fscatter (\x -> runLimit (getConst x)) id $ Const $ Limit ax
+-- fpureDist a = fdistrib Proxy \_ -> a
+{-# inline fpureFDist #-}
 
 faskFDist :: FDistributive f => f (FLog f)
 faskFDist = ftabulate id
@@ -1488,13 +1488,13 @@ instance TraversableWithIndex i f => FTraversableWithIndex (Atkey i x) (HKD f x)
   iftraverse = \f -> fmap HKD . itraverse (f . Atkey) .# runHKD
   {-# inline iftraverse #-}
 
-instance Applicative f => FZip (HKD f x) where
-  fzipWith = \f (HKD fab) -> HKD #. liftA2 f fab .# runHKD
-  {-# inline fzipWith #-}
+instance Applicative f => FApply (HKD f x) where
+  fliftA2 = \f (HKD fab) -> HKD #. liftA2 f fab .# runHKD
+  {-# inline fliftA2 #-}
 
-instance Applicative f => FRepeat (HKD f x) where
-  frepeat f = HKD $ pure f
-  {-# inline frepeat #-}
+instance Applicative f => FApplicative (HKD f x) where
+  fpure f = HKD $ pure f
+  {-# inline fpure #-}
 
 instance Distributive f => FDistributive (HKD f x) where
   type FLog (HKD f x) = Atkey (Log f) x
@@ -1579,11 +1579,11 @@ instance FDecidable f => Decidable (LKD f) where
   lose = \f -> LKD $ flose (absurd . f .# getConst)
   {-# inline lose #-}
 
--- Assumes FRepeat is FApplicative
-instance FRepeat f => Applicative (LKD f) where
-  (<*>) = \(LKD fab) -> LKD #. fzipWith coerce fab .# runLKD
+-- Assumes FApplicative is FApplicative
+instance FApplicative f => Applicative (LKD f) where
+  (<*>) = \(LKD fab) -> LKD #. fliftA2 coerce fab .# runLKD
   {-# inline (<*>) #-}
-  pure = \a -> LKD $ frepeat (Const a)
+  pure = \a -> LKD $ fpure (Const a)
   {-# inline pure #-}
 
 type role DLKD representational nominal
@@ -1650,7 +1650,7 @@ instance (FTraversable f, FDistributive f) => GCompare (FLogarithm f) where
   {-# inline gcompare #-}
 
 flogFPath :: forall f. (FDistributive f, FTraversable f) => FLog f ~> FPath Proxy
-flogFPath = findex $ runTrail (ftraverse fend $ frepeatFDist @f Proxy) id
+flogFPath = findex $ runTrail (ftraverse fend $ fpureFDist @f Proxy) id
 {-# inline flogFPath #-}
 
 type Lens' s a = forall f. Functor f => (a -> f a) -> s -> f s
@@ -1701,7 +1701,7 @@ instance (FDistributive f, FLog f ~ i) => FFunctorWithIndex i (FDist f) where
 ifmapFDist
   :: forall f a b. FDistributive f
   => (forall x. FLog f x -> a x -> b x) -> f a -> f b
-ifmapFDist = \f -> fzipWithFDist f is
+ifmapFDist = \f -> fliftA2FDist f is
   where is = faskFDist :: f (FLog f)
 {-# inline ifmapFDist #-}
 
@@ -1783,8 +1783,8 @@ instance (forall a. p a) => FAll p Limit where fall = Limit Dict1
 instance (forall a. q a => p a) => FAll p (FConstrained q) where
   fall = FConstrained Dict1
 
-fzipWithW :: (FDistributive f, FFunctor w) => (forall x. a x -> w (F1 x) -> r x) -> f a -> w f -> f r
-fzipWithW f fa w = fdistrib (F1 fa :*: w) \(F1 (F1 a) :*: w') -> f a w'
+fliftA2W :: (FDistributive f, FFunctor w) => (forall x. a x -> w (F1 x) -> r x) -> f a -> w f -> f r
+fliftA2W f fa w = fdistrib (F1 fa :*: w) \(F1 (F1 a) :*: w') -> f a w'
 
 cfdistrib
   :: forall i (p :: i -> Constraint) (f :: (i -> Type) -> Type) (r :: i -> Type) w.
@@ -1792,7 +1792,7 @@ cfdistrib
   => w f
   -> (forall x. p x => w (F1 x) -> r x)
   -> f r
-cfdistrib w k = fzipWithW (\Dict1 -> k) (fall @i @p) w
+cfdistrib w k = fliftA2W (\Dict1 -> k) (fall @i @p) w
 
 {-
 type family EqC :: k -> Constraint where

@@ -19,9 +19,9 @@ module Data.HKD.Distributive
 -- * FFunctor
 , ffmapFDist
 -- * FRepeat
-, frepeatFDist
--- * FZip
-, fzipWithFDist
+, fpureFDist
+-- * FApply
+, fliftA2FDist
 -- * Others
 , faskFDist
 , ftraceFDist
