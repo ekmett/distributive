@@ -66,12 +66,14 @@ module Data.HKD
 , ffor_
 -- * Traversable
 , FTraversable(..)
+, FTraversableInstances(..)
 , ffmapDefault
 , ffoldMapDefault
 , ffor
 , fsequence
 , FApply(..)
 , FApplicative(..)
+, FApplicativeInstances(..)
 -- * Higher kinded data
 -- | See also "Data.Some" in @some@ package. This package provides instances for it.
 , F0(..)
@@ -297,6 +299,18 @@ fsequence :: (FTraversable t, Applicative f) => t f -> f (t Identity)
 fsequence = ftraverse (fmap Identity)
 {-# inline fsequence #-}
 
+-- | For use with DerivingVia
+newtype FTraversableInstances t f = FTraversableInstances { runFTraversableInstances :: t f }
+
+instance FTraversable t => FFunctor (FTraversableInstances t) where
+  ffmap = \f -> FTraversableInstances #. ffmapDefault f .# runFTraversableInstances
+  {-# inline ffmap #-}
+
+instance FTraversable t => FFoldable (FTraversableInstances t) where
+  ffoldMap = \f -> ffoldMapDefault f .# runFTraversableInstances
+  {-# inline ffoldMap #-}
+
+
 instance FTraversable Proxy where
   ftraverse _ Proxy = pure Proxy
   {-# inline ftraverse #-}
@@ -370,6 +384,15 @@ class FApply t => FApplicative t where
   default fpure :: (Generic1 t, FApplicative (Rep1 t)) => (forall x. f x) -> t f 
   fpure fx = to1 $ fpure fx
   {-# inline fpure #-}
+
+-- | For use with DerivingVia
+newtype FApplicativeInstances t f = FApplicativeInstances { runFApplicativeInstances :: t f }
+
+newtype Expo f g x = Expo { runExpo :: f x -> g x }
+
+instance FApplicative t => FFunctor (FApplicativeInstances t) where
+  ffmap = \f -> FApplicativeInstances #. fliftA2 runExpo (fpure $ Expo f) .# runFApplicativeInstances
+  {-# inline ffmap #-}
 
 instance FApply Proxy where
   fliftA2 _ _ _ = Proxy
