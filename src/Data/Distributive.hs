@@ -163,6 +163,7 @@ import Data.Kind
 import qualified Data.Monoid as Monoid
 import qualified Data.Semigroup as Semigroup
 import Data.HKD
+import Data.HKD.Contravariant
 import Data.Ord (Down(..))
 import Data.Orphans ()
 import Data.Proxy

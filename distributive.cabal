@@ -72,9 +72,10 @@ library
     Data.Distributive.Vec
     Data.Functor.Confusing
     Data.HKD
+    Data.HKD.Contravariant
+    Data.HKD.Contravariant.Divisible
     Data.HKD.Distributive
     Data.HKD.Distributive.Endo
-    Data.HKD.Divisible
     Data.HKD.Internal.Index
     Data.HKD.Internal.Record
     Data.HKD.Record

@@ -111,7 +111,8 @@ import Data.GADT.Compare
 import qualified Data.Monoid as Monoid
 import Data.Kind
 import Data.HKD
-import Data.HKD.Divisible
+import Data.HKD.Contravariant
+import Data.HKD.Contravariant.Divisible
 import Data.HKD.WithIndex
 import Data.Some
 import Data.Traversable.WithIndex
