@@ -50,13 +50,14 @@
 -- data V3 a = V3 a a a
 --   deriving stock (Eq, Ord, Functor, Foldable, Traversable, Generic, Generic1, Data)
 --   deriving anyclass Distributive
---   deriving ( Applicative, Monad, MonadFix, MonadZip
---              MonadReader (Logarithm V3)
---            , FunctorWithIndex (Logarithm V3)
---            , FoldableWithIndex (Logarithm V3)
---            , TraversableWithIndex (Logarithm V3)
---            , Eq1, Ord1
---            ) via Dist V3
+--   deriving
+--   ( Applicative, Monad, MonadFix, MonadZip
+--   , MonadReader (Logarithm V3)
+--   , FunctorWithIndex (Logarithm V3)
+--   , FoldableWithIndex (Logarithm V3)
+--   , TraversableWithIndex (Logarithm V3)
+--   , Eq1, Ord1
+--   ) via Dist V3
 --   deriving (Num, Fractional, Floating) via Dist V3 a
 -- @
 --
@@ -65,7 +66,6 @@
 module Data.Distributive
 ( Distributive(..)
 , distribute
-, cotrav
 , distrib
 , dist
 , collect
@@ -312,17 +312,6 @@ type DefaultIndex f = DefaultIndex' (LogIsLogarithm f) f
 defaultIndex :: forall f a. DefaultIndex f => f a -> (Log f -> a)
 defaultIndex = defaultIndex' @(LogIsLogarithm f)
 {-# inline defaultIndex #-}
-
--- | A helper for the most common usage pattern when working with 'scatter'.
---
--- @
--- 'cotrav' k ≡ 'scatter' k id
--- @
---
--- flipped version of 'distrib'
-cotrav :: (Distributive f, FFunctor w) => (w Identity -> r) -> w f -> f r
-cotrav = \ k w -> scatter k id w
-{-# inline cotrav #-}
 
 -- | A helper for the most common usage pattern when working with 'scatter'.
 --
