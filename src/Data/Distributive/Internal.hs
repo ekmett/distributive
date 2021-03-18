@@ -5,10 +5,8 @@
 {-# Language DataKinds #-}
 {-# Language DefaultSignatures #-}
 {-# Language DeriveDataTypeable #-}
-{-# Language DeriveFunctor #-}
 {-# Language DeriveGeneric #-}
 {-# Language DeriveTraversable #-}
-{-# Language DerivingStrategies #-}
 {-# Language DerivingVia #-}
 {-# Language EmptyCase #-}
 {-# Language ExistentialQuantification #-}
@@ -475,7 +473,7 @@ instance Distributive Monoid.Product where
 
 instance Distributive Monoid.Sum where
   type Log Monoid.Sum = ()
-  scatter = \ k f -> coerce $ (k .  ffmap ((Identity . Monoid.getSum) #. f))
+  scatter = \ k f -> coerce $ k .  ffmap ((Identity . Monoid.getSum) #. f)
   index = \ x _ -> Monoid.getSum x
   tabulate = \f -> Monoid.Sum $ f ()
   {-# inline scatter #-}

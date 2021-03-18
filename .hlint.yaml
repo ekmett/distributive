@@ -5,4 +5,4 @@
 - ignore: {name: Use const}
 - ignore: {name: Avoid lambda}
 - ignore: {name: Avoid lambda using `infix`}
-- ignore: {name: Use sequenceA, within: [Data.Distributive]} 
+- ignore: {name: Use sequenceA, within: [Data.Distributive.Internal]} 

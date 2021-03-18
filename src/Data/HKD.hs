@@ -70,7 +70,6 @@ module Data.HKD
 , ffoldMapDefault
 , ffor
 , fsequence
--- * Zip & Repeat
 , FApply(..)
 , FApplicative(..)
 -- * Higher kinded data
