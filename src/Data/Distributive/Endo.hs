@@ -1,4 +1,3 @@
-{-# Language CPP #-}
 {-# Language PatternSynonyms #-}
 {-# Language RoleAnnotations #-}
 {-# Language Safe #-}
@@ -17,10 +16,6 @@ module Data.Distributive.Endo
 
 import Data.Distributive
 
-#if __GLASGOW_HASKELL__ < 804
-import Data.Semigroup (Semigroup(..))
-#endif
-
 -- | Tabulated endomorphisms.
 --
 -- Many representable functors can be used to memoize functions.
@@ -37,10 +32,6 @@ instance Distributive f => Semigroup (Endo f) where
   {-# inline (<>) #-}
 
 instance Distributive f => Monoid (Endo f) where
-#if __GLASGOW_HASKELL__ < 804
-  mappend = \f g -> Endo (appEndo f . appEndo g)
-  {-# inline mappend #-}
-#endif
   mempty = EndoDist askDist
   {-# inline mempty #-}
 
