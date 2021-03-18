@@ -1,12 +1,4 @@
-{-# Language CPP #-}
-{-# Language BlockArguments #-}
-{-# Language DeriveFunctor #-}
-{-# Language DeriveGeneric #-}
-{-# Language LambdaCase #-}
-{-# Language MultiParamTypeClasses #-}
 {-# Language Safe #-}
-{-# Language TypeFamilies #-}
-{-# Language DerivingVia #-}
 
 -- |
 -- Copyright   :  (C) 2012-2021 Edward Kmett

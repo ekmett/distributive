@@ -1,16 +1,5 @@
-{-# Language GADTs #-}
-{-# Language BlockArguments #-}
 {-# Language CPP #-}
-{-# Language FlexibleContexts #-}
-{-# Language FlexibleInstances #-}
-{-# Language MultiParamTypeClasses #-}
-{-# Language PatternSynonyms #-}
-{-# Language RoleAnnotations #-}
-{-# Language ScopedTypeVariables #-}
 {-# Language Trustworthy #-}
-{-# Language TypeFamilies #-}
-{-# Language TypeOperators #-}
-{-# Language UndecidableInstances #-}
 {-# options_ghc -fenable-rewrite-rules -fno-warn-orphans #-}
 
 #ifndef MIN_VERSION_base

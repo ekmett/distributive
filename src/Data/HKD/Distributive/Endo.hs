@@ -19,10 +19,6 @@ module Data.HKD.Distributive.Endo
 import Data.HKD
 import Data.HKD.Distributive
 
-#if __GLASGOW_HASKELL__ < 804
-import Data.Semigroup (Semigroup(..))
-#endif
-
 -- | Tabulated endomorphisms.
 --
 -- Many representable functors can be used to memoize functions.
@@ -38,10 +34,6 @@ instance FDistributive f => Semigroup (FEndo f) where
   {-# inline (<>) #-}
 
 instance FDistributive f => Monoid (FEndo f) where
-#if __GLASGOW_HASKELL__ < 804
-  mappend = \f g -> FEndo (appFEndo f . appFEndo g)
-  {-# inline mappend #-}
-#endif
   mempty = FEndoDist faskFDist
   {-# inline mempty #-}
 

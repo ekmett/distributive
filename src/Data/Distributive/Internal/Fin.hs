@@ -1,20 +1,5 @@
-{-# Language AllowAmbiguousTypes #-}
-{-# Language DataKinds #-}
-{-# Language DerivingVia #-}
-{-# Language GADTs #-}
-{-# Language MagicHash #-}
-{-# Language MultiParamTypeClasses #-}
-{-# Language PatternSynonyms #-}
-{-# Language PolyKinds #-}
-{-# Language RankNTypes #-}
-{-# Language RoleAnnotations #-}
-{-# Language ScopedTypeVariables #-}
-{-# Language TypeApplications #-}
-{-# Language TypeFamilies #-}
-{-# Language TypeOperators #-}
 {-# Language UnboxedTuples #-}
 {-# Language Unsafe #-}
-{-# Language ViewPatterns #-}
 {-# options_haddock hide #-}
 
 module Data.Distributive.Internal.Fin

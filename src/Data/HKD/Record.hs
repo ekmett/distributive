@@ -1,5 +1,5 @@
-{-# Language ExplicitNamespaces #-}
 {-# Language Trustworthy #-}
+
 module Data.HKD.Record
 ( Index(Index, IndexZ, IndexS)
 , toIndex

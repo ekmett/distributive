@@ -1,29 +1,6 @@
-{-# Language BangPatterns #-}
-{-# Language BlockArguments #-}
-{-# Language ConstraintKinds #-}
-{-# Language DataKinds #-}
-{-# Language DerivingVia #-}
-{-# Language FlexibleContexts #-}
-{-# Language FlexibleInstances #-}
-{-# Language GADTs #-}
-{-# Language MagicHash #-}
-{-# Language MultiParamTypeClasses #-}
-{-# Language PartialTypeSignatures #-}
-{-# Language PatternSynonyms #-}
-{-# Language PolyKinds #-}
-{-# Language QuantifiedConstraints #-}
-{-# Language RankNTypes #-}
-{-# Language RoleAnnotations #-}
-{-# Language ScopedTypeVariables #-}
-{-# Language StandaloneDeriving #-}
-{-# Language TypeApplications #-}
-{-# Language TypeFamilies #-}
-{-# Language TypeOperators #-}
-{-# Language UndecidableInstances #-}
-{-# Language UndecidableSuperClasses #-}
 {-# Language Unsafe #-}
-{-# Language ViewPatterns #-}
 {-# options_haddock hide #-}
+
 module Data.HKD.Internal.Record where
 
 import Control.Applicative

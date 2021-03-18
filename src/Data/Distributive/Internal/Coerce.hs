@@ -1,6 +1,4 @@
 {-# Language Trustworthy #-}
-{-# Language PatternSynonyms #-}
-{-# Language ViewPatterns #-}
 {-# options_haddock hide #-}
 
 module Data.Distributive.Internal.Coerce where

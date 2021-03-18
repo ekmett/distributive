@@ -1,27 +1,6 @@
-{-# Language AllowAmbiguousTypes #-}
-{-# Language BlockArguments #-}
 {-# Language CPP #-}
-{-# Language DataKinds #-}
-{-# Language DeriveTraversable #-}
-{-# Language DerivingVia #-}
-{-# Language FlexibleInstances #-}
-{-# Language FunctionalDependencies #-}
-{-# Language GADTs #-}
 {-# Language GeneralizedNewtypeDeriving #-}
-{-# Language InstanceSigs #-}
-{-# Language MagicHash #-}
-{-# Language PatternSynonyms #-}
-{-# Language PolyKinds #-}
-{-# Language RankNTypes #-}
-{-# Language RoleAnnotations #-}
-{-# Language ScopedTypeVariables #-}
-{-# Language StandaloneDeriving #-}
-{-# Language TypeApplications #-}
-{-# Language TypeFamilies #-}
-{-# Language TypeOperators #-}
-{-# Language UnboxedTuples #-}
 {-# Language Unsafe #-}
-{-# Language ViewPatterns #-}
 {-# options_haddock hide #-}
 
 module Data.Distributive.Internal.Vec

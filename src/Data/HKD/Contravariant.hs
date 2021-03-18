@@ -1,24 +1,5 @@
-{-# language BlockArguments #-}
-{-# language FlexibleContexts #-}
-{-# language FlexibleInstances #-}
-{-# language DefaultSignatures #-}
-{-# language DeriveAnyClass #-}
-{-# language ConstraintKinds #-}
-{-# language GADTs #-}
-{-# language MultiParamTypeClasses #-}
-{-# language PolyKinds #-}
-{-# language StandaloneDeriving #-}
-{-# language RoleAnnotations #-}
-{-# language DerivingStrategies #-}
 {-# Language GeneralizedNewtypeDeriving #-}
-{-# Language QuantifiedConstraints #-}
-{-# language RankNTypes #-}
-{-# language ScopedTypeVariables #-}
-{-# language Trustworthy #-}
-{-# language TypeFamilies #-}
-{-# language TypeOperators #-}
-{-# language LambdaCase #-}
-{-# language EmptyCase #-}
+{-# Language Trustworthy #-}
 
 -- |
 -- Copyright :  (c) 2019-2021 Edward Kmett

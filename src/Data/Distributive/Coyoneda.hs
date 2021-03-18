@@ -1,13 +1,6 @@
-{-# Language AllowAmbiguousTypes #-}
 {-# Language GADTs #-}
-{-# Language PatternSynonyms #-}
-{-# Language ScopedTypeVariables #-}
-{-# Language TypeApplications #-}
-{-# Language TypeFamilies #-}
-{-# Language RankNTypes #-}
-{-# Language RoleAnnotations #-}
-{-# Language ViewPatterns #-}
 {-# Language Safe #-}
+
 module Data.Distributive.Coyoneda
 ( Coyoneda(CoyonedaDist, Coyoneda)
 , liftCoyonedaDist

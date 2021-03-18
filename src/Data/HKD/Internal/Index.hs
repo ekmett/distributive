@@ -1,21 +1,5 @@
-{-# Language GADTs #-}
-{-# Language AllowAmbiguousTypes #-}
-{-# Language PatternSynonyms #-}
-{-# Language RoleAnnotations #-}
-{-# Language ViewPatterns #-}
-{-# Language RankNTypes #-}
-{-# Language DerivingStrategies #-}
 {-# Language GeneralizedNewtypeDeriving #-}
-{-# Language DataKinds #-}
-{-# Language PolyKinds #-}
-{-# Language TypeApplications #-}
-{-# Language ConstraintKinds #-}
-{-# Language TypeOperators #-}
-{-# Language ScopedTypeVariables #-}
 {-# Language Unsafe #-}
-{-# Language TypeFamilies #-}
-{-# Language UndecidableInstances #-}
-{-# Language FlexibleContexts #-}
 {-# options_haddock hide #-}
 
 module Data.HKD.Internal.Index

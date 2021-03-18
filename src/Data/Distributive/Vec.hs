@@ -1,4 +1,3 @@
-{-# Language PatternSynonyms #-}
 {-# Language Trustworthy #-}
 
 module Data.Distributive.Vec

@@ -1,37 +1,6 @@
 {-# Language CPP #-}
-{-# Language AllowAmbiguousTypes #-}
-{-# Language BlockArguments #-}
-{-# Language ConstraintKinds #-}
-{-# Language DataKinds #-}
-{-# Language DefaultSignatures #-}
-{-# Language DeriveDataTypeable #-}
-{-# Language DeriveGeneric #-}
-{-# Language DeriveTraversable #-}
-{-# Language DerivingVia #-}
-{-# Language EmptyCase #-}
-{-# Language ExistentialQuantification #-}
-{-# Language FlexibleContexts #-}
-{-# Language FlexibleInstances #-}
-{-# Language GADTs #-}
 {-# Language GeneralizedNewtypeDeriving #-}
-{-# Language LambdaCase #-}
-{-# Language LiberalTypeSynonyms #-}
-{-# Language MultiParamTypeClasses #-}
-{-# Language PatternSynonyms #-}
-{-# Language PolyKinds #-}
-{-# Language QuantifiedConstraints #-}
-{-# Language RankNTypes #-}
-{-# Language RoleAnnotations #-}
-{-# Language ScopedTypeVariables #-}
-{-# Language StandaloneDeriving #-}
-{-# Language TupleSections #-}
-{-# Language TypeApplications #-}
-{-# Language TypeFamilies #-}
-{-# Language TypeOperators #-}
-{-# Language UndecidableInstances #-}
-{-# Language UndecidableSuperClasses #-}
 {-# Language Unsafe #-}
-{-# Language ViewPatterns #-}
 {-# options_haddock not-home #-}
 
 -- |
@@ -42,7 +11,7 @@
 -- Maintainer  : Edward Kmett <ekmett@gmail.com>
 -- Stability   : provisional
 -- Portability : non-portable (ghc 8.6+)
---
+
 module Data.Distributive.Internal where
 
 import Control.Applicative

@@ -1,5 +1,3 @@
-{-# Language ExplicitNamespaces #-}
-{-# Language PatternSynonyms #-}
 {-# Language Trustworthy #-}
 
 module Data.HKD.Distributive

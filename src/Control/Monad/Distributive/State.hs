@@ -1,13 +1,5 @@
 {-# Language CPP #-}
-{-# Language FlexibleContexts #-}
-{-# Language FlexibleInstances #-}
-{-# Language MultiParamTypeClasses #-}
-{-# Language PatternSynonyms #-}
-{-# Language RoleAnnotations #-}
 {-# Language Trustworthy #-}
-{-# Language TupleSections #-}
-{-# Language TypeFamilies #-}
-{-# Language UndecidableInstances #-}
 
 #ifndef MIN_VERSION_base
 #define MIN_VERSION_base(_x,_y,_z) 1

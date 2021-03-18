@@ -1,27 +1,5 @@
-{-# Language CPP #-}
-{-# Language AllowAmbiguousTypes #-}
-{-# Language ConstraintKinds #-}
-{-# Language DataKinds #-}
-{-# Language DefaultSignatures #-}
-{-# Language EmptyCase #-}
-{-# Language FlexibleContexts #-}
-{-# Language FlexibleInstances #-}
-{-# Language GADTs #-}
-{-# Language InstanceSigs #-}
-{-# Language MultiParamTypeClasses #-}
-{-# Language PolyKinds #-}
-{-# Language RankNTypes #-}
-{-# Language ScopedTypeVariables #-}
 {-# Language Trustworthy #-}
-{-# Language TypeApplications #-}
-{-# Language TypeOperators #-}
-{-# Language StandaloneDeriving #-}
-{-# Language DerivingStrategies #-}
 {-# Language GeneralizedNewtypeDeriving #-}
-
-#ifndef MIN_VERSION_base
-#define MIN_VERSION_base(_x,_y,_z) 1
-#endif
 
 module Data.HKD.Contravariant.Divisible
 ( FSemidivisible(..)
@@ -249,9 +227,7 @@ class FSemideciding q t where
 instance (FSemideciding q s, FSemideciding q t) => FSemideciding q (Product s t)
 instance (FSemideciding q s, FSemideciding q t) => FSemideciding q (Sum s t)
 deriving newtype instance FSemideciding q f => FSemideciding q (Monoid.Alt f)
-#if MIN_VERSION_base(4,12,0)
 deriving newtype instance FSemideciding q f => FSemideciding q (Monoid.Ap f)
-#endif
 -- deriving newtype instance FSemideciding q f => FSemideciding q (Backwards f)
 -- deriving newtype instance FSemideciding q f => FSemideciding q (Reverse f)
 

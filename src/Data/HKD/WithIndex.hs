@@ -1,18 +1,4 @@
-{-# Language CPP #-}
-{-# Language DerivingStrategies #-}
-{-# Language StandaloneDeriving #-}
-{-# Language RankNTypes #-}
-{-# Language ScopedTypeVariables #-}
 {-# Language GeneralizedNewtypeDeriving #-}
-{-# Language EmptyCase #-}
-{-# Language LambdaCase #-}
-{-# Language FunctionalDependencies #-}
-{-# Language FlexibleInstances #-}
-{-# Language UndecidableInstances #-}
-{-# Language PolyKinds #-}
-{-# Language DataKinds #-}
-{-# Language DefaultSignatures #-}
-{-# Language TypeOperators #-}
 {-# Language Trustworthy #-}
 module Data.HKD.WithIndex 
 ( FFunctorWithIndex(..)
