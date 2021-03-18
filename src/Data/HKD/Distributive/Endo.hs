@@ -1,7 +1,6 @@
 {-# Language CPP #-}
 {-# Language Safe #-}
 {-# Language PatternSynonyms #-}
-{-# Language ViewPatterns #-}
 {-# Language TypeOperators #-}
 {-# Language RankNTypes #-}
 -- |

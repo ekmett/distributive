@@ -1,6 +1,4 @@
-{-# Language CPP #-}
 {-# Language AllowAmbiguousTypes #-}
-{-# Language CPP #-}
 {-# Language GADTs #-}
 {-# Language PatternSynonyms #-}
 {-# Language ScopedTypeVariables #-}
@@ -136,7 +134,7 @@ instance Foldable f => Foldable (Coyoneda f) where
 
 instance Traversable f => Traversable (Coyoneda f) where
   traverse = \f (CoyonedaDist (fmap f -> g') flg) -> 
-    liftCoyoneda <$> traverse (index g') flg where
+    liftCoyoneda <$> traverse (index g') flg
   {-# inline traverse #-}
 
 instance MonadPlus f => MonadPlus (Coyoneda f) where

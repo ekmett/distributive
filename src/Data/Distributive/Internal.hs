@@ -1,8 +1,6 @@
-{-# Language CPP #-}
+{-# Language BlockArguments #-}
 {-# Language DataKinds #-}
 {-# Language DeriveFunctor #-}
-{-# Language DeriveGeneric #-}
-{-# Language PatternSynonyms #-}
 {-# Language LambdaCase #-}
 {-# Language PolyKinds #-}
 {-# Language RoleAnnotations #-}
@@ -10,11 +8,6 @@
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
 {-# Language UndecidableInstances #-}
-{-# Language ViewPatterns #-}
-
-#ifndef MIN_VERSION_base
-#define MIN_VERSION_base(_x,_y,_z) 1
-#endif
 
 -- |
 -- Copyright   : (C) 2021 Edward Kmett
@@ -41,13 +34,7 @@ import Data.Kind
 import Data.Type.Bool (type (||))
 import GHC.Generics
 import GHC.TypeLits (Nat, type (-))
-#if MIN_VERSION_base(4,11,0)
 import Data.Functor
-#else
-(<&>) :: Functor f => f a -> (a -> b) -> f b
-m <&> f = fmap f m
-infixl 1 <&>
-#endif
 
 -- Does Generic Rep contain 'Rec1'?
 --
@@ -87,11 +74,11 @@ instance Applicative Trail where
   pure = Trail . const
   {-# inline pure #-}
 
-  fab <*> fa = Trail $ \k -> runTrail fab (k . L) $ runTrail fa (k . R)
+  (<*>) = \fab fa -> Trail \k -> runTrail fab (k . L) $ runTrail fa (k . R)
   {-# inline (<*>) #-}
 
 end :: Trail Path
-end = Trail $ \k -> k End
+end = Trail \k -> k End
 {-# inline end #-}
 
 -- This is also not a legal 'Applicative', but it is used towards legal ends.
@@ -101,14 +88,14 @@ data Evil a = Evil a (Path -> a)
   deriving Functor
 
 instance Applicative Evil where
-  pure a = Evil a $ \_ -> a
+  pure = \a -> Evil a \_ -> a
   {-# inline pure #-}
-  ~(Evil mb mg) <*> ~(Evil nb ng) = Evil (mb nb) $ \case
+  (<*>) = \ ~(Evil mb mg) ~(Evil nb ng) -> Evil (mb nb) \case
     L xs -> mg xs nb
     R xs -> mb (ng xs)
     End -> undefined
   {-# inline (<*>) #-}
 
 runEvil :: Evil a -> Path -> a
-runEvil (Evil _ mg) p = mg p
+runEvil = \(Evil _ mg) -> mg
 {-# inline runEvil #-}

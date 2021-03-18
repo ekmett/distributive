@@ -4,7 +4,6 @@
 {-# Language RoleAnnotations #-}
 {-# Language ViewPatterns #-}
 {-# Language RankNTypes #-}
-{-# Language KindSignatures #-}
 {-# Language DerivingStrategies #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language DataKinds #-}
@@ -75,7 +74,8 @@ lowerFin = coerce
 type KnownLength (as :: [i]) = KnownNat (Length as)
 
 pattern IntIndex
-  :: forall i (as :: [i]). KnownLength as => forall (a :: i). Index as a -> Int
+  :: forall i (as :: [i]). KnownLength as
+  => forall (a :: i). Index as a -> Int
 pattern IntIndex i <- (toIndex -> Just (Some i)) where
   IntIndex i = fromIndex i
 

@@ -2,7 +2,6 @@
 {-# Language PatternSynonyms #-}
 {-# Language RoleAnnotations #-}
 {-# Language Safe #-}
-{-# Language ViewPatterns #-}
 -- |
 -- Copyright   : (C) 2021 Edward Kmett
 -- License     : BSD-style (see the file LICENSE)

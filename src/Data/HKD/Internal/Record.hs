@@ -1,33 +1,28 @@
-{-# Language CPP #-}
-{-# Language Unsafe #-}
 {-# Language BangPatterns #-}
-{-# Language KindSignatures #-}
-{-# Language ScopedTypeVariables #-}
-{-# Language TypeApplications #-}
-{-# Language GADTs #-}
-{-# Language RankNTypes #-}
+{-# Language BlockArguments #-}
+{-# Language ConstraintKinds #-}
+{-# Language DataKinds #-}
+{-# Language DerivingVia #-}
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
-{-# Language DefaultSignatures #-}
-{-# Language UndecidableInstances #-}
+{-# Language GADTs #-}
 {-# Language MagicHash #-}
-{-# Language RoleAnnotations #-}
-{-# Language UndecidableSuperClasses #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language PartialTypeSignatures #-}
-{-# Language TypeFamilies #-}
-{-# Language DataKinds #-}
-{-# Language PolyKinds #-}
-{-# Language StandaloneDeriving #-}
 {-# Language PatternSynonyms #-}
-{-# Language ViewPatterns #-}
-{-# Language ConstraintKinds #-}
-{-# Language DerivingVia #-}
-{-# Language TypeOperators #-}
-{-# Language GeneralizedNewtypeDeriving #-}
-#if __GLASGOW_HASKELL__ >= 806
+{-# Language PolyKinds #-}
 {-# Language QuantifiedConstraints #-}
-#endif
+{-# Language RankNTypes #-}
+{-# Language RoleAnnotations #-}
+{-# Language ScopedTypeVariables #-}
+{-# Language StandaloneDeriving #-}
+{-# Language TypeApplications #-}
+{-# Language TypeFamilies #-}
+{-# Language TypeOperators #-}
+{-# Language UndecidableInstances #-}
+{-# Language UndecidableSuperClasses #-}
+{-# Language Unsafe #-}
+{-# Language ViewPatterns #-}
 {-# options_haddock hide #-}
 module Data.HKD.Internal.Record where
 
@@ -99,15 +94,14 @@ instance KnownLength as => FDistributive (Record as) where
   type FLog (Record as) = Index as
   fscatter k f (ffmap f -> w) =
     UnsafeRecord $
-    generate (len @as) $ \i ->
+    generate (len @as) \i ->
     Any $ k $ ffmap (\r -> F1 $ findex r (UnsafeIndex i)) w
   {-# inline fscatter #-}
   findex (UnsafeRecord as) (UnsafeIndex i) = unsafeCoerce (as ! i)
   {-# inline findex #-}
   ftabulate f =
     UnsafeRecord $
-    generate (len @as) $ \i ->
-    Any $ f (UnsafeIndex i)
+    generate (len @as) (Any . f .# UnsafeIndex)
   {-# inline ftabulate #-}
 
 instance FZip (Record as) where
@@ -147,7 +141,7 @@ instance (KnownLength as, All p as) => FAll (p :: i -> Constraint) (Record as) w
     n ->
       case para @i @p @as (IRec n []) $
       \ (_ :: Proxy# b) (IRec (subtract 1 -> i) t) ->
-        IRec i $ (Any (Dict1 :: Dict1 p b)) : t
+        IRec i $ Any (Dict1 :: Dict1 p b) : t
       of
       IRec 0 r -> UnsafeRecord $ V.fromListN n r
       _ -> error "cfdistrib: the impossible happened"

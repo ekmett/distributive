@@ -1,10 +1,7 @@
 {-# Language AllowAmbiguousTypes #-}
 {-# Language DataKinds #-}
-{-# Language DerivingStrategies #-}
 {-# Language DerivingVia #-}
 {-# Language GADTs #-}
-{-# Language KindSignatures #-}
-{-# Language BangPatterns #-}
 {-# Language MagicHash #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language PatternSynonyms #-}
@@ -12,7 +9,6 @@
 {-# Language RankNTypes #-}
 {-# Language RoleAnnotations #-}
 {-# Language ScopedTypeVariables #-}
-{-# Language StandaloneDeriving #-}
 {-# Language TypeApplications #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
@@ -95,8 +91,6 @@ toFin i
 pattern IntFin :: KnownNat n => Fin n -> Int
 pattern IntFin i <- (toFin -> Just i) where
   IntFin x = fromFin x
-
--- IntFin is not complete
 
 data Fin' (n :: Nat) where
   FinZ' :: Fin' (S n)

@@ -8,7 +8,6 @@
 {-# Language FlexibleInstances #-}
 {-# Language GADTs #-}
 {-# Language InstanceSigs #-}
-{-# Language LambdaCase #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language PolyKinds #-}
 {-# Language RankNTypes #-}

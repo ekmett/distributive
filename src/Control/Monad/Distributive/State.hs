@@ -5,21 +5,18 @@
 {-# Language PatternSynonyms #-}
 {-# Language RoleAnnotations #-}
 {-# Language Trustworthy #-}
+{-# Language TupleSections #-}
 {-# Language TypeFamilies #-}
-{-# Language TypeSynonymInstances #-}
 {-# Language UndecidableInstances #-}
-{-# Language ViewPatterns #-}
 
 #ifndef MIN_VERSION_base
 #define MIN_VERSION_base(_x,_y,_z) 1
 #endif
 
 -- |
--- Module      :  Control.Monad.Distributive.State
--- Copyright   :  (c) Edward Kmett 2011-2021
+-- Copyright   :  (c) Edward Kmett 2011-2021,
 --                (c) Sjoerd Visscher 2011
 -- License     :  BSD3
---
 -- Maintainer  :  ekmett@gmail.com
 -- Stability   :  experimental
 --
@@ -173,11 +170,11 @@ instance (Distributive g, MonadFail m) => MonadFail (StateT g m) where
   {-# inline fail #-}
 
 instance Distributive f => MonadTrans (StateT f) where
-  lift = \m -> StateT $ \s -> fmap (\a -> (a, s)) m
+  lift = \m -> StateT $ \s -> (,s) <$> m
   {-# inline lift #-}
 
 liftStateT :: (Distributive f, Functor m) => m a -> StateT f m a
-liftStateT = \m -> StateT $ \s -> fmap (\a -> (a, s)) m
+liftStateT = \m -> StateT $ \s -> (,s) <$> m
 {-# inline liftStateT #-}
 
 instance (Distributive g, Monad m, Log g ~ s) => MonadState s (StateT g m) where
@@ -205,7 +202,8 @@ instance (Distributive g, MonadWriter w m) => MonadWriter w (StateT g m) where
   {-# inline pass #-}
 
 liftListen :: (Distributive f, Functor m) => Listen w m (a, Log f) -> Listen w (StateT f m) a
-liftListen = \listen' -> mapStateT $ \ma -> (\((a,s'), w) -> ((a,w), s')) <$> listen' ma
+liftListen = \listen' -> mapStateT $ 
+  fmap (\((a,s'), w) -> ((a,w), s')) . listen'
 {-# inline liftListen #-}
 
 liftPass :: (Distributive f, Functor m) => Pass w m (a, Log f) -> Pass w (StateT f m) a
@@ -264,8 +262,6 @@ instance FFunctor (DCatch x y m) where
 liftCatch :: Distributive f => Catch e m (a, Log f) -> Catch e (StateT f m) a
 liftCatch = \catchE (StateDistT m) h ->
   StateDistT $ distrib (DCatch m (runStateDistT #. h)) $ \(DCatch m' h') -> coerce catchE m' h'
---liftCatch = \catchE m h ->
---    StateT $ \ s -> runStateT m s `catchE` \ e -> runStateT (h e) s
 {-# INLINE liftCatch #-}
 
 instance (Distributive f, MonadFix m) => MonadFix (StateT f m) where

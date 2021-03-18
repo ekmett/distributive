@@ -3,7 +3,6 @@
 {-# Language StandaloneDeriving #-}
 {-# Language RankNTypes #-}
 {-# Language ScopedTypeVariables #-}
-{-# Language MultiParamTypeClasses #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language EmptyCase #-}
 {-# Language LambdaCase #-}
@@ -26,19 +25,22 @@ module Data.HKD.WithIndex
 import Control.Applicative
 import Control.Applicative.Backwards
 import Data.Coerce
-import Data.HKD
 import Data.Distributive.Internal.Coerce
+import Data.Foldable.WithIndex
 import Data.Functor.Compose
 import Data.Functor.Constant
 import Data.Functor.Identity
-import Data.Functor.WithIndex
-import Data.Functor.Sum
 import Data.Functor.Product
 import Data.Functor.Reverse
+import Data.Functor.Sum
+import Data.Functor.WithIndex
+import Data.HKD
 import Data.HKD.Internal.Index
-import Data.Proxy
 import qualified Data.Monoid as Monoid
-import Data.Foldable.WithIndex
+import Data.Proxy
+import qualified Data.Some.GADT as G
+import Data.Some.Newtype (Some(..), mapSome, foldSome, traverseSome)
+import qualified Data.Some.Church as C
 import Data.Traversable.WithIndex
 import GHC.Generics
 
@@ -58,6 +60,8 @@ class FFoldable f => FFoldableWithIndex i f | f -> i where
   iffoldMap = iffoldMapDefault
   {-# inline iffoldMap #-}
 
+  
+
 -- TODO: IdentityT
 
 iffoldMapDefault :: (FTraversableWithIndex i f, Monoid m) => (forall x. i x -> a x -> m) -> f a -> m
@@ -68,6 +72,33 @@ class (FFunctorWithIndex i f, FFoldableWithIndex i f, FTraversable f) => FTraver
   iftraverse :: Applicative m => (forall x. i x -> a x -> m (b x)) -> f a -> m (f b)
 
 -- * Units
+
+instance FFunctorWithIndex U1 Some where
+  ifmap f = mapSome (f U1)
+
+instance FFoldableWithIndex U1 Some where
+  iffoldMap f = foldSome (f U1)
+
+instance FTraversableWithIndex U1 Some where
+  iftraverse f = traverseSome (f U1)
+
+instance FFunctorWithIndex U1 G.Some where
+  ifmap f = G.mapSome (f U1)
+
+instance FFoldableWithIndex U1 G.Some where
+  iffoldMap f = G.foldSome (f U1)
+
+instance FTraversableWithIndex U1 G.Some where
+  iftraverse f = G.traverseSome (f U1)
+
+instance FFunctorWithIndex U1 C.Some where
+  ifmap f = C.mapSome (f U1)
+
+instance FFoldableWithIndex U1 C.Some where
+  iffoldMap f = C.foldSome (f U1)
+
+instance FTraversableWithIndex U1 C.Some where
+  iftraverse f = C.traverseSome (f U1)
 
 instance FFunctorWithIndex V1 U1 where
   ifmap = \_ U1 -> U1
@@ -269,13 +300,11 @@ instance FTraversableWithIndex i f => FTraversableWithIndex i (Monoid.Alt f) whe
 
 -- * Ap
 
-#if MIN_VERSION_base(4,12,0)
 deriving newtype instance FFunctorWithIndex i f => FFunctorWithIndex i (Monoid.Ap f)
 deriving newtype instance FFoldableWithIndex i f => FFoldableWithIndex i (Monoid.Ap f)
 instance FTraversableWithIndex i f => FTraversableWithIndex i (Monoid.Ap f) where
   iftraverse = \f -> fmap Monoid.Ap . iftraverse f .# Monoid.getAp
   {-# inline iftraverse #-}
-#endif
 
 -- * Backwards
 
@@ -296,28 +325,53 @@ instance FTraversableWithIndex i f => FTraversableWithIndex i (Reverse f) where
   iftraverse = \f -> forwards #. fmap Reverse . iftraverse (\i -> Backwards #. f i) .# getReverse
   {-# inline iftraverse #-}
 
-instance FFunctorWithIndex (Index '[]) F0 where
-  ifmap _ = coerce
-  {-# inline ifmap #-}
-
-instance FFoldableWithIndex (Index '[]) F0 where
-  iffoldMap _ = mempty
-  {-# inline iffoldMap #-}
-
+instance FFunctorWithIndex (Index '[]) F0
+instance FFoldableWithIndex (Index '[]) F0
 instance FTraversableWithIndex (Index '[]) F0 where
   iftraverse _ F0 = pure F0
   {-# inline iftraverse #-}
 
-{-
-instance FFunctorWithIndex (Index '[a]) (F1 a) where
-  ifmap _ = coerce
-  {-# inline ifmap #-}
-
-instance FFoldableWithIndex (Index '[a]) (F1 a) where
-  iffoldMap _ = mempty
-  {-# inline iffoldMap #-}
-
+instance FFunctorWithIndex (Index '[a]) (F1 a)
+instance FFoldableWithIndex (Index '[a]) (F1 a)
 instance FTraversableWithIndex (Index '[a]) (F1 a) where
-  iftraverse _ F0 = pure F0
+  iftraverse f (F1 a) = F1 <$> f (UnsafeIndex 0) a
   {-# inline iftraverse #-}
--}
+
+instance FFunctorWithIndex (Index '[a,b]) (F2 a b)
+instance FFoldableWithIndex (Index '[a,b]) (F2 a b)
+instance FTraversableWithIndex (Index '[a,b]) (F2 a b) where
+  iftraverse f (F2 a b) = liftA2 F2
+    (f (UnsafeIndex 0) a)
+    (f (UnsafeIndex 1) b)
+  {-# inline iftraverse #-}
+
+instance FFunctorWithIndex (Index '[a,b,c]) (F3 a b c)
+instance FFoldableWithIndex (Index '[a,b,c]) (F3 a b c)
+instance FTraversableWithIndex (Index '[a,b,c]) (F3 a b c) where
+  iftraverse f (F3 a b c) = liftA3 F3
+    (f (UnsafeIndex 0) a)
+    (f (UnsafeIndex 1) b)
+    (f (UnsafeIndex 2) c)
+  {-# inline iftraverse #-}
+
+instance FFunctorWithIndex (Index '[a,b,c,d]) (F4 a b c d)
+instance FFoldableWithIndex (Index '[a,b,c,d]) (F4 a b c d)
+instance FTraversableWithIndex (Index '[a,b,c,d]) (F4 a b c d) where
+  iftraverse f (F4 a b c d) = liftA2 F4
+       (f (UnsafeIndex 0) a)
+       (f (UnsafeIndex 1) b)
+    <*> f (UnsafeIndex 2) c
+    <*> f (UnsafeIndex 3) d
+  {-# inline iftraverse #-}
+
+instance FFunctorWithIndex (Index '[a,b,c,d,e]) (F5 a b c d e)
+instance FFoldableWithIndex (Index '[a,b,c,d,e]) (F5 a b c d e)
+instance FTraversableWithIndex (Index '[a,b,c,d,e]) (F5 a b c d e) where
+  iftraverse f (F5 a b c d e) = liftA2 F5
+       (f (UnsafeIndex 0) a)
+       (f (UnsafeIndex 1) b)
+    <*> f (UnsafeIndex 2) c
+    <*> f (UnsafeIndex 3) d
+    <*> f (UnsafeIndex 4) e
+  {-# inline iftraverse #-}
+

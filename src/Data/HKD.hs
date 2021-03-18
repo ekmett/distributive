@@ -1,7 +1,10 @@
-{-# language CPP #-}
+{-# language BlockArguments #-}
 {-# language FlexibleContexts #-}
 {-# language FlexibleInstances #-}
 {-# language DefaultSignatures #-}
+{-# language DeriveTraversable #-}
+{-# language DeriveAnyClass #-}
+{-# language DeriveGeneric #-}
 {-# language ConstraintKinds #-}
 {-# language GADTs #-}
 {-# language MultiParamTypeClasses #-}
@@ -10,18 +13,14 @@
 {-# language RoleAnnotations #-}
 {-# language DerivingStrategies #-}
 {-# Language GeneralizedNewtypeDeriving #-}
+{-# Language QuantifiedConstraints #-}
 {-# language RankNTypes #-}
 {-# language ScopedTypeVariables #-}
 {-# language Trustworthy #-}
 {-# language TypeOperators #-}
-#if !defined(HLINT)
 {-# language LambdaCase #-}
 {-# language EmptyCase #-}
-#endif
 
-#ifndef MIN_VERSION_base
-#define MIN_VERSION_base(_x,_y,_z) 1
-#endif
 -- |
 -- Copyright :  (c) 2019-2021 Edward Kmett
 --              (c) 2019 Oleg Grenrus
@@ -57,8 +56,10 @@ module Data.HKD
    type (~>)
 -- * Functor
 , FFunctor(..)
+, gffmap
 -- * Foldable
 , FFoldable(..)
+, gffoldMap
 , flength
 , ftraverse_
 , ffor_
@@ -72,7 +73,7 @@ module Data.HKD
 , FZip(..)
 , FRepeat(..)
 -- * Higher kinded data
--- | See also "Data.Some" in @some@ package. @hkd@ provides instances for it.
+-- | See also "Data.Some" in @some@ package. This package provides instances for it.
 , F0(..)
 , F1(..)
 , F2(..)
@@ -81,7 +82,6 @@ module Data.HKD
 , F5(..)
 , FConstrained(..)
 , FCompose(..)
-, FBind(..)
 , NT(..)
 , Limit(..)
 , Dict1(..)
@@ -107,8 +107,8 @@ import Data.GADT.Compare
 import qualified Data.Monoid as Monoid
 import Data.Kind (Type)
 import Data.Semigroup (Semigroup (..))
-import Data.Some.GADT (Some (..), mapSome, foldSome)
-import qualified Data.Some.Newtype as N
+import qualified Data.Some.GADT as G
+import Data.Some.Newtype (Some (..), mapSome, foldSome, withSome)
 import qualified Data.Some.Church as C
 import Data.Distributive.Internal.Coerce
 import Data.Type.Equality
@@ -128,9 +128,13 @@ infixr 0 ~>
 
 class FFunctor (t :: (k -> Type) -> Type) where
   ffmap :: (f ~> g) -> t f -> t g
-  default ffmap :: (Generic1 t, FFunctor (Rep1 t)) => (f ~> g) -> t f -> t g
-  ffmap f = to1 . ffmap f . from1
+  default ffmap :: FTraversable t => (f ~> g) -> t f -> t g
+  ffmap = ffmapDefault
   {-# inline ffmap #-}
+
+gffmap :: (Generic1 t, FFunctor (Rep1 t)) => (f ~> g) -> t f -> t g
+gffmap f = to1 . ffmap f . from1
+{-# inline gffmap #-}
 
 instance FFunctor Proxy where
   ffmap = \_ -> coerce
@@ -164,15 +168,8 @@ instance FFunctor (K1 i a) where
 deriving newtype instance FFunctor f => FFunctor (M1 i c f)
 deriving newtype instance FFunctor f => FFunctor (Rec1 f)
 
-instance FFunctor U1 where
-  ffmap _ U1 = U1
-  {-# inline ffmap #-}
-
-instance FFunctor V1 where
-#ifndef HLINT
-  ffmap _ = \case
-  {-# inline ffmap #-}
-#endif
+instance FFunctor U1
+instance FFunctor V1
 
 instance (Functor f, FFunctor g) => FFunctor (f :.: g) where
   ffmap f = Comp1 #. fmap (ffmap f) .# unComp1
@@ -192,18 +189,25 @@ instance (FFunctor f, FFunctor g) => FFunctor (f :+: g) where
 -------------------------------------------------------------------------------
 
 class FFoldable (t :: (k -> Type) -> Type) where
-  ffoldMap :: Monoid.Monoid m => (forall a. f a -> m) -> t f -> m
+  ffoldMap :: Monoid m => (forall a. f a -> m) -> t f -> m
+  default ffoldMap :: (FTraversable t, Monoid m) => (forall a. f a -> m) -> t f -> m
+  ffoldMap = ffoldMapDefault
+  {-# inline ffoldMap #-}
 
   flengthAcc :: Int -> t f -> Int
   flengthAcc acc t = acc + Monoid.getSum (ffoldMap (\_ -> Monoid.Sum 1) t)
   {-# inline flengthAcc #-}
+
+gffoldMap :: (Generic1 t, FFoldable (Rep1 t), Monoid m) => (forall a. f a -> m) -> t f -> m
+gffoldMap f = ffoldMap f . from1
+{-# inline gffoldMap #-}
 
 flength :: FFoldable t => t f -> Int
 flength = flengthAcc 0
 {-# inline flength #-}
 
 ftraverse_ :: (FFoldable t, Applicative m) => (forall a. f a -> m b) -> t f -> m ()
-ftraverse_ k tf = N.withSome (ffoldMap (N.mkSome . k) tf) (() <$)
+ftraverse_ k tf = withSome (ffoldMap (Some . k) tf) (() <$)
 {-# inline ftraverse_ #-}
 
 ffor_ :: (FFoldable t, Applicative m) => t f -> (forall a. f a -> m b) -> m ()
@@ -211,21 +215,15 @@ ffor_ tf k = ftraverse_ k tf
 {-# inline ffor_ #-}
 
 instance FFoldable Proxy where
-  ffoldMap _ = mempty
   flengthAcc = const
-  {-# inline ffoldMap #-}
   {-# inline flengthAcc #-}
 
 instance FFoldable (Const a) where
-  ffoldMap _ = mempty
   flengthAcc = const
-  {-# inline ffoldMap #-}
   {-# inline flengthAcc #-}
 
 instance FFoldable (Constant a) where
-  ffoldMap _ = mempty
   flengthAcc = const
-  {-# inline ffoldMap #-}
   {-# inline flengthAcc #-}
 
 instance (Foldable f, FFoldable g) => FFoldable (Compose f g) where
@@ -247,26 +245,18 @@ instance (FFoldable f, FFoldable g) => FFoldable (Sum f g) where
   {-# inline flengthAcc #-}
 
 instance FFoldable V1 where
-#ifndef HLINT
-  ffoldMap _ = \case
   flengthAcc _ = \case
-  {-# inline ffoldMap #-}
   {-# inline flengthAcc #-}
-#endif
 
 instance FFoldable (K1 i a) where
-  ffoldMap _ = mempty
   flengthAcc = const
-  {-# inline ffoldMap #-}
   {-# inline flengthAcc #-}
 
 deriving newtype instance FFoldable f => FFoldable (M1 i c f)
 deriving newtype instance FFoldable f => FFoldable (Rec1 f)
 
 instance FFoldable U1 where
-  ffoldMap _ = mempty
   flengthAcc = const
-  {-# inline ffoldMap #-}
   {-# inline flengthAcc #-}
 
 instance (Foldable f, FFoldable g) => FFoldable (f :.: g) where
@@ -395,22 +385,6 @@ instance FZip Proxy where
 
 instance FRepeat Proxy where
   frepeat _ = Proxy
-  {-# inline frepeat #-}
-
-instance FZip (F1 a) where
-  fzipWith f (F1 x) (F1 y) = F1 (f x y)
-  {-# inline fzipWith #-}
-
-instance FRepeat (F1 a) where
-  frepeat x = F1 x
-  {-# inline frepeat #-}
-
-instance FZip (NT f) where
-  fzipWith f (NT g) (NT h) = NT $ \x -> f (g x) (h x)
-  {-# inline fzipWith #-}
-
-instance FRepeat (NT a) where
-  frepeat x = NT $ \_ -> x
   {-# inline frepeat #-}
 
 instance FZip Limit where
@@ -594,7 +568,6 @@ instance FTraversable f => FTraversable (Monoid.Alt f) where
   ftraverse = \f -> fmap Monoid.Alt . ftraverse f .# Monoid.getAlt 
   {-# inline ftraverse #-}
   
-#if MIN_VERSION_base(4,12,0)
 deriving newtype instance FFunctor f => FFunctor (Monoid.Ap f)
 deriving newtype instance FContravariant f => FContravariant (Monoid.Ap f)
 deriving newtype instance FZip f => FZip (Monoid.Ap f)
@@ -604,48 +577,19 @@ deriving newtype instance FFoldable f => FFoldable (Monoid.Ap f)
 instance FTraversable f => FTraversable (Monoid.Ap f) where
   ftraverse = \f -> fmap Monoid.Ap . ftraverse f .# Monoid.getAp
   {-# inline ftraverse #-}
-#endif
 
--------------------------------------------------------------------------------
--- Elements
--------------------------------------------------------------------------------
+-- * F0
 
+type role F0 phantom
 data F0 f = F0
+  deriving stock (Generic, Generic1, Functor, Foldable, Traversable)
+  deriving anyclass (FFunctor, FFoldable, FTraversable, FContravariant, FRepeat, FZip)
 
-instance Functor F0 where
-  fmap = \_ -> coerce
-  {-# inline fmap #-}
+-- * F1
 
-instance FFunctor F0 where
-  ffmap _ = coerce
-  {-# inline ffmap #-}
-
-instance FFoldable F0 where
-  ffoldMap _ F0 = mempty
-  {-# inline ffoldMap #-}
-
-instance FTraversable F0 where
-  ftraverse _ F0 = pure F0
-  {-# inline ftraverse #-}
-
-instance FContravariant F0 where
-  fcontramap _ = coerce
-  {-# inline fcontramap #-}
-
-instance FRepeat F0 where
-  frepeat = \ _ -> F0
-  {-# inline frepeat #-}
-
-instance FZip F0 where
-  fzipWith = \_ F0 -> coerce
-  {-# inline fzipWith #-} 
-
--- | 
+type role F1 nominal representational
 newtype F1 a f = F1 { runF1 :: f a }
-
-instance FFunctor (F1 a) where
-  ffmap = \f -> F1 #. f .# runF1
-  {-# inline ffmap #-}
+  deriving anyclass FFunctor
 
 instance FFoldable (F1 a) where
   ffoldMap f = f .# runF1
@@ -657,6 +601,92 @@ instance FTraversable (F1 a) where
   ftraverse f = fmap F1 . f .# runF1
   {-# inline ftraverse #-}
 
+instance FRepeat (F1 a) where
+  frepeat x = F1 x
+
+instance FZip (F1 a) where
+  fzipWith f (F1 a) (F1 b) = F1 (f a b)
+
+type role F2 nominal nominal representational
+data F2 a b f = F2 (f a) (f b)
+  deriving anyclass FFunctor
+
+instance FFoldable (F2 a b) where
+  flengthAcc acc _ = acc + 2
+  {-# inline flengthAcc #-}
+
+instance FTraversable (F2 a b) where
+  ftraverse = \f (F2 a b) -> liftA2 F2 (f a) (f b)
+  {-# inline ftraverse #-}
+
+instance FZip (F2 a b) where
+  fzipWith = \f (F2 a b) (F2 a' b') -> F2 (f a a') (f b b')
+  {-# inline fzipWith #-}
+
+instance FRepeat (F2 a b) where
+  frepeat = \x -> F2 x x
+  {-# inline frepeat #-}
+
+type role F3 nominal nominal nominal representational
+data F3 a b c f = F3 (f a) (f b) (f c)
+  deriving anyclass FFunctor
+
+instance FFoldable (F3 a b c) where
+  flengthAcc = \acc _ -> acc + 3
+  {-# inline flengthAcc #-}
+
+instance FTraversable (F3 a b c) where
+  ftraverse = \f (F3 a b c) -> liftA2 F3 (f a) (f b) <*> f c
+  {-# inline ftraverse #-}
+
+instance FZip (F3 a b c) where
+  fzipWith = \f (F3 a b c) (F3 a' b' c') -> F3 (f a a') (f b b') (f c c')
+  {-# inline fzipWith #-}
+
+instance FRepeat (F3 a b c) where
+  frepeat = \x -> F3 x x x 
+  {-# inline frepeat #-}
+
+type role F4 nominal nominal nominal nominal representational
+data F4 a b c d f = F4 (f a) (f b) (f c) (f d)
+  deriving anyclass FFunctor
+
+instance FFoldable (F4 a b c d) where
+  flengthAcc = \acc _ -> acc + 4
+  {-# inline flengthAcc #-}
+
+instance FTraversable (F4 a b c d) where
+  ftraverse = \f (F4 a b c d) -> liftA2 F4 (f a) (f b) <*> f c <*> f d
+  {-# inline ftraverse #-}
+
+instance FZip (F4 a b c d) where
+  fzipWith = \f (F4 a b c d) (F4 a' b' c' d') -> F4 (f a a') (f b b') (f c c') (f d d')
+  {-# inline fzipWith #-}
+
+instance FRepeat (F4 a b c d) where
+  frepeat = \x -> F4 x x x x
+  {-# inline frepeat #-}
+
+type role F5 nominal nominal nominal nominal nominal representational
+data F5 a b c d e f = F5 (f a) (f b) (f c) (f d) (f e)
+  deriving anyclass FFunctor
+
+instance FFoldable (F5 a b c d e) where
+  flengthAcc = \acc _ -> acc + 5
+  {-# inline flengthAcc #-}
+
+instance FTraversable (F5 a b c d e) where
+  ftraverse = \f (F5 a b c d e) -> liftA2 F5 (f a) (f b) <*> f c <*> f d <*> f e
+  {-# inline ftraverse #-}
+
+instance FZip (F5 a b c d e) where
+  fzipWith = \f (F5 a b c d e) (F5 a' b' c' d' e') -> F5 (f a a') (f b b') (f c c') (f d d') (f e e')
+  {-# inline fzipWith #-}
+
+instance FRepeat (F5 a b c d e) where
+  frepeat = \x -> F5 x x x x x
+  {-# inline frepeat #-}
+
 -------------------------------------------------------------------------------
 -- "natural" transformations via parametricity
 -------------------------------------------------------------------------------
@@ -665,8 +695,16 @@ instance FTraversable (F1 a) where
 newtype NT f g = NT { runNT :: f ~> g }
 
 instance FFunctor (NT f) where
-  ffmap f (NT g) = NT (f . g)
+  ffmap = \f (NT g) -> NT (f . g)
   {-# inline ffmap #-}
+
+instance FZip (NT f) where
+  fzipWith = \f (NT g) (NT h) -> NT \x -> f (g x) (h x)
+  {-# inline fzipWith #-}
+
+instance FRepeat (NT a) where
+  frepeat = \x -> NT \_ -> x
+  {-# inline frepeat #-}
 
 -------------------------------------------------------------------------------
 -- Some
@@ -686,18 +724,18 @@ instance FTraversable Some where
   ftraverse f (Some m) = Some <$> f m
   {-# inline ftraverse #-}
 
-instance FFunctor N.Some where
-  ffmap = N.mapSome
+instance FFunctor G.Some where
+  ffmap = G.mapSome
   {-# inline ffmap #-}
 
-instance FFoldable N.Some where
-  ffoldMap = N.foldSome
+instance FFoldable G.Some where
+  ffoldMap = G.foldSome
   flengthAcc len _ = len + 1
   {-# inline ffoldMap #-}
   {-# inline flengthAcc #-}
 
-instance FTraversable N.Some where
-  ftraverse f x = N.withSome x $ \x' -> N.mkSome <$> f x'
+instance FTraversable G.Some where
+  ftraverse f x = G.withSome x $ fmap G.Some . f
   {-# inline ftraverse #-}
 
 instance FFunctor C.Some where
@@ -711,14 +749,16 @@ instance FFoldable C.Some where
   {-# inline flengthAcc #-}
 
 instance FTraversable C.Some where
-  ftraverse f x = C.withSome x $ \x' -> C.mkSome <$> f x'
+  ftraverse f x = C.withSome x $ fmap C.mkSome . f
   {-# inline ftraverse #-}
 
 -------------------------------------------------------------------------------
 -- Limit
 -------------------------------------------------------------------------------
 
-newtype Limit f = Limit { runLimit :: forall a. f a }
+newtype Limit f = Limit
+  { runLimit :: forall a. f a
+  }
 
 instance FFunctor Limit where
   ffmap f (Limit g) = Limit (f g)
@@ -731,7 +771,7 @@ instance FFoldable Limit where
   {-# inline flengthAcc #-}
 
 instance FTraversable Limit where
-  ftraverse f (Limit m) = unsafeCoerce <$> f m
+  ftraverse = \ f (Limit m) -> unsafeCoerce <$> f m
   {-# inline ftraverse #-}
 
 -- * Dicts
@@ -747,47 +787,34 @@ instance FFunctor (Dicts p) where
   ffmap = \ f -> Dicts #. f .# runDicts
   {-# inline ffmap #-}
 
-newtype FConstrained p f = FConstrained { runFConstrained :: forall x. p x => f x }
+newtype FConstrained p f = FConstrained
+  { runFConstrained :: forall x. p x => f x
+  }
 
 instance FFunctor (FConstrained p) where
   ffmap = \f x -> FConstrained (f $ runFConstrained x)
   {-# inline ffmap #-}
 
+instance (forall x. p x) => FFoldable (FConstrained p) where
+  ffoldMap = \ f x -> f $ runFConstrained x
+  {-# inline ffoldMap #-}
+
+-- instance (forall x. p x) => FTraversable (FConstrained p) where
+
 type role FCompose nominal representational nominal
 newtype FCompose a f g = FCompose { runFCompose :: f (g a) }
+
 instance Functor f => FFunctor (FCompose a f) where
-  ffmap f = FCompose #. (fmap f .# runFCompose)
+  ffmap = \f -> FCompose #. (fmap f .# runFCompose)
   {-# inline ffmap #-}
 
-type role F2 nominal nominal representational
-data F2 a b f = F2 (f a) (f b)
-instance FFunctor (F2 a b) where
-  ffmap f (F2 a b) = F2 (f a) (f b)
-  {-# inline ffmap #-}
+instance Foldable f => FFoldable (FCompose a f) where
+  ffoldMap = \f -> foldMap f .# runFCompose
+  {-# inline ffoldMap #-}
 
-type role F3 nominal nominal nominal representational
-data F3 a b c f = F3 (f a) (f b) (f c)
-instance FFunctor (F3 a b c) where
-  ffmap f (F3 a b c) = F3 (f a) (f b) (f c)
-  {-# inline ffmap #-}
-
-type role F4 nominal nominal nominal nominal representational
-data F4 a b c d f = F4 (f a) (f b) (f c) (f d)
-instance FFunctor (F4 a b c d) where
-  ffmap f (F4 a b c d) = F4 (f a) (f b) (f c) (f d)
-  {-# inline ffmap #-}
-
-type role F5 nominal nominal nominal nominal nominal representational
-data F5 a b c d e f = F5 (f a) (f b) (f c) (f d) (f e)
-instance FFunctor (F5 a b c d e) where
-  ffmap f (F5 a b c d e) = F5 (f a) (f b) (f c) (f d) (f e)
-  {-# inline ffmap #-}
-
-type role FBind nominal nominal representational
-data FBind x y f = FBind (f x) (x -> f y)
-instance FFunctor (FBind x y) where
-  ffmap f (FBind l r) = FBind (f l) (f . r)
-  {-# inline ffmap #-}
+instance Traversable f => FTraversable (FCompose a f) where
+  ftraverse = \f -> fmap FCompose . traverse f .# runFCompose 
+  {-# inline ftraverse #-}
 
 
 -------------------------------------------------------------------------------
@@ -799,7 +826,7 @@ newtype FEquivalence a = FEquivalence
   }
 
 instance FContravariant FEquivalence where
-  fcontramap f (FEquivalence g) = FEquivalence $ \i j -> g (f i) (f j)
+  fcontramap f (FEquivalence g) = FEquivalence \i j -> g (f i) (f j)
   {-# inline fcontramap #-}
 
 newtype FComparison a = FComparison
@@ -807,7 +834,7 @@ newtype FComparison a = FComparison
   }
 
 instance FContravariant FComparison where
-  fcontramap f (FComparison g) = FComparison $ \i j -> g (f i) (f j)
+  fcontramap f (FComparison g) = FComparison \i j -> g (f i) (f j)
   {-# inline fcontramap #-}
 
 newtype FOp b f = FOp { getFOp :: forall x. f x -> b }

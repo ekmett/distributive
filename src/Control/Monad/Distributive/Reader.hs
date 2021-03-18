@@ -1,35 +1,31 @@
-{-# LANGUAGE GADTs #-}
+{-# Language GADTs #-}
+{-# Language BlockArguments #-}
 {-# Language CPP #-}
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language PatternSynonyms #-}
 {-# Language RoleAnnotations #-}
+{-# Language ScopedTypeVariables #-}
 {-# Language Trustworthy #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
-{-# Language ScopedTypeVariables #-}
-{-# Language TypeSynonymInstances #-}
 {-# Language UndecidableInstances #-}
-{-# Language ViewPatterns #-}
-{-# OPTIONS_GHC -fenable-rewrite-rules -fno-warn-orphans #-}
+{-# options_ghc -fenable-rewrite-rules -fno-warn-orphans #-}
 
 #ifndef MIN_VERSION_base
 #define MIN_VERSION_base(_x,_y,_z) 1
 #endif
-----------------------------------------------------------------------
+
 -- |
--- Module      :  Control.Monad.Distributive.Reader
 -- Copyright   :  (c) Edward Kmett 2011-2021,
 --                (c) Conal Elliott 2008
 -- License     :  BSD3
---
 -- Maintainer  :  ekmett@gmail.com
 -- Stability   :  experimental
 --
 -- Distributive functors on Hask are all monads, because they are isomorphic to
 -- a 'Reader' monad.
-----------------------------------------------------------------------
 
 module Control.Monad.Distributive.Reader
 (
@@ -88,7 +84,7 @@ instance (Distributive f, Distributive m) => Distributive (ReaderT f m) where
   type Log (ReaderT f m) = (Log f, Log m)
   scatter = \k f -> coerce $ scatter k ((Comp1 . runReaderDistT) #. f)
   index = \(ReaderDistT f) (x, y) -> index (index f x) y
-  tabulate = \f -> ReaderDistT $ tabulate $ \i -> tabulate $ \j -> f (i, j)
+  tabulate = \f -> ReaderDistT $ tabulate \i -> tabulate \j -> f (i, j)
   {-# inline tabulate #-}
   {-# inline index #-}
 
@@ -118,7 +114,7 @@ instance (Distributive f, MonadFail m) => MonadFail (ReaderT f m) where
 instance (Distributive f, Monad m, Log f ~ e) => MonadReader e (ReaderT f m) where
   ask = ReaderDistT $ tabulate pure
   {-# inline ask #-}
-  local = \f m -> ReaderT $ \r -> runReaderT m (f r)
+  local = \f m -> ReaderT \r -> runReaderT m (f r)
   {-# inline local #-}
   reader = ReaderT . fmap pure
   {-# inline reader #-}
@@ -176,9 +172,9 @@ instance FFunctor (DCatch x y m) where
 
 -- | Lift a @catchE@ operation to the new monad.
 liftCatch :: Distributive f => Catch e m a -> Catch e (ReaderT f m) a
--- liftCatch = \f m h -> ReaderT $ \ r -> f (runReaderT m r) (\ e -> runReaderT (h e) r)
+-- liftCatch = \f m h -> ReaderT \ r -> f (runReaderT m r) (\ e -> runReaderT (h e) r)
 liftCatch = \ f m h ->
-  ReaderDistT $ distrib (DCatch m h) $ \(DCatch m' h') -> coerce f m' h'
+  ReaderDistT $ distrib (DCatch m h) \(DCatch m' h') -> coerce f m' h'
 {-# inline liftCatch #-}
 
 newtype DCompReaderT g m a f = DCompReaderT (g (ReaderT f m a))
@@ -190,10 +186,8 @@ instance Functor g => FFunctor (DCompReaderT g m a) where
 -- | Lift a @callCC@ operation to the new monad.
 liftCallCC :: forall f m a b. Distributive f => CallCC m a b -> CallCC (ReaderT f m) a b
 liftCallCC = \callCC' f ->
-  ReaderDistT $ distrib (DCompReaderT f) $ \(DCompReaderT f') ->
-    callCC' $ \c -> coerce $ f' (ReaderDistT #. pureDist . c)
---liftCallCC = \callCC' f -> ReaderT $ \r ->
---  callCC' $ \c -> runReaderT (f (ReaderDistT #. pureDist . c)) r
+  ReaderDistT $ distrib (DCompReaderT f) \(DCompReaderT f') ->
+    callCC' \c -> coerce $ f' (ReaderDistT #. pureDist . c)
 {-# inline liftCallCC #-}
 
 instance (Distributive f, MonadCont m) => MonadCont (ReaderT f m) where

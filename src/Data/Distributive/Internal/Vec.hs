@@ -1,24 +1,21 @@
-{-# Language CPP #-}
 {-# Language AllowAmbiguousTypes #-}
+{-# Language BlockArguments #-}
+{-# Language CPP #-}
 {-# Language DataKinds #-}
 {-# Language DeriveTraversable #-}
-{-# Language DerivingStrategies #-}
 {-# Language DerivingVia #-}
+{-# Language FlexibleInstances #-}
+{-# Language FunctionalDependencies #-}
 {-# Language GADTs #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language InstanceSigs #-}
-{-# Language KindSignatures #-}
-{-# Language BangPatterns #-}
 {-# Language MagicHash #-}
-{-# Language MultiParamTypeClasses #-}
-{-# Language FunctionalDependencies #-}
 {-# Language PatternSynonyms #-}
 {-# Language PolyKinds #-}
 {-# Language RankNTypes #-}
 {-# Language RoleAnnotations #-}
 {-# Language ScopedTypeVariables #-}
 {-# Language StandaloneDeriving #-}
-{-# Language FlexibleInstances #-}
 {-# Language TypeApplications #-}
 {-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
@@ -68,7 +65,7 @@ pattern Vec { toVector } <- UnsafeVec toVector
 instance KnownNat n => Distributive (Vec n) where
   type Log (Vec n) = Fin n
   scatter = \(k :: w Identity -> r) f (ffmap f -> w) -> UnsafeVec $
-    generate (int @n) $ \i -> k $ ffmap (\v -> Identity $ index v $ UnsafeFin i) w
+    generate (int @n) \i -> k $ ffmap (\v -> Identity $ index v $ UnsafeFin i) w
   {-# inlinable scatter #-}
 
   tabulate = \(f :: Fin n -> a) -> UnsafeVec $ generate (int @n) (f .# UnsafeFin)
@@ -101,7 +98,7 @@ instance FoldableWithIndex (Fin n) (Vec n) where
   {-# inline ifoldMap #-}
 
 instance TraversableWithIndex (Fin n) (Vec n) where
-  itraverse f (toVector -> as) = (UnsafeVec #. V.fromListN (V.length as)) <$>
+  itraverse f (toVector -> as) = UnsafeVec #. V.fromListN (V.length as) <$>
     itraverse (f .# UnsafeFin) (V.toList as)
   {-# inline itraverse #-}
 
@@ -109,7 +106,7 @@ data SomeVec a where
   SomeVec :: KnownNat n => Vec n a -> SomeVec a
 
 asVec :: FromVector t a => t -> SomeVec a
-asVec ((UnsafeVec . asVector) -> v) = withDim v (SomeVec v)
+asVec (UnsafeVec #. asVector -> v) = withDim v (SomeVec v)
 {-# inline asVec #-}
 
 withDim :: forall n a r. Vec n a -> (KnownNat n => r) -> r
@@ -137,8 +134,6 @@ pattern V v <- (asVec -> SomeVec v) where
 {-# complete V :: Vector #-}
 {-# complete V :: [] #-}
 
-#if __GLASGOW_HASKELL__ >= 806
-
 deriving via Dist (Vec n) instance KnownNat n => Applicative (Vec n)
 deriving via Dist (Vec n) instance KnownNat n => Monad (Vec n)
 deriving via Dist (Vec n) instance KnownNat n => MonadFix (Vec n)
@@ -147,67 +142,3 @@ deriving via Dist (Vec n) instance KnownNat n => MonadReader (Fin n) (Vec n)
 deriving via Dist (Vec n) a instance (KnownNat n, Num a) => Num (Vec n a)
 deriving via Dist (Vec n) a instance (KnownNat n, Fractional a) => Fractional (Vec n a)
 deriving via Dist (Vec n) a instance (KnownNat n, Floating a) => Floating (Vec n a)
-
-#else
-
-instance KnownNat n => Applicative (Vec n) where
-  pure = pureDist
-  liftA2 = liftD2
-  (<*>) = apDist
-  _ *> n = n
-  (<*) = const
-
-instance KnownNat n => Monad (Vec n) where
-  (>>=) = bindDist
-  (>>) = (*>)
-
-instance KnownNat n => MonadFix (Vec n) where
-  mfix = mfixDist
-
-instance KnownNat n => MonadZip (Vec n) where
-  mzipWith = mzipWithDist
-
-instance KnownNat n => MonadReader (Fin n) (Vec n) where
-  ask = askDist
-  local = localDist
-  reader = tabulate
-
-instance (KnownNat n, Num a) => Num (Vec n a) where
-  (+) = liftA2 (+)
-  (-) = liftA2 (-)
-  (*) = liftA2 (*)
-  negate = fmap negate
-  abs = fmap abs
-  signum = fmap signum
-  fromInteger = pure . fromInteger
-
-instance (KnownNat n, Fractional b) => Fractional (Vec n a) where
-  (/) = liftA2 (/)
-  recip = fmap recip
-  fromRational = pure . fromRational
-
-instance (KnownNat n, Floating b) => Floating (Vec n a) where
-  pi = pure pi
-  exp = fmap exp
-  log = fmap log
-  sqrt = fmap sqrt
-  (**) = liftA2 (**)
-  logBase = liftA2 logBase
-  sin = fmap sin
-  cos = fmap cos
-  tan = fmap tan
-  asin = fmap asin
-  acos = fmap acos
-  atan = fmap atan
-  sinh = fmap sinh
-  cosh = fmap cosh
-  tanh = fmap tanh
-  asinh = fmap asinh
-  acosh = fmap acosh
-  atanh = fmap atanh
-  log1p = fmap log1p
-  expm1 = fmap expm1
-  log1pexp = fmap log1pexp
-  log1mexp = fmap log1mexp
-
-#endif

@@ -1,5 +1,5 @@
-{-# Language CPP #-}
 {-# Language AllowAmbiguousTypes #-}
+{-# Language BlockArguments #-}
 {-# Language ConstraintKinds #-}
 {-# Language DataKinds #-}
 {-# Language DefaultSignatures #-}
@@ -12,12 +12,12 @@
 {-# Language FlexibleInstances #-}
 {-# Language GADTs #-}
 {-# Language GeneralizedNewtypeDeriving #-}
-{-# Language KindSignatures #-}
 {-# Language LambdaCase #-}
 {-# Language LiberalTypeSynonyms #-}
 {-# Language MultiParamTypeClasses #-}
 {-# Language PatternSynonyms #-}
 {-# Language PolyKinds #-}
+{-# Language QuantifiedConstraints #-}
 {-# Language RankNTypes #-}
 {-# Language RoleAnnotations #-}
 {-# Language ScopedTypeVariables #-}
@@ -25,18 +25,10 @@
 {-# Language Trustworthy #-}
 {-# Language TypeApplications #-}
 {-# Language TypeFamilies #-}
-{-# Language TypeInType #-}
 {-# Language TypeOperators #-}
 {-# Language UndecidableInstances #-}
 {-# Language UndecidableSuperClasses #-}
 {-# Language ViewPatterns #-}
-#if __GLASGOW_HASKELL__ >= 806
-{-# Language QuantifiedConstraints #-}
-#endif
-
-#ifndef MIN_VERSION_base
-#define MIN_VERSION_Base(_x,_y,_z) 1
-#endif
 
 module Data.HKD.Distributive
 ( type (%)
@@ -194,7 +186,7 @@ fdistrib = \ w k -> fscatter k id w
 ftabulateFLogarithm
   :: FDistributive f => (FLogarithm f ~> a) -> f a
 ftabulateFLogarithm
-  = \f -> fdistrib (FTab f) $ \(FTab f') -> f' (FLogarithm runF1)
+  = \f -> fdistrib (FTab f) \(FTab f') -> f' (FLogarithm runF1)
 {-# inline ftabulateFLogarithm #-}
 
 -- | A higher-kinded 'indexLogarithm'
@@ -231,7 +223,7 @@ fscatterDefault
   -> (g ~> f)
   -> w g -> f r
 fscatterDefault = \k phi wg ->
-  ftabulate $ \x -> k $ ffmap (\g -> F1 $ findex (phi g) x) wg
+  ftabulate \x -> k $ ffmap (\g -> F1 $ findex (phi g) x) wg
 {-# inline fscatterDefault #-}
 
 -- | A higher-kinded 'Tabulate'
@@ -283,7 +275,7 @@ fdistribute
   :: (Functor f, FDistributive g)
   => f (g a) -> g (Compose f a)
 fdistribute = \f ->
-  fdistrib (FCompose f) $ \(FCompose f') ->
+  fdistrib (FCompose f) \(FCompose f') ->
     Compose $ fmap coerce f'
 {-# inline fdistribute #-}
 
@@ -297,7 +289,7 @@ fcollect
   => (a -> g b)
   -> f a -> g (Compose f b)
 fcollect = \f fa ->
-  fdistrib (FCompose f) $ \(FCompose f') ->
+  fdistrib (FCompose f) \(FCompose f') ->
     Compose $ fmap (coerce f') fa
 {-# inline fcollect #-}
 
@@ -311,7 +303,7 @@ fcotraverse
   => (f % a ~> b)
   -> f (g a) -> g b
 fcotraverse = \fab fga ->
-  fdistrib (FCompose fga) $ \(FCompose f') ->
+  fdistrib (FCompose fga) \(FCompose f') ->
     fab (fmap coerce f')
 {-# inline fcotraverse #-}
 
@@ -360,7 +352,7 @@ instance (Distributive f, FDistributive g) => FDistributive (f :.: g) where
   fscatter = \k phi wg -> Comp1 $
     scatter (fscatter k coerce .# runAppCompose) id $ AppCompose (ffmap phi wg)
   findex = \(Comp1 f) (Const x :*: y) -> findex (index f x) y
-  ftabulate = \f -> Comp1 $ tabulate $ \i -> ftabulate $ \j -> f (Const i :*: j)
+  ftabulate = \f -> Comp1 $ tabulate \i -> ftabulate \j -> f (Const i :*: j)
   {-# inline fscatter #-}
   {-# inline ftabulate #-}
   {-# inline findex #-}
@@ -384,11 +376,7 @@ instance FDistributive Proxy
 deriving newtype instance FDistributive f => FDistributive (Backwards f)
 deriving newtype instance FDistributive f => FDistributive (Reverse f)
 deriving newtype instance FDistributive f => FDistributive (Monoid.Alt f)
-
-#if MIN_VERSION_base(4,12,0)
--- Ap was only added in base 4.12 ghc 8.6
 deriving newtype instance FDistributive f => FDistributive (Monoid.Ap f)
-#endif
 
 instance FDistributive (F1 a) where
   type FLog (F1 a) = (:~:) a
@@ -409,10 +397,10 @@ instance FDistributive (NT f) where
   {-# inline fscatter #-}
 
 instance FDistributive Limit where
-  type FLog Limit = Proxy
+  type FLog Limit = U1
   fscatter = \k f w -> Limit $ k $ ffmap (\x -> F1 $ runLimit $ f x) w
   findex f = const $ runLimit f
-  ftabulate = \f -> Limit $ f (Proxy)
+  ftabulate = \f -> Limit $ f U1
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
@@ -427,12 +415,6 @@ instance FDistributive (F2 a b) where
   {-# inline findex #-}
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
-
-  -- type FLog (D2 a b) = (:~:) a :+: (:~:) b
-  -- findex = \(D2 x y) -> \case
-  --  L1 Refl -> x
-  --  R1 Refl -> y
-  -- ftabulate = \f -> D2 (f $ L1 Refl) (f $ R1 Refl)
 
 instance FDistributive (F3 a b c) where
   type FLog (F3 a b c) = FLogarithm (F3 a b c)
@@ -473,17 +455,6 @@ instance FDistributive (F5 a b c d e) where
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
 
-instance FDistributive (FBind x y) where
-  type FLog (FBind x y) = FLogarithm (FBind x y)
-  findex = findexFLogarithm
-  ftabulate = ftabulateFLogarithm
-  fscatter = \k f (ffmap f -> w) ->
-    FBind (      k $ ffmap (\(FBind x _)  -> F1 x     ) w)
-          (\a -> k $ ffmap (\(FBind _ fx) -> F1 $ fx a) w)
-  {-# inline findex #-}
-  {-# inline ftabulate #-}
-  {-# inline fscatter #-}
-
 -- | A higher-kinded 'Dist'
 type role FDist representational nominal
 newtype FDist f a = FDist { runFDist :: f a }
@@ -516,24 +487,23 @@ fzipWithFDist = fliftD2
 
 fliftD2 :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
 fliftD2 = \f m n ->
-  fdistrib (F2 m n) $ \(F2 (F1 m') (F1 n')) -> f m' n'
+  fdistrib (F2 m n) \(F2 (F1 m') (F1 n')) -> f m' n'
 {-# inline fliftD2 #-}
 
 fliftD3 :: FDistributive f => (forall x. a x -> b x -> c x -> d x) -> f a -> f b -> f c -> f d
 fliftD3 = \f m n o ->
-  fdistrib (F3 m n o) $ \(F3 (F1 m') (F1 n') (F1 o')) -> f m' n' o'
+  fdistrib (F3 m n o) \(F3 (F1 m') (F1 n') (F1 o')) -> f m' n' o'
 {-# inline fliftD3 #-}
 
 fliftD4 :: FDistributive f => (forall x. a x -> b x -> c x -> d x -> e x) -> f a -> f b -> f c -> f d -> f e
 fliftD4 = \f m n o p ->
-  fdistrib (F4 m n o p) $ \(F4 (F1 m') (F1 n') (F1 o') (F1 p')) -> f m' n' o' p'
+  fdistrib (F4 m n o p) \(F4 (F1 m') (F1 n') (F1 o') (F1 p')) -> f m' n' o' p'
 {-# inline fliftD4 #-}
 
 fliftD5 :: FDistributive f => (forall x. a x -> b x -> c x -> d x -> e x -> r x) -> f a -> f b -> f c -> f d -> f e -> f r
 fliftD5 = \f m n o p q ->
-  fdistrib (F5 m n o p q) $ \(F5 (F1 m') (F1 n') (F1 o') (F1 p') (F1 q')) -> f m' n' o' p' q'
+  fdistrib (F5 m n o p q) \(F5 (F1 m') (F1 n') (F1 o') (F1 p') (F1 q')) -> f m' n' o' p' q'
 {-# inline fliftD5 #-}
-
 
 instance FDistributive f => FRepeat (FDist f) where
   frepeat = frepeatFDist
@@ -541,8 +511,8 @@ instance FDistributive f => FRepeat (FDist f) where
 
 -- | A default definition of 'frepeat' from 'FRepeat' in terms of 'FDistributive'
 frepeatFDist :: FDistributive f => (forall x. a x) -> f a
-frepeatFDist = \ax -> fscatter (\x -> runLimit (getConst x)) id (Const (Limit ax))
--- frepeatDist a = fdistrib Proxy $ \_ -> a
+frepeatFDist = \ax -> fscatter (\x -> runLimit (getConst x)) id $ Const $ Limit ax
+-- frepeatDist a = fdistrib Proxy \_ -> a
 {-# inline frepeatFDist #-}
 
 faskFDist :: FDistributive f => f (FLog f)
@@ -657,7 +627,7 @@ instance Decidable f => FSemidecidable (HKD f x) where
     L1 x -> Left x
     R1 y -> Right y) (runHKD g) .# runHKD
   {-# inline fchoose #-}
-  flose f = HKD (lose $ \x -> case f x of)
+  flose f = HKD (lose \x -> case f x of)
   {-# inline flose #-}
 
 -------------------------------------------------------------------------------
@@ -912,19 +882,14 @@ instance (Distributive f, FAll p g) => FAll p (Compose f g)
 
 instance (FAll p f, FAll p g) => FAll p (Product f g)
 
-#if __GLASGOW_HASKELL__ >= 806
 -- this is arguably any existential constraint
 instance (forall a. p a) => FAll p Some where fall = Some Dict1
 instance (forall a. p a) => FAll p Limit where fall = Limit Dict1
 instance (forall a. q a => p a) => FAll p (FConstrained q) where
   fall = FConstrained Dict1
-#else
-instance p ~ q => FAll p (FConstrained q) where
-  fall = FConstrained Dict1
-#endif
 
 fzipWithW :: (FDistributive f, FFunctor w) => (forall x. a x -> w (F1 x) -> r x) -> f a -> w f -> f r
-fzipWithW f fa w = fdistrib (F1 fa :*: w) $ \(F1 (F1 a) :*: w') -> f a w'
+fzipWithW f fa w = fdistrib (F1 fa :*: w) \(F1 (F1 a) :*: w') -> f a w'
 
 cfdistrib
   :: forall i (p :: i -> Constraint) (f :: (i -> Type) -> Type) (r :: i -> Type) w.
