@@ -1,5 +1,12 @@
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# language Trustworthy #-}
+{-# language TypeApplications #-}
+{-# language TypeFamilies #-}
+{-# language TypeOperators #-}
+{-# language LambdaCase #-}
+{-# language EmptyCase #-}
+{-# language UndecidableInstances #-}
+{-# language UndecidableSuperClasses #-}
 
 -- |
 -- Copyright :  (c) 2019-2021 Edward Kmett
@@ -53,6 +60,13 @@ module Data.HKD
 , FApply(..)
 , FApplicative(..)
 , FApplicativeInstances(..)
+-- * FEq
+, EqC
+, FEq
+-- * FOrd
+, OrdC'
+, OrdC
+, FOrd
 -- * Higher kinded data
 -- | See also "Data.Some" in @some@ package. This package provides instances for it.
 , F0(..)
@@ -80,7 +94,7 @@ import Data.Functor.Product (Product (..))
 import Data.Functor.Reverse
 import Data.Functor.Sum (Sum (..))
 import qualified Data.Monoid as Monoid
-import Data.Kind (Type)
+import Data.Kind (Type, Constraint)
 import qualified Data.Some.GADT as G
 import Data.Some.Newtype (Some (..), mapSome, foldSome, withSome)
 import qualified Data.Some.Church as C
@@ -508,6 +522,53 @@ deriving newtype instance FFoldable f => FFoldable (Monoid.Ap f)
 instance FTraversable f => FTraversable (Monoid.Ap f) where
   ftraverse = \f -> fmap Monoid.Ap . ftraverse f .# Monoid.getAp
   {-# inline ftraverse #-}
+
+-- * FEq
+
+-- | Eq constraints on `k`
+type family EqC :: k -> Constraint
+
+type instance EqC @Type = Eq
+
+class (forall x. EqC x => Eq (w x)) => FEq w
+instance (forall x. EqC x => Eq (w x)) => FEq w
+
+type instance EqC @(k -> Type) = FEq
+
+-- This works, but the default stock instances with flexible constraints should be strictly more general.
+-- deriving stock instance (EqC a, EqC f) => Eq (F1 a f)
+-- deriving stock instance (EqC a, EqC b, EqC f) => Eq (F2 a b f)
+-- deriving stock instance (EqC a, EqC b, EqC c, EqC f) => Eq (F3 a b c f)
+-- deriving stock instance (EqC a, EqC b, EqC c, EqC d, EqC f) => Eq (F4 a b c d f)
+-- deriving stock instance (EqC a, EqC b, EqC c, EqC d, EqC e, EqC f) => Eq (F5 a b c d e f)
+
+-- * FOrd
+
+-- | Ord constraints on `k`
+type family OrdC' :: k -> Constraint
+
+type instance OrdC' @Type = Ord
+
+class (FEq w, forall x. OrdC x => Ord (w x)) => FOrd w
+instance (FEq w, forall x. OrdC x => Ord (w x)) => FOrd w
+
+type instance OrdC' @(k -> Type) = FOrd
+
+{- 
+We want forall (x :: k). OrdC x => EqC x. Ideally we might require that as a constraint
+for the particular k, but that won't work given how QCs work. 
+Instead, just define OrdC to include EqC, though it's a bit hacky.
+Maybe there's a better solution.
+-}
+class (EqC x, OrdC' x) => OrdC x where
+instance (EqC x, OrdC' x) => OrdC x where
+
+-- This works, but the default stock instances with flexible constraints should be strictly more general.
+-- deriving stock instance (OrdC a, OrdC f) => Ord (F1 a f)
+-- deriving stock instance (OrdC a, OrdC b, OrdC f) => Ord (F2 a b f)
+-- deriving stock instance (OrdC a, OrdC b, OrdC c, OrdC f) => Ord (F3 a b c f)
+-- deriving stock instance (OrdC a, OrdC b, OrdC c, OrdC d, OrdC f) => Ord (F4 a b c d f)
+-- deriving stock instance (OrdC a, OrdC b, OrdC c, OrdC d, OrdC e, OrdC f) => Ord (F5 a b c d e f)
 
 -- * F0
 
