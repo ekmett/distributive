@@ -41,7 +41,6 @@ import Data.Functor.WithIndex
 import Data.GADT.Compare
 import Data.HKD
 import Data.HKD.Contravariant
-import Data.HKD.Contravariant.Divisible
 import Data.HKD.WithIndex
 import Data.Kind
 import qualified Data.Monoid as Monoid

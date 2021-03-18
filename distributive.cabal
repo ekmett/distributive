@@ -73,7 +73,6 @@ library
     Data.Functor.Confusing
     Data.HKD
     Data.HKD.Contravariant
-    Data.HKD.Contravariant.Divisible
     Data.HKD.Distributive
     Data.HKD.Distributive.Endo
     Data.HKD.Internal.Index

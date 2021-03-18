@@ -1,4 +1,3 @@
-{-# Language GADTs #-}
 {-# Language Safe #-}
 
 module Data.Distributive.Coyoneda
