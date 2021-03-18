@@ -574,13 +574,14 @@ instance (EqC x, OrdC' x) => OrdC x where
 
 type role F0 phantom
 data F0 f = F0
-  deriving stock (Generic, Generic1, Functor, Foldable, Traversable)
+  deriving stock (Generic, Generic1, Functor, Foldable, Traversable, Eq, Ord, Show, Read)
   deriving anyclass (FFunctor, FFoldable, FTraversable, FApplicative, FApply)
 
 -- * F1
 
 type role F1 nominal representational
 newtype F1 a f = F1 { runF1 :: f a }
+  deriving stock (Eq, Ord, Show, Read)
   deriving anyclass FFunctor
 
 instance FFoldable (F1 a) where
@@ -601,6 +602,7 @@ instance FApply (F1 a) where
 
 type role F2 nominal nominal representational
 data F2 a b f = F2 (f a) (f b)
+  deriving stock (Eq, Ord, Show, Read)
   deriving anyclass FFunctor
 
 instance FFoldable (F2 a b) where
@@ -621,6 +623,7 @@ instance FApplicative (F2 a b) where
 
 type role F3 nominal nominal nominal representational
 data F3 a b c f = F3 (f a) (f b) (f c)
+  deriving stock (Eq, Ord, Show, Read)
   deriving anyclass FFunctor
 
 instance FFoldable (F3 a b c) where
@@ -641,6 +644,7 @@ instance FApplicative (F3 a b c) where
 
 type role F4 nominal nominal nominal nominal representational
 data F4 a b c d f = F4 (f a) (f b) (f c) (f d)
+  deriving stock (Eq, Ord, Show, Read)
   deriving anyclass FFunctor
 
 instance FFoldable (F4 a b c d) where
@@ -661,6 +665,7 @@ instance FApplicative (F4 a b c d) where
 
 type role F5 nominal nominal nominal nominal nominal representational
 data F5 a b c d e f = F5 (f a) (f b) (f c) (f d) (f e)
+  deriving stock (Eq, Ord, Show, Read)
   deriving anyclass FFunctor
 
 instance FFoldable (F5 a b c d e) where
