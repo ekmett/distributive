@@ -118,6 +118,29 @@ class Functor f => Distributive f where
   -- @
   --
   -- Defaults to 'scatterRep'
+  --
+  -- The obvious API for this function is the much simpler
+  --
+  -- @
+  -- 'dist ':: ('Distributive' f, 'FFunctor' w) => w f -> f (w 'Identity')
+  -- @
+  --
+  -- However, most uses of this function aren't interested in leaving a @w 'Identity'@ inside @f@
+  -- and immediately 'ffmap' to replace it. However, most implementations have to 'ffmap' to put
+  -- it there. This leads to two unfused 'ffmap' calls. By adding a @(w 'Identity' -> r)@ step
+  -- we clean up that concern.
+  --
+  -- Another concern with the obvious implementation as a class method is that 'w f' knows nothing
+  -- about whether 'w' takes a representational argument. As a result, @GeneralizedNewtypeDeriving@
+  -- wouldn't work for this class if this was a member. (For an example of this, try to use GND on
+  -- 'Traversable' today!) Adding a natural transformation before we process allows this
+  -- dictionary to be derived with GND. This latter mapping is a lot less useful, so we supply
+  --
+  -- @
+  -- 'distrib' :: ('Distributive' f, 'FFunctor' w) => w f -> (w 'Identity' -> r) -> f r
+  -- @
+  --
+  -- as well, outside o the class, which is quite concise for many workloads.
   scatter :: FFunctor w => (w Identity -> r) -> (g ~> f) -> w g -> f r
   default scatter
     :: (Generic1 f, Distributive (Rep1 f), FFunctor w)
@@ -125,6 +148,8 @@ class Functor f => Distributive f where
   scatter = scatterRep
   {-# inline scatter #-}
 
+-- | derive tabulate via 'Generic1' when @'Log' f@ is (a possible newtype of)
+-- @'Log' ('Rep1' f)@
 tabulateRep
   :: forall f a.
      (Distributive (Rep1 f), Generic1 f, Coercible (Log f) (Log (Rep1 f)))
@@ -132,6 +157,8 @@ tabulateRep
 tabulateRep = coerce (to1 . tabulate :: (Log (Rep1 f) -> a) -> f a)
 {-# inline tabulateRep #-}
 
+-- | derive 'index' via 'Generic1' when @'Log' f@ is (a possible newtype of)
+-- @'Log' ('Rep1' f)@
 indexRep
   :: forall f a.
      (Distributive (Rep1 f), Generic1 f, Coercible (Log f) (Log (Rep1 f)))
@@ -139,12 +166,15 @@ indexRep
 indexRep = coerce (index . from1 :: f a -> Log (Rep1 f) -> a)
 {-# inline indexRep #-}
 
+-- | derive 'scatter' via 'Generic1'
 scatterRep
   :: (Distributive (Rep1 f), Generic1 f, FFunctor w)
   => (w Identity -> r) -> (g ~> f) -> w g -> f r
 scatterRep = \k phi -> to1 . scatter k (from1 . phi)
 {-# inline scatterRep #-}
 
+-- | This pattern synonym lets you work with any 'Distributive' functor as if
+-- it were a function.
 pattern Tabulate :: Distributive f => (Log f -> a) -> f a
 pattern Tabulate i <- (index -> i) where
   Tabulate i = tabulate i
@@ -269,6 +299,9 @@ tabulateLogarithm = \ f ->
 type role Logarithm representational
 newtype Logarithm f = Logarithm { runLogarithm :: forall a. f a -> a }
 
+-- | A 'Log' for a distributive functor needs to support 'index' and 'tabulate'.
+--
+-- 'Logarithm' is a universal choice for 'Log'.
 indexLogarithm :: f a -> Logarithm f -> a
 indexLogarithm = \fa (Logarithm fa2a) -> fa2a fa
 {-# inline indexLogarithm #-}
@@ -290,8 +323,8 @@ instance FFunctor (Tab a) where
 -- [2,3]
 --
 -- @
--- 'distribute' = 'collect' 'id'
--- 'distribute' . 'distribute' = 'id'
+-- 'distribute' ≡ 'collect' 'id'
+-- 'distribute' . 'distribute' ≡ 'id'
 -- @
 distribute
   :: (Functor f, Distributive g)
@@ -301,9 +334,9 @@ distribute = \f -> distrib (FCompose f) \(FCompose f') -> runIdentity <$> f'
 
 -- |
 -- @
--- 'collect' f = 'distribute' . 'fmap' f
--- 'fmap' f = 'runIdentity' . 'collect' ('Identity' . f)
--- 'fmap' 'distribute' . 'collect' f = 'getCompose' . 'collect' ('Compose' . f)
+-- 'collect' f ≡ 'distribute' . 'fmap' f
+-- 'fmap' f ≡ 'runIdentity' . 'collect' ('Identity' . f)
+-- 'fmap' 'distribute' . 'collect' f ≡ 'getCompose' . 'collect' ('Compose' . f)
 -- @
 collect
   :: (Functor f, Distributive g)
@@ -315,7 +348,7 @@ collect = \ f fa -> distrib (FCompose f) \(FCompose f') -> coerce f' <$> fa
 -- | The dual of 'Data.Traversable.traverse'
 --
 -- @
--- 'cotraverse' f = 'fmap' f . 'distribute'
+-- 'cotraverse' f ≡ 'fmap' f . 'distribute'
 -- @
 cotraverse
   :: (Functor f, Distributive g)
@@ -368,7 +401,7 @@ instance Distributive f => Distributive (Rec1 f) where
 
 instance Distributive Par1 where
   type Log Par1 = ()
-  scatter = \k f -> coerce $ k .  ffmap ((Identity . unPar1) #. f)
+  scatter = \k f -> coerce $ k . ffmap ((Identity . unPar1) #. f)
   index = \x _ -> unPar1 x
   tabulate = \f -> Par1 $ f ()
   {-# inline scatter #-}
@@ -377,7 +410,12 @@ instance Distributive Par1 where
 
 instance (Distributive f, Distributive g) => Distributive (f :.: g) where
   type Log (f :.: g) = (Log f, Log g)
-  scatter = \ k phi wg -> Comp1 $ scatter (scatter k coerce .# runAppCompose) id (AppCompose (ffmap phi wg))
+  scatter = \ k phi wg ->
+    Comp1 $
+    scatter
+      (scatter k coerce .# runAppCompose)
+      id
+      (AppCompose (ffmap phi wg))
   index = \ (Comp1 f) (x, y) -> index (index f x) y
   tabulate = \f -> Comp1 $ tabulate \i -> tabulate \j -> f (i, j)
   {-# inline scatter #-}
@@ -410,57 +448,16 @@ instance Distributive ((->) x) where
   {-# inline tabulate #-}
   {-# inline index #-}
 
-#if MIN_VERSION_base(4,12,0)
-
 instance Distributive Down
 instance Distributive Monoid.Product
 instance Distributive Monoid.Sum
-
-#else
-
--- accessor isn't included in the newtype until base 4.14
-getDown :: Down a -> a
-getDown (Down x) = x
-
-instance Distributive Down where
-  type Log Down = ()
-  scatter = \k f -> coerce $ k . ffmap ((Identity . getDown) #. f)
-  index = \x _ -> getDown x
-  tabulate = \f -> Down $ f ()
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
-
-instance Distributive Monoid.Product where
-  type Log Monoid.Product = ()
-  scatter = \k f -> coerce $ k .  ffmap ((Identity . Monoid.getProduct) #. f)
-  index = \x _ -> Monoid.getProduct x
-  tabulate = \f -> Monoid.Product $ f ()
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
-
-instance Distributive Monoid.Sum where
-  type Log Monoid.Sum = ()
-  scatter = \ k f -> coerce $ k .  ffmap ((Identity . Monoid.getSum) #. f)
-  index = \ x _ -> Monoid.getSum x
-  tabulate = \f -> Monoid.Sum $ f ()
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
-
-#endif
 
 deriving newtype instance Distributive f => Distributive (Backwards f)
 deriving newtype instance Distributive f => Distributive (Reverse f)
 deriving newtype instance Distributive f => Distributive (Monoid.Alt f)
 instance Distributive Monoid.Dual
 
-#if MIN_VERSION_base(4,12,0)
-
 deriving newtype instance Distributive f => Distributive (Monoid.Ap f)
-
-#endif
 
 instance Distributive Semigroup.First
 instance Distributive Semigroup.Last
@@ -495,23 +492,8 @@ instance Distributive Complex where
 
 deriving newtype instance Distributive f => Distributive (IdentityT f)
 
-#if __GLASGOW_HASKELL__ >= 806
-
 deriving via ((((->) e) :.: f) :: Type -> Type)
   instance Distributive f => Distributive (ReaderT e f)
-
-#else
-
-instance Distributive f => Distributive (ReaderT e f) where
-  type Log (ReaderT e f) = (e, Log f)
-  scatter = \ k f -> coerce $ scatter k ((Comp1 . runReaderT) #. f)
-  tabulate = (ReaderT . unComp1) #. tabulate
-  index = index .# (Comp1 . runReaderT)
-  {-# inline scatter #-}
-  {-# inline tabulate #-}
-  {-# inline index #-}
-
-#endif
 
 -- * DerivingVia
 
@@ -708,10 +690,6 @@ instance (Distributive f, Semigroup a) => Semigroup (Dist f a) where
 instance (Distributive f, Monoid a) => Monoid (Dist f a) where
   mempty = pure mempty
   {-# noinline[0] mempty #-}
-#if !(MIN_VERSION_base(4,11,0))
-  mappend = liftD2 mappend
-  {-# inline mappend #-}
-#endif
 
 instance (Distributive f, Foldable f, Eq a) => Eq (Dist f a) where
   (==) = eqDist
