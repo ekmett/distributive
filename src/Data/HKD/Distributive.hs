@@ -98,7 +98,9 @@ import Data.Distributive
 import Data.Distributive.Internal
 import Data.Distributive.Internal.Coerce
 import Data.Foldable.WithIndex
+-- import Data.Functor.Classes
 import Data.Functor.Compose
+-- import Data.Functor.Constant
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
@@ -891,3 +893,69 @@ cfdistrib
   -> f r
 cfdistrib w k = fzipWithW (\Dict1 -> k) (fall @i @p) w
 
+{-
+type family EqC :: k -> Constraint where
+  EqC = Eq
+  EqC = FEq
+
+class DefaultFEq (w :: k -> Type) where
+  feqDefault :: EqC i => w i -> w i -> Bool
+
+instance (Distributive w, Foldable w) => DefaultFEq (w :: Type -> Type) where
+  feqDefault = \x -> and . liftD2 (==) x
+
+instance (FDistributive w, FFoldable w, FAll EqC w) => DefaultFEq (w :: (k -> Type) -> Type) where
+  feqDefault = \x y ->
+    Monoid.getAll $
+    ffoldMap getConst $
+    fliftD3
+      (\(Dict1 :: Dict1 EqC x) (i :: f x) (j :: f x) -> Const $ Monoid.All $ feq i j)
+      (fall @_ @EqC)
+      x
+      y
+
+class (forall i. EqC i => Eq (w i)) => FEq w
+instance (forall i. EqC i => Eq (w i)) => FEq w
+
+feq :: (FEq w, EqC i) => w i -> w i -> Bool
+feq = (==)
+
+-- type FEq w = forall i. EqC i => Eq (w i) :: Constraint
+
+{-
+class FEq (w :: k -> Type) where
+  feq :: EqC i => w i -> w i -> Bool
+  default feq :: (DefaultFEq w, EqC i) => w i -> w i -> Bool
+  feq = feqDefault
+  {-# inline feq #-}
+-}
+
+instance Eq (F0 x)
+instance (EqC a, EqC b, DefaultFEq f) => Eq (F2 a b f) where
+  (==) = feqDefault
+{-
+--instance FEq V1 where feq = (==)
+--instance FEq U1 where feq _ _ = True
+--instance FEq F0 where feq _ _ = True
+instance FEq Proxy where feq _ _ = True
+
+instance Eq a => FEq (Const a) where feq = (==)
+instance Eq a => FEq (Constant a) where feq = (==)
+instance EqC a => FEq (F1 a)
+instance (EqC a, EqC b) => FEq (F2 a b)
+instance (EqC a, EqC b, EqC c) => FEq (F3 a b c)
+instance (EqC a, EqC b, EqC c, EqC d) => FEq (F4 a b c d)
+instance (EqC a, EqC b, EqC c, EqC d, EqC e) => FEq (F5 a b c d e)
+
+instance (FEq f, FEq g) => FEq (f :*: g) where
+  feq (a :*: b) (a' :*: b') = feq a a' && feq b b'
+
+instance (FEq f, FEq g) => FEq (f :+: g) where
+  feq (L1 a) (L1 a') = feq a a'
+  feq (R1 b) (R1 b') = feq b b'
+  feq _ _ = False
+
+instance (Eq1 f, FEq g) => FEq (f :.: g) where
+  feq (Comp1 x) (Comp1 y) = liftEq feq x y
+-}
+-}

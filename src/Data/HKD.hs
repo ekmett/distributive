@@ -17,6 +17,7 @@
 {-# language RankNTypes #-}
 {-# language ScopedTypeVariables #-}
 {-# language Trustworthy #-}
+{-# language TypeFamilies #-}
 {-# language TypeOperators #-}
 {-# language LambdaCase #-}
 {-# language EmptyCase #-}
@@ -842,3 +843,4 @@ newtype FOp b f = FOp { getFOp :: forall x. f x -> b }
 instance FContravariant (FOp b) where
   fcontramap f (FOp g) = FOp (g . f)
   {-# inline fcontramap #-}
+
