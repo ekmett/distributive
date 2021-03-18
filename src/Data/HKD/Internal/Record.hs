@@ -94,16 +94,16 @@ type family AllF (p :: i -> Constraint) (as :: [i]) :: Constraint where
   AllF _ '[] = ()
   AllF p (a ': as) = (p a, AllF p as)
 
-class AllF p as => All (p :: i -> Constraint) (as :: [i]) where
-  para :: r '[] -> (forall b bs. (p b, All p bs) => Proxy# b -> r bs -> r (b ': bs)) -> r as
+-- class AllF p as => All (p :: i -> Constraint) (as :: [i]) where
+--   para :: r '[] -> (forall b bs. (p b, All p bs) => Proxy# b -> r bs -> r (b ': bs)) -> r as
 
-instance All p '[] where
-  para nil _ = nil
-  {-# inline para #-}
+-- instance All p '[] where
+--   para nil _ = nil
+--   {-# inline para #-}
 
-instance (p a, All p as) => All (p :: i -> Constraint) (a ': as) where
-  para nil kons = kons (proxy# @a) (para @i @p nil kons)
-  {-# inline para #-}
+-- instance (p a, All p as) => All (p :: i -> Constraint) (a ': as) where
+--   para nil kons = kons (proxy# @a) (para @i @p nil kons)
+--   {-# inline para #-}
 
 withLen :: forall as f r. Record as f -> (KnownLength as => r) -> r
 withLen v r = case someNatVal (fromIntegral $ V.length (safeRecord v)) of
@@ -113,6 +113,7 @@ withLen v r = case someNatVal (fromIntegral $ V.length (safeRecord v)) of
 
 data IRec (f :: i -> Type) (as :: [i]) = IRec {-# unpack #-} !Int [Any]
 
+{-
 instance (KnownLength as, All p as) => FAll (p :: i -> Constraint) (Record as) where
   fall = case len @as of
     n ->
@@ -141,6 +142,7 @@ instance (Ord1 f, All Ord as, All Eq as) => Ord (Record (as :: [Type]) f) where
       (\Dict1 x y -> Const $ liftCompare compare x y)
       (fall @Type @Ord) xs ys
   {-# inline compare #-}
+-}
 
 data Record' :: [i] -> (i -> Type) -> Type where
   Nil' :: Record' '[] f

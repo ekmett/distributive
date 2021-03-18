@@ -9,7 +9,7 @@ module Data.HKD.Record
 , len
 , Record(Nil, Cons)
 , withLen
-, All
+-- , All
 ) where
 
 import Data.HKD.Internal.Index
