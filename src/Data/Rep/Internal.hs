@@ -25,8 +25,7 @@ import Data.Coerce
 import Data.Complex
 import Data.Data
 import Data.Fin.Internal
-import Data.Rep.Coerce
-import Data.Rep.Orphans ()
+import Data.Function.Coerce
 import Data.Foldable (fold)
 import Data.Foldable.WithIndex
 import Data.Function

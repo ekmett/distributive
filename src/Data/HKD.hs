@@ -91,7 +91,7 @@ import Data.Coerce (coerce)
 import Data.Functor.Compose (Compose (..))
 import Data.Functor.Contravariant
 import Data.Functor.Contravariant.Divisible
-import Data.Rep.Coerce
+import Data.Function.Coerce
 import Data.HKD.Classes
 import Data.HKD.Contravariant
 import Data.HKD.Index.Internal

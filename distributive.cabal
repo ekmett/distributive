@@ -56,10 +56,9 @@ library
 
   hs-source-dirs:  src
   other-modules:
-    Data.Rep.Orphans
+    Data.HKD.Orphans
   exposed-modules:
     Data.Rep
-    Data.Rep.Coerce
     Data.Rep.Coyoneda
     Data.Rep.Endo
     Data.Rep.Internal
@@ -77,6 +76,7 @@ library
     Data.HKD.Rep
     Data.HKD.Rep.Endo
     Data.HKD.Variant
+    Data.Function.Coerce
     Data.Machine.Mealy
     Data.Machine.Moore
     -- Data.Machine.Rep.Moore

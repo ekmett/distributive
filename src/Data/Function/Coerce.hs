@@ -1,7 +1,11 @@
 {-# Language Trustworthy #-}
 {-# options_haddock hide #-}
 
-module Data.Rep.Coerce where
+module Data.Function.Coerce 
+( (#.)
+, (.#)
+, pattern Coerce
+) where
 
 import Data.Coerce
 

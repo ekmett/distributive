@@ -40,8 +40,7 @@ import Data.GADT.Compare
 import Data.HKD.Classes
 import Data.Kind
 import Data.Proxy
-import Data.Rep.Coerce
-import Data.Rep.Orphans ()
+import Data.Function.Coerce
 import Data.Type.Equality
 import GHC.Generics
 import qualified Data.Monoid as Monoid

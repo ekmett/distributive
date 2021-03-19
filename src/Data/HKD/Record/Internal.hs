@@ -11,16 +11,15 @@
 module Data.HKD.Record.Internal where
 
 import Control.Applicative
-import Data.Rep.Coerce
-import Data.Vec.Internal
+import Data.Function.Coerce
 import Data.HKD
 import Data.HKD.Index.Internal
 import Data.HKD.Rep
 import Data.Kind
--- import qualified Data.Monoid as Monoid
 import Data.Proxy
 import Data.Traversable.WithIndex
 import Data.Type.Equality
+import Data.Vec.Internal
 import Data.Vector as V
 import GHC.Exts
 import GHC.TypeNats

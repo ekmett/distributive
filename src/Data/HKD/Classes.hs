@@ -74,6 +74,7 @@ import Control.Applicative.Backwards
 import Control.Monad(join)
 import Data.Coerce (coerce)
 import Data.Foldable.WithIndex
+import Data.Function.Coerce
 import Data.Functor.Constant
 import Data.Functor.Compose (Compose (..))
 import Data.Functor.Identity (Identity (..))
@@ -81,10 +82,10 @@ import Data.Functor.Product (Product (..))
 import Data.Functor.Reverse
 import Data.Functor.Sum (Sum (..))
 import Data.Functor.WithIndex
+import Data.HKD.Orphans ()
 import Data.Kind (Type, Constraint)
 import qualified Data.Monoid as Monoid
 import Data.Proxy (Proxy (..))
-import Data.Rep.Coerce
 import qualified Data.Some.GADT as G
 import Data.Some.Newtype (Some (..), mapSome, foldSome, withSome, traverseSome)
 import qualified Data.Some.Church as C

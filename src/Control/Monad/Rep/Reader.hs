@@ -43,10 +43,10 @@ import Control.Monad.State.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Writer.Class as Writer
 import Data.Coerce
+import Data.Function.Coerce
 import Data.Functor.Contravariant
 import Data.Functor.Identity
 import Data.Rep
-import Data.Rep.Coerce
 import Data.HKD
 import GHC.Generics
 

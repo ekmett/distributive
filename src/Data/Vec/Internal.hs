@@ -16,13 +16,13 @@ import Control.Monad.Fix
 import Control.Monad.Zip
 import Data.Fin.Internal
 import Data.Foldable.WithIndex
+import Data.Function.Coerce
 import Data.Functor.Classes
 import Data.Functor.Identity
 import Data.Functor.WithIndex
 import Data.HKD
 import Data.Proxy
 import Data.Rep
-import Data.Rep.Coerce
 import Data.Traversable.WithIndex
 import Data.Type.Equality
 import Data.Vector as V
