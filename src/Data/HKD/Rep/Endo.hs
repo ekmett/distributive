@@ -33,6 +33,6 @@ instance FRepresentable f => Semigroup (FEndo f) where
   {-# inline (<>) #-}
 
 instance FRepresentable f => Monoid (FEndo f) where
-  mempty = FEndoDist faskFDist
+  mempty = FEndoDist faskRep
   {-# inline mempty #-}
 

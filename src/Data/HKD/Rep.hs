@@ -9,26 +9,25 @@ module Data.HKD.Rep
 , fcollect
 , fcotraverse
 , pattern FTabulate
-, fliftD2
-, fliftD3
-, fliftD4
-, fliftD5
 -- * DerivingVia
 , FDist(..)
 -- * FFunctor
-, ffmapFDist
+, ffmapRep
 -- * FApply
-, fliftA2FDist
+, fliftR2
+, fliftR3
+, fliftR4
+, fliftR5
 -- * FApplicative
-, fpureFDist
+, fpureRep
 -- * FMonad
-, fbindFDist 
+, fbindRep
 -- * Others
-, faskFDist
-, ftraceFDist
-, ifmapFDist
-, iffoldMapFDist
-, iftraverseFDist
+, faskRep
+, ftraceRep
+, ifmapRep
+, iffoldMapRep
+, iftraverseRep
 -- * Default logarithms
 , FLogarithm(..)
 , FTab(..)

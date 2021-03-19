@@ -145,13 +145,13 @@ instance (Functor g, Functor m) => Functor (StateT g m) where
   {-# inline fmap #-}
 
 instance (Representable g, Functor m, Monad m) => Applicative (StateT g m) where
-  pure = StateDistT #. leftAdjunctDist pure
+  pure = StateDistT #. leftAdjunctRep pure
   {-# inline pure #-}
   (<*>) = \mf ma -> mf >>= \f -> fmap f ma
   {-# inline (<*>) #-}
 
 instance (Representable g, Monad m) => Monad (StateT g m) where
-  (>>=) = \(StateDistT m) f -> StateDistT $ fmap (>>= rightAdjunctDist (runStateT . f)) m
+  (>>=) = \(StateDistT m) f -> StateDistT $ fmap (>>= rightAdjunctRep (runStateT . f)) m
   {-# inline (>>=) #-}
 #if !(MIN_VERSION_base(4,13,0))
   fail = lift . Control.Monad.fail
@@ -173,7 +173,7 @@ liftStateT = \m -> StateT $ \s -> (,s) <$> m
 instance (Representable g, Monad m, Log g ~ s) => MonadState s (StateT g m) where
   get = StateT $ \s -> pure (s, s)
   {-# inline get #-}
-  put = \s -> StateDistT $ pureDist $ pure ((),s)
+  put = \s -> StateDistT $ pureRep $ pure ((),s)
   {-# inline put #-}
   state = \f -> StateT $ pure . f
   {-# inline state #-}
@@ -217,7 +217,7 @@ liftCallCC
   -> StateT g m a
 liftCallCC = \callCC' f -> StateT $ \s ->
   callCC' $ \c ->
-  runStateT (f (\a -> StateDistT $ pureDist $ c (a, s))) s
+  runStateT (f (\a -> StateDistT $ pureRep $ c (a, s))) s
 {-# inline liftCallCC #-}
 
 -- | In-situ lifting of a @callCC@ operation to the new monad.
@@ -234,7 +234,7 @@ liftCallCC' = \callCC' f -> StateT $ \s ->
 instance (Representable f, MonadPlus m) => Alternative (StateT f m) where
   empty = liftStateT mzero
   {-# inline empty #-}
-  (<|>) = \(StateDistT fm) (StateDistT fn) -> StateDistT (liftD2 mplus fm fn)
+  (<|>) = \(StateDistT fm) (StateDistT fn) -> StateDistT (liftR2 mplus fm fn)
   {-# inline (<|>) #-}
 
 instance (Representable f, MonadPlus m) => MonadPlus (StateT f m)

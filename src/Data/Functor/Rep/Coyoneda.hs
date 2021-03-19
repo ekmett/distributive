@@ -149,12 +149,12 @@ instance Indexable f => Indexable (Coyoneda f) where
 
 instance Representable f => Representable (Coyoneda f) where
   scatter = \wid2r h2cyf wh -> liftCoyoneda (scatter wid2r (lowerCoyoneda . h2cyf) wh)
-  tabulate = \logf2a -> CoyonedaDist (tabulate @f logf2a) askDist
+  tabulate = \logf2a -> CoyonedaDist (tabulate @f logf2a) askRep
   {-# inline scatter #-}
   {-# inline tabulate #-}
 
 liftCoyonedaDist :: forall g f. Representable g => f (Log g) -> Coyoneda f (Log g)
-liftCoyonedaDist = CoyonedaDist (askDist @g)
+liftCoyonedaDist = CoyonedaDist (askRep @g)
 {-# inline liftCoyonedaDist #-}
 
 liftCoyoneda :: f a -> Coyoneda f a

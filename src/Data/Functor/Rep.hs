@@ -81,45 +81,45 @@ module Data.Functor.Rep
 , Dist(..)
 -- ** for other classes
 -- *** Functor
-, fmapDist
+, fmapRep
 -- *** Applicative
-, pureDist
-, apDist
-, liftD2
-, liftD3
-, liftD4
-, liftD5
+, pureRep
+, apRep
+, liftR2
+, liftR3
+, liftR4
+, liftR5
 -- *** Monad
-, bindDist
+, bindRep
 -- *** MonadFix
-, mfixDist
+, mfixRep
 -- *** MonadZip
-, mzipWithDist
+, mzipWithRep
 -- *** MonadReader
-, askDist
-, localDist
+, askRep
+, localRep
 -- *** Comonad
-, extractDist, extractDistBy
-, extendDist, extendDistBy
-, duplicateDist, duplicateDistBy
+, extractRep, extractRepBy
+, extendRep, extendRepBy
+, duplicateRep, duplicateRepBy
 -- *** ComonadTrace
-, traceDist
+, traceRep
 -- *** FunctorWithIndex
-, imapDist
+, imapRep
 -- *** FoldableWithIndex
-, ifoldMapDist
+, ifoldMapRep
 -- *** TraversableWithIndex
-, itraverseDist
+, itraverseRep
 -- * Eq/Eq1
-, eqDist
-, neDist
-, liftEqDist
+, eqRep
+, neRep
+, liftEqRep
 -- * Ord/Ord1
-, compareDist
-, liftCompareDist
+, compareRep
+, liftCompareRep
 -- *** As right adjoints
-, leftAdjunctDist
-, rightAdjunctDist
+, leftAdjunctRep
+, rightAdjunctRep
 ) where
 
 import Data.Functor.Rep.Internal

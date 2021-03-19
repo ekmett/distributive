@@ -31,7 +31,7 @@ instance Representable f => Semigroup (Endo f) where
   {-# inline (<>) #-}
 
 instance Representable f => Monoid (Endo f) where
-  mempty = EndoDist askDist
+  mempty = EndoDist askRep
   {-# inline mempty #-}
 
 --instance (Representable f, Traversable f) => Eq (Endo f) where
