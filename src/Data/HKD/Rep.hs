@@ -4,8 +4,8 @@ module Data.HKD.Rep
 ( type (%)
 , FIndexable(..)
 , FRepresentable(..)
-, fdistribute
 , fdistrib
+, fdistribute
 , fcollect
 , fcotraverse
 , pattern FTabulate

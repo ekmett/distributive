@@ -443,9 +443,9 @@ instance (Representable f, Representable g) => Representable (f :.: g) where
   scatter = \ k phi wg ->
     Comp1 $
     scatter
-      (scatter k coerce .# runAppCompose)
+      (scatter k coerce .# runAppDot)
       id
-      (AppCompose (ffmap phi wg))
+      (AppDot (ffmap phi wg))
   tabulate = \f -> Comp1 $ tabulate \i -> tabulate \j -> f (i, j)
   {-# inline scatter #-}
   {-# inline tabulate #-}
@@ -1033,6 +1033,23 @@ _logEq :: (Representable f, Eq (Log f)) => Log f -> Lens' (f a) a
 _logEq = \i a2ga fa -> a2ga (index fa i) <&> \a' -> imapDist (\j a -> if i == j then a' else a) fa
 {-# inline _logEq #-}
 
+type role AppCompose representational nominal nominal
+newtype AppCompose w g f = AppCompose { runAppCompose :: w (Compose f g) }
+
+instance FFunctor w => FFunctor (AppCompose w g) where
+  ffmap f = AppCompose #. ffmap (Compose #. f .# getCompose) .# runAppCompose
+  {-# inline ffmap #-}
+
+-- | By definition representable functors preserve limits.
+distributeLim :: Representable f => Lim (Compose f g) -> f (Lim g)
+distributeLim xs = distrib (AppCompose xs) \(AppCompose xs') -> ffmap coerce xs'
+{-# inline distributeLim #-} 
+
+-- | By definition representable functors preserve limits. forall is a limit.
+distributeForall :: Representable f => (forall a. f (g a)) -> f (Lim g)
+distributeForall xs = distrib (AppCompose (Lim (Compose xs))) \(AppCompose xs') -> ffmap coerce xs'
+{-# inline distributeForall #-} 
+
 type (%) f g i = f (g i)
 infixr 9 %
 
@@ -1254,7 +1271,7 @@ instance (Indexable f, FIndexable g) => FIndexable (f :.: g) where
 
 instance (Representable f, FRepresentable g) => FRepresentable (f :.: g) where
   fscatter = \k phi wg -> Comp1 $
-    scatter (fscatter k coerce .# runAppCompose) id $ AppCompose (ffmap phi wg)
+    scatter (fscatter k coerce .# runAppDot) id $ AppDot (ffmap phi wg)
   ftabulate = \f -> Comp1 $ tabulate \i -> ftabulate \j -> f (K1 i :*: j)
   {-# inline fscatter #-}
   {-# inline ftabulate #-}
@@ -1313,14 +1330,14 @@ instance FRepresentable (NT f) where
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
 
-instance FIndexable Limit where
-  type FLog Limit = U1
-  findex f = const $ runLimit f
+instance FIndexable Lim where
+  type FLog Lim = U1
+  findex f = const $ runLim f
   {-# inline findex #-}
 
-instance FRepresentable Limit where
-  fscatter = \k f w -> Limit $ k $ ffmap (\x -> F1 $ runLimit $ f x) w
-  ftabulate = \f -> Limit $ f U1
+instance FRepresentable Lim where
+  fscatter = \k f w -> Lim $ k $ ffmap (\x -> F1 $ runLim $ f x) w
+  ftabulate = \f -> Lim $ f U1
   {-# inline ftabulate #-}
   {-# inline fscatter #-}
 
@@ -1441,7 +1458,7 @@ instance FRepresentable f => FApplicative (FDist f) where
 
 -- | A default definition of 'fpure' from 'FApplicative' in terms of 'FRepresentable'
 fpureFDist :: FRepresentable f => (forall x. a x) -> f a
-fpureFDist = \ax -> fscatter (\x -> runLimit (getConst x)) id $ Const $ Limit ax
+fpureFDist = \ax -> fscatter (\x -> runLim (getConst x)) id $ Const $ Lim ax
 -- fpureDist a = fdistrib Proxy \_ -> a
 {-# inline fpureFDist #-}
 
@@ -1841,7 +1858,7 @@ instance (FAll p f, FAll p g) => FAll p (Product f g)
 
 -- this is arguably any existential constraint
 instance (forall a. p a) => FAll p Some where fall = Some Dict1
-instance (forall a. p a) => FAll p Limit where fall = Limit Dict1
+instance (forall a. p a) => FAll p Lim where fall = Lim Dict1
 instance (forall a. q a => p a) => FAll p (FConstrained q) where
   fall = FConstrained Dict1
 
@@ -2020,11 +2037,12 @@ type DefaultKnownIndices f = GKnownIndices (Rep1 f)
 
 type SearchDepth = 3
 
-type role AppCompose representational nominal nominal
-newtype AppCompose w g f = AppCompose { runAppCompose :: w (f :.: g) }
-instance FFunctor w => FFunctor (AppCompose w g) where
-  ffmap f = AppCompose #. ffmap (Comp1 #. f .# unComp1) .# runAppCompose
+type role AppDot representational nominal nominal
+newtype AppDot w g f = AppDot { runAppDot :: w (f :.: g) }
+instance FFunctor w => FFunctor (AppDot w g) where
+  ffmap f = AppDot #. ffmap (Comp1 #. f .# unComp1) .# runAppDot
   {-# inline ffmap #-}
+
 
 data Path = End | L Path | R Path deriving (Eq, Ord, Show, Read)
 

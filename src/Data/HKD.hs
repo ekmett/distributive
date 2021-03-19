@@ -76,7 +76,7 @@ module Data.HKD
 , FConstrained(..)
 , FCompose(..)
 , NT(..)
-, Limit(..)
+, Lim(..), traverseLim
 , Dict1(..)
 , Dicts(Dicts, runDicts, ..)
 ) where
@@ -100,7 +100,7 @@ import Data.Some.Newtype (Some (..), mapSome, foldSome, withSome)
 import qualified Data.Some.Church as C
 import Data.Functor.Rep.Internal.Coerce
 import GHC.Generics
-import Text.Read
+import GHC.Ix
 import Unsafe.Coerce
 
 -------------------------------------------------------------------------------
@@ -610,8 +610,12 @@ instance (EqC x, OrdC' x) => OrdC x where
 
 type role F0 phantom
 data F0 f = F0
-  deriving stock (Generic, Generic1, Functor, Foldable, Traversable, Eq, Ord, Show, Read)
-  deriving anyclass (FFunctor, FFoldable, FTraversable, FApplicative, FApply)
+  deriving stock
+  ( Generic, Generic1, Functor, Foldable, Traversable
+  , Eq, Ord, Show, Read, Ix, Enum, Bounded)
+  deriving anyclass
+  ( FFunctor, FFoldable, FTraversable
+  , FApplicative, FApply )
 
 -- * F1
 
@@ -619,6 +623,10 @@ type role F1 nominal representational
 newtype F1 a f = F1 { runF1 :: f a }
   deriving stock (Eq, Ord, Show, Read)
   deriving anyclass FFunctor
+
+deriving newtype instance Ix (f a) => Ix (F1 a f)
+deriving newtype instance Enum (f a) => Enum (F1 a f)
+deriving newtype instance Bounded (f a) => Bounded (F1 a f)
 
 instance FFoldable (F1 a) where
   ffoldMap f = f .# runF1
@@ -652,9 +660,9 @@ pattern F2 a b = F2' (F1 a) (F1 b)
 {-# complete F2 :: F2 #-}
 
 instance FMonad (F2 a b) where
-  fbind = \k (F2 a b) f -> 
-    F2 
-      (k $ case f a of F2 x _ -> x) 
+  fbind = \k (F2 a b) f ->
+    F2
+      (k $ case f a of F2 x _ -> x)
       (k $ case f b of F2 _ y -> y)
   {-# inline fbind #-}
 
@@ -668,9 +676,9 @@ pattern F3 a b c = F3' (F1 a) (F1 b) (F1 c)
 {-# complete F3 :: F3 #-}
 
 instance FMonad (F3 a b c) where
-  fbind = \k (F3 a b c) f -> 
-    F3 
-      (k $ case f a of F3 x _ _ -> x) 
+  fbind = \k (F3 a b c) f ->
+    F3
+      (k $ case f a of F3 x _ _ -> x)
       (k $ case f b of F3 _ y _ -> y)
       (k $ case f c of F3 _ _ z -> z)
   {-# inline fbind #-}
@@ -685,9 +693,9 @@ pattern F4 a b c d = F4' (F1 a) (F1 b) (F1 c) (F1 d)
 {-# complete F4 :: F4 #-}
 
 instance FMonad (F4 a b c d) where
-  fbind = \k (F4 a b c d) f -> 
-    F4 
-      (k $ case f a of F4 x _ _ _ -> x) 
+  fbind = \k (F4 a b c d) f ->
+    F4
+      (k $ case f a of F4 x _ _ _ -> x)
       (k $ case f b of F4 _ x _ _ -> x)
       (k $ case f c of F4 _ _ x _ -> x)
       (k $ case f d of F4 _ _ _ x -> x)
@@ -703,9 +711,9 @@ pattern F5 a b c d e = F5' (F1 a) (F1 b) (F1 c) (F1 d) (F1 e)
 {-# complete F5 :: F5 #-}
 
 instance FMonad (F5 a b c d e) where
-  fbind = \k (F5 a b c d e) f -> 
-    F5 
-      (k $ case f a of F5 x _ _ _ _ -> x) 
+  fbind = \k (F5 a b c d e) f ->
+    F5
+      (k $ case f a of F5 x _ _ _ _ -> x)
       (k $ case f b of F5 _ x _ _ _ -> x)
       (k $ case f c of F5 _ _ x _ _ -> x)
       (k $ case f d of F5 _ _ _ x _ -> x)
@@ -782,37 +790,83 @@ instance FTraversable C.Some where
   {-# inline ftraverse #-}
 
 -------------------------------------------------------------------------------
--- Limit
+-- Lim
 -------------------------------------------------------------------------------
 
-newtype Limit f = Limit
-  { runLimit :: forall a. f a
+newtype Lim f = Lim
+  { runLim :: forall a. f a
   }
 
-instance FFunctor Limit where
-  ffmap f (Limit g) = Limit (f g)
+unsafeLim :: f a -> Lim f
+unsafeLim = unsafeCoerce
+{-# inline unsafeLim #-}
+
+traverseLim :: forall f g. Traversable f => Lim (Compose f g) -> f (Lim g)
+traverseLim (Lim (Compose xs)) = fmap unsafeLim xs
+{-# inline traverseLim #-}
+
+deriving stock instance (forall a. Eq (f a)) => Eq (Lim f)
+deriving stock instance (forall a. Ord (f a)) => Ord (Lim f)
+deriving stock instance (forall a. Show (f a)) => Show (Lim f)
+deriving stock instance (forall a. Bounded (f a)) => Bounded (Lim f)
+
+instance (forall a. Enum (f a)) => Enum (Lim f) where
+  toEnum x = Lim (toEnum x)
+  {-# inline toEnum #-}
+  fromEnum (Lim x) = fromEnum x
+  {-# inline fromEnum #-}
+  succ x = Lim (succ $ runLim x)
+  {-# inline succ #-}
+  pred x = Lim (pred $ runLim x)
+  {-# inline pred #-}
+  enumFrom (Lim x) = unsafeLim <$> enumFrom x
+  {-# inline enumFrom #-}
+  enumFromTo (Lim x) (Lim y) = unsafeLim <$> enumFromTo x y
+  {-# inline enumFromTo #-}
+  enumFromThen (Lim x) (Lim y) = unsafeLim <$> enumFromThen x y
+  {-# inline enumFromThen #-}
+  enumFromThenTo (Lim x) (Lim y) (Lim z) = unsafeLim <$> enumFromThenTo x y z
+  {-# inline enumFromThenTo #-}
+
+instance (forall a. Ix (f a)) => Ix (Lim f) where
+  -- this can be implemented in quadratic time without unsafeCoerce
+  range (Lim a, Lim b) = unsafeLim <$> range (a, b)
+  {-# inline range #-}
+  index (Lim a, Lim b) (Lim c) = index (a, b) c
+  {-# inline index #-}
+  unsafeIndex (Lim a, Lim b) (Lim c) = unsafeIndex (a, b) c
+  {-# inline unsafeIndex #-}
+  inRange (Lim a, Lim b) (Lim c) = inRange (a, b) c
+  {-# inline inRange #-}
+  rangeSize (Lim a, Lim b) = rangeSize (a, b)
+  {-# inline rangeSize #-}
+  unsafeRangeSize (Lim a, Lim b) = unsafeRangeSize (a, b)
+  {-# inline unsafeRangeSize #-}
+
+instance FFunctor Lim where
+  ffmap f (Lim g) = Lim (f g)
   {-# inline ffmap #-}
 
-instance FFoldable Limit where
-  ffoldMap f (Limit g) = f g
+instance FFoldable Lim where
+  ffoldMap f (Lim g) = f g
   flengthAcc len _ = len + 1
   {-# inline ffoldMap #-}
   {-# inline flengthAcc #-}
 
-instance FTraversable Limit where
-  ftraverse = \ f (Limit m) -> unsafeCoerce <$> f m
+instance FTraversable Lim where
+  ftraverse = \ f (Lim m) -> unsafeLim <$> f m
   {-# inline ftraverse #-}
 
-instance FApply Limit where
-  fliftA2 f (Limit x) (Limit y) = Limit (f x y)
+instance FApply Lim where
+  fliftA2 f (Lim x) (Lim y) = Lim (f x y)
   {-# inline fliftA2 #-}
 
-instance FApplicative Limit where
-  fpure x = Limit x
+instance FApplicative Lim where
+  fpure x = Lim x
   {-# inline fpure #-}
 
-instance FMonad Limit where
-  fbind = \k (Limit a) f -> Limit $ k $ runLimit $ f a
+instance FMonad Lim where
+  fbind = \k (Lim a) f -> Lim $ k $ runLim $ f a
   {-# inline fbind #-}
 
 -- * Dicts
@@ -820,19 +874,24 @@ instance FMonad Limit where
 data Dict1 p a where
   Dict1 :: p a => Dict1 p a
 
-instance Eq (Dict1 p a) where
-  Dict1 == Dict1 = True
+deriving stock instance Eq (Dict1 p a)
+deriving stock instance Ord (Dict1 p a)
+deriving stock instance Show (Dict1 p a)
+deriving stock instance p a => Read (Dict1 p a)
 
-instance Ord (Dict1 p a) where
-  compare Dict1 Dict1 = EQ
+instance p a => Enum (Dict1 p a) where
+  succ = error "Dict1.succ"
+  pred = error "Dict1.pred"
+  toEnum 0 = Dict1
+  toEnum _ = error "Dict1.toEnum"
+  fromEnum Dict1 = 0
+  enumFrom Dict1 = [Dict1]
+  enumFromTo Dict1 Dict1 = [Dict1]
+  enumFromThen Dict1 Dict1 = repeat Dict1
+  enumFromThenTo Dict1 Dict1 Dict1 = repeat Dict1
 
-instance Show (Dict1 p a) where
-  showsPrec _ Dict1 = showString "Dict1"
-
-instance p a => Read (Dict1 p a) where
-  readPrec = parens $ do
-    Ident "Dict1" <- lexP
-    pure Dict1
+deriving stock instance p a => Bounded (Dict1 p a)
+deriving stock instance Ix (Dict1 p a)
 
 newtype Dicts p f = Dicts'
   { runDicts' :: F1 (Dict1 p) f
@@ -840,14 +899,14 @@ newtype Dicts p f = Dicts'
   deriving stock (Generic, Generic1)
   deriving anyclass (FFunctor, FFoldable, FTraversable, FApply, FApplicative)
 
-deriving newtype instance Eq (f (Dict1 p)) => Eq (Dicts p f)
-
-deriving newtype instance Ord (f (Dict1 p)) => Ord (Dicts p f)
-
 pattern Dicts :: f (Dict1 p) -> Dicts p f
 pattern Dicts { runDicts } = Dicts' (F1 runDicts)
 
 {-# complete Dicts #-}
+
+deriving newtype instance Eq (f (Dict1 p)) => Eq (Dicts p f)
+deriving newtype instance Ord (f (Dict1 p)) => Ord (Dicts p f)
+
 
 instance FMonad (Dicts p) where
   fbind = \k (Dicts a) f -> Dicts $ k $ runDicts (f a)

@@ -14,7 +14,7 @@
 --
 -- @
 -- data V3 a = V3 a a a
---   deriving stock 
+--   deriving stock
 --   ( Show, Read, Eq, Ord
 --   , Functor, Foldable, Traversable
 --   , Generic, Generic1, Data )
@@ -36,18 +36,20 @@
 module Data.Functor.Rep
 ( Indexable(..)
 , Representable(..)
-, distribute
-, distrib
 , dist
+, distrib
+, distribute
+, distributeLim
+, distributeForall
 , collect
 , cotraverse
 , pattern Tabulate
 -- * Default definitions
 -- ** via Generics
-, tabulateGeneric
 , indexGeneric
 , scatterGeneric
--- ** Simple Scattering
+, tabulateGeneric
+-- ** via index/tabulate
 , scatterDefault
 -- ** Canonical 'Logarithm's
 , Logarithm(..)
