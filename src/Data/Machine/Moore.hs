@@ -50,9 +50,9 @@ instance Representable (Moore a) where
 logMoore :: Monoid m => Moore m m
 logMoore = h mempty where
   h m = Moore m \a -> h (m <> a)
-{-# INLINE logMoore #-}
+{-# inline logMoore #-}
 
 -- | Construct a Moore machine from a state valuation and transition function
 unfoldMoore :: (s -> b) -> (s -> a -> s) -> s -> Moore a b
 unfoldMoore = \f g s -> Moore (f s) (unfoldMoore f g . g s)
-{-# INLINE unfoldMoore #-}
+{-# inline unfoldMoore #-}

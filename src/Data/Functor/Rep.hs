@@ -44,9 +44,9 @@ module Data.Functor.Rep
 , pattern Tabulate
 -- * Default definitions
 -- ** via Generics
-, tabulateRep
-, indexRep
-, scatterRep
+, tabulateGeneric
+, indexGeneric
+, scatterGeneric
 -- ** Simple Scattering
 , scatterDefault
 -- ** Canonical 'Logarithm's

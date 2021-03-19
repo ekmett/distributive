@@ -34,9 +34,9 @@ module Data.HKD.Rep
 , FTab(..)
 , findexFLogarithm
 , ftabulateFLogarithm
-, ftabulateRep
-, findexRep
-, fscatterRep
+, ftabulateGeneric
+, findexGeneric
+, fscatterGeneric
 , fscatterDefault
 , Indices
 

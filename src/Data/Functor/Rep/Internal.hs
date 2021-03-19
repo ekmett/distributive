@@ -98,7 +98,7 @@ class Indexable f where
   type KnownSize f :: Maybe Nat
   type KnownSize f = DefaultKnownSize f
 
-  -- | Defaults to 'indexLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'indexRep'
+  -- | Defaults to 'indexLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'indexGeneric'
   index :: f a -> Log f -> a
   default index :: DefaultIndex f => f a -> Log f -> a
   index = defaultIndex
@@ -106,7 +106,7 @@ class Indexable f where
 
 class (Indexable f, Functor f) => Representable f where
 
-  -- | Defaults to 'tabulateLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'tabulateRep'
+  -- | Defaults to 'tabulateLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'tabulateGeneric'
   tabulate :: (Log f -> a) -> f a
   default tabulate :: DefaultTabulate f => (Log f -> a) -> f a
   tabulate = defaultTabulate
@@ -125,7 +125,7 @@ class (Indexable f, Functor f) => Representable f where
   -- 'scatter' phi wg ≡ 'tabulate' \\x -> 'ffmap' (\\g -> 'Identity' '$' 'index' (phi g) x) wg
   -- @
   --
-  -- Defaults to 'scatterRep'
+  -- Defaults to 'scatterGeneric'
   --
   -- The obvious API for this function is the much simpler
   --
@@ -153,33 +153,33 @@ class (Indexable f, Functor f) => Representable f where
   default scatter
     :: (Generic1 f, Representable (Rep1 f), FFunctor w)
     => (w Identity -> r) -> (g ~> f) -> w g -> f r
-  scatter = scatterRep
+  scatter = scatterGeneric
   {-# inline scatter #-}
 
 -- | derive tabulate via 'Generic1' when @'Log' f@ is (a possible newtype of)
 -- @'Log' ('Rep1' f)@
-tabulateRep
+tabulateGeneric
   :: forall f a.
      (Representable (Rep1 f), Generic1 f, Coercible (Log f) (Log (Rep1 f)))
   => (Log f -> a) -> f a
-tabulateRep = coerce (to1 . tabulate :: (Log (Rep1 f) -> a) -> f a)
-{-# inline tabulateRep #-}
+tabulateGeneric = coerce (to1 . tabulate :: (Log (Rep1 f) -> a) -> f a)
+{-# inline tabulateGeneric #-}
 
 -- | derive 'index' via 'Generic1' when @'Log' f@ is (a possible newtype of)
 -- @'Log' ('Rep1' f)@
-indexRep
+indexGeneric
   :: forall f a.
      (Indexable (Rep1 f), Generic1 f, Coercible (Log f) (Log (Rep1 f)))
   => f a -> Log f -> a
-indexRep = coerce (index . from1 :: f a -> Log (Rep1 f) -> a)
-{-# inline indexRep #-}
+indexGeneric = coerce (index . from1 :: f a -> Log (Rep1 f) -> a)
+{-# inline indexGeneric #-}
 
 -- | derive 'scatter' via 'Generic1'
-scatterRep
+scatterGeneric
   :: (Representable (Rep1 f), Generic1 f, FFunctor w)
   => (w Identity -> r) -> (g ~> f) -> w g -> f r
-scatterRep = \k phi -> to1 . scatter k (from1 . phi)
-{-# inline scatterRep #-}
+scatterGeneric = \k phi -> to1 . scatter k (from1 . phi)
+{-# inline scatterGeneric #-}
 
 -- | This pattern synonym lets you work with any 'Representable' functor as if
 -- it were a function.
@@ -230,7 +230,7 @@ instance DefaultTabulateImplC 'UseLogarithm f => DefaultTabulate' 'UseLogarithm 
   {-# inline defaultTabulate' #-}
 
 instance DefaultTabulateImplC 'UseLogRep f => DefaultTabulate' 'UseLogRep f where
-  defaultTabulate' = tabulateRep
+  defaultTabulate' = tabulateGeneric
   {-# inline defaultTabulate' #-}
 
 instance DefaultTabulateImplC 'UseLogFin f => DefaultTabulate' 'UseLogFin f where
@@ -251,7 +251,7 @@ instance DefaultIndexImplC 'UseLogarithm f => DefaultIndex' 'UseLogarithm f wher
   {-# inline defaultIndex' #-}
 
 instance DefaultIndexImplC 'UseLogRep f => DefaultIndex' 'UseLogRep f where
-  defaultIndex' = indexRep
+  defaultIndex' = indexGeneric
   {-# inline defaultIndex' #-}
 
 instance DefaultIndexImplC 'UseLogFin f => DefaultIndex' 'UseLogFin f where
@@ -453,20 +453,20 @@ instance (Representable f, Representable g) => Representable (f :.: g) where
 -- TODO: Why Functor f?
 instance (Functor f, Indexable f, Indexable g) => Indexable (Compose f g) where
   type Log (Compose f g) = Log (Rep1 (Compose f g))
-  index = indexRep
+  index = indexGeneric
   {-# inline index #-}
 
 instance (Representable f, Representable g) => Representable (Compose f g) where
-  tabulate = tabulateRep
+  tabulate = tabulateGeneric
   {-# inline tabulate #-}
 
 instance (Indexable f, Indexable g) => Indexable (Product f g) where
   type Log (Product f g) = Log (Rep1 (Product f g))
-  index = indexRep
+  index = indexGeneric
   {-# inline index #-}
 
 instance (Representable f, Representable g) => Representable (Product f g) where
-  tabulate = tabulateRep
+  tabulate = tabulateGeneric
   {-# inline tabulate #-}
 
 instance Indexable Proxy
@@ -1072,7 +1072,7 @@ class (FIndexable f, FFunctor f) => FRepresentable (f :: (k -> Type) -> Type) wh
   default fscatter
     :: (Generic1 f, FRepresentable (Rep1 f), FFunctor w)
     => (w % F1 ~> r) -> (g ~> f) -> w g -> f r
-  fscatter = fscatterRep
+  fscatter = fscatterGeneric
   {-# inline fscatter #-}
 
   -- | A higher-kinded 'tabulate'
@@ -1102,28 +1102,28 @@ findexFLogarithm :: f a -> FLogarithm f ~> a
 findexFLogarithm = \fa (FLogarithm k) -> k fa
 {-# inline findexFLogarithm #-}
 
--- | A higher-kinded 'tabulateRep'
-ftabulateRep
+-- | A higher-kinded 'tabulateGeneric'
+ftabulateGeneric
   :: forall f a.
      (FRepresentable (Rep1 f), Generic1 f, Coercible (FLog f) (FLog (Rep1 f)))
   => (FLog f ~> a) -> f a
-ftabulateRep = \f -> to1 $ ftabulate (\x -> f (coerce x))
-{-# inline ftabulateRep #-}
+ftabulateGeneric = \f -> to1 $ ftabulate (\x -> f (coerce x))
+{-# inline ftabulateGeneric #-}
 
--- | A higher-kinded 'indexRep'
-findexRep
+-- | A higher-kinded 'indexGeneric'
+findexGeneric
   :: forall f a.
      (FIndexable (Rep1 f), Generic1 f, Coercible (FLog f) (FLog (Rep1 f)))
   => f a -> FLog f ~> a
-findexRep = \fa flog -> findex (from1 fa) (coerce flog)
-{-# inline findexRep #-}
+findexGeneric = \fa flog -> findex (from1 fa) (coerce flog)
+{-# inline findexGeneric #-}
 
--- | A higher-kinded 'scatterRep'
-fscatterRep
+-- | A higher-kinded 'scatterGeneric'
+fscatterGeneric
   :: (FRepresentable (Rep1 f), Generic1 f, FFunctor w)
   => (w % F1 ~> r) -> (g ~> f) -> w g -> f r
-fscatterRep = \k phi -> to1 . fscatter k (from1 . phi)
-{-# inline fscatterRep #-}
+fscatterGeneric = \k phi -> to1 . fscatter k (from1 . phi)
+{-# inline fscatterGeneric #-}
 
 fscatterDefault
   :: (FRepresentable f, FFunctor w)
@@ -1156,7 +1156,7 @@ instance DefaultFImplC 'True f => DefaultFTabulate' 'True f where
   {-# inline defaultFTabulate #-}
 
 instance DefaultFImplC 'False f => DefaultFTabulate' 'False f where
-  defaultFTabulate = ftabulateRep
+  defaultFTabulate = ftabulateGeneric
   {-# inline defaultFTabulate #-}
 
 class DefaultFImplC containsRec1 f => DefaultFIndex' (containsRec1 :: Bool) f where
@@ -1167,7 +1167,7 @@ instance DefaultFImplC 'True f => DefaultFIndex' 'True f where
   {-# inline defaultFIndex #-}
 
 instance DefaultFImplC 'False f => DefaultFIndex' 'False f where
-  defaultFIndex = findexRep
+  defaultFIndex = findexGeneric
   {-# inline defaultFIndex #-}
 
 type DefaultFLog f = DefaultFLog' (GFInvalid (Rep1 f)) f
@@ -1262,20 +1262,20 @@ instance (Representable f, FRepresentable g) => FRepresentable (f :.: g) where
 -- TODO: why Functor f?
 instance (Functor f, Indexable f, FIndexable g) => FIndexable (Compose f g) where
   type FLog (Compose f g) = FLog (Rep1 (Compose f g))
-  findex = findexRep
+  findex = findexGeneric
   {-# inline findex #-}
 
 instance (Representable f, FRepresentable g) => FRepresentable (Compose f g) where
-  ftabulate = ftabulateRep
+  ftabulate = ftabulateGeneric
   {-# inline ftabulate #-}
 
 instance (FIndexable f, FIndexable g) => FIndexable (Product f g) where
   type FLog (Product f g) = FLog (Rep1 (Product f g))
-  findex = findexRep
+  findex = findexGeneric
   {-# inline findex #-}
 
 instance (FRepresentable f, FRepresentable g) => FRepresentable (Product f g) where
-  ftabulate = ftabulateRep
+  ftabulate = ftabulateGeneric
   {-# inline ftabulate #-}
 
 instance FIndexable Proxy
@@ -1926,7 +1926,7 @@ instance (Eq1 f, FEq g) => FEq (f :.: g) where
 -- * Internals
 
 -- Does @(Rep1 f)@ contain @'Rec1' f@, @K1@, @V1@, sums or a @Par1@?
--- In any of these cases 'tabulateRep/indexRep and defining
+-- In any of these cases 'tabulateGeneric/indexGeneric and defining
 -- @Log f = Log (Rep1 f)@ will fail. In all of these cases
 -- we'll default to using Logarithm.
 -- In the other case we could try to use 'Index' or
