@@ -4,7 +4,7 @@
 -- |
 -- Copyright :  (c) 2019-2021 Edward Kmett
 --              (c) 2019 Oleg Grenrus
---              (c) 2017-2021 Aaron Vargo 
+--              (c) 2017-2021 Aaron Vargo
 -- License   :  BSD-2-Clause OR Apache-2.0
 -- Maintainer:  Oleg Grenrus <oleg.grenrus@iki.fi>
 -- Stability :  experimental
@@ -73,6 +73,7 @@ module Data.HKD
 , NT(..)
 , Limit(..)
 , Dict1(..)
+, Dicts(Dicts, runDicts, ..)
 ) where
 
 import Control.Applicative
@@ -93,6 +94,7 @@ import Data.Some.Newtype (Some (..), mapSome, foldSome, withSome)
 import qualified Data.Some.Church as C
 import Data.Distributive.Internal.Coerce
 import GHC.Generics
+import Text.Read
 import Unsafe.Coerce
 
 -------------------------------------------------------------------------------
@@ -367,7 +369,7 @@ class FFunctor t => FApply t where
 
 class FApply t => FApplicative t where
   fpure :: (forall x. f x) -> t f
-  default fpure :: (Generic1 t, FApplicative (Rep1 t)) => (forall x. f x) -> t f 
+  default fpure :: (Generic1 t, FApplicative (Rep1 t)) => (forall x. f x) -> t f
   fpure fx = to1 $ fpure fx
   {-# inline fpure #-}
 
@@ -386,14 +388,6 @@ instance FApply Proxy where
 
 instance FApplicative Proxy where
   fpure _ = Proxy
-  {-# inline fpure #-}
-
-instance FApply Limit where
-  fliftA2 f (Limit x) (Limit y) = Limit (f x y)
-  {-# inline fliftA2 #-}
-
-instance FApplicative Limit where
-  fpure x = Limit x
   {-# inline fpure #-}
 
 instance Semigroup a => FApply (Const a) where
@@ -504,9 +498,9 @@ instance FTraversable f => FTraversable (Backwards f) where
   {-# inline ftraverse #-}
 
 instance FTraversable f => FTraversable (Monoid.Alt f) where
-  ftraverse = \f -> fmap Monoid.Alt . ftraverse f .# Monoid.getAlt 
+  ftraverse = \f -> fmap Monoid.Alt . ftraverse f .# Monoid.getAlt
   {-# inline ftraverse #-}
-  
+
 deriving newtype instance FFunctor f => FFunctor (Monoid.Ap f)
 deriving newtype instance FApply f => FApply (Monoid.Ap f)
 deriving newtype instance FApplicative f => FApplicative (Monoid.Ap f)
@@ -547,9 +541,9 @@ instance (FEq w, forall x. OrdC x => Ord (w x)) => FOrd w
 
 type instance OrdC' @(k -> Type) = FOrd
 
-{- 
+{-
 We want forall (x :: k). OrdC x => EqC x. Ideally we might require that as a constraint
-for the particular k, but that won't work given how QCs work. 
+for the particular k, but that won't work given how QCs work.
 Instead, just define OrdC to include EqC, though it's a bit hacky.
 Maybe there's a better solution.
 -}
@@ -597,108 +591,39 @@ instance FApply (F1 a) where
 
 type role F2 nominal nominal representational
 data F2 a b f = F2' (F1 a f) (F1 b f)
-  deriving stock (Eq, Ord, Show, Read)
-  deriving anyclass (FFunctor)
+  deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
+  deriving anyclass (FFunctor, FFoldable, FTraversable, FApply, FApplicative)
 
 pattern F2 :: f a -> f b -> F2 a b f
 pattern F2 a b = F2' (F1 a) (F1 b)
 {-# complete F2 :: F2 #-}
 
-instance FFoldable (F2 a b) where
-  flengthAcc acc _ = acc + 2
-  {-# inline flengthAcc #-}
-
-instance FTraversable (F2 a b) where
-  ftraverse = \f (F2 a b) -> liftA2 F2 (f a) (f b)
-  {-# inline ftraverse #-}
-
-instance FApply (F2 a b) where
-  fliftA2 = \f (F2 a b) (F2 a' b') -> F2 (f a a') (f b b')
-  {-# inline fliftA2 #-}
-
-instance FApplicative (F2 a b) where
-  fpure = \x -> F2 x x
-  {-# inline fpure #-}
-
 type role F3 nominal nominal nominal representational
 data F3 a b c f = F3' (F1 a f) (F1 b f) (F1 c f)
-  deriving stock (Eq, Ord, Show, Read)
-  deriving anyclass FFunctor
+  deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
+  deriving anyclass (FFunctor, FFoldable, FTraversable, FApply, FApplicative)
 
 pattern F3 :: f a -> f b -> f c -> F3 a b c f
 pattern F3 a b c = F3' (F1 a) (F1 b) (F1 c)
-
 {-# complete F3 :: F3 #-}
-
-instance FFoldable (F3 a b c) where
-  flengthAcc = \acc _ -> acc + 3
-  {-# inline flengthAcc #-}
-
-instance FTraversable (F3 a b c) where
-  ftraverse = \f (F3 a b c) -> liftA2 F3 (f a) (f b) <*> f c
-  {-# inline ftraverse #-}
-
-instance FApply (F3 a b c) where
-  fliftA2 = \f (F3 a b c) (F3 a' b' c') -> F3 (f a a') (f b b') (f c c')
-  {-# inline fliftA2 #-}
-
-instance FApplicative (F3 a b c) where
-  fpure = \x -> F3 x x x 
-  {-# inline fpure #-}
 
 type role F4 nominal nominal nominal nominal representational
 data F4 a b c d f = F4' (F1 a f) (F1 b f) (F1 c f) (F1 d f)
-  deriving stock (Eq, Ord, Show, Read)
-  deriving anyclass FFunctor
+  deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
+  deriving anyclass (FFunctor, FFoldable, FTraversable, FApply, FApplicative)
 
 pattern F4 :: f a -> f b -> f c -> f d -> F4 a b c d f
 pattern F4 a b c d = F4' (F1 a) (F1 b) (F1 c) (F1 d)
-
 {-# complete F4 :: F4 #-}
-
-instance FFoldable (F4 a b c d) where
-  flengthAcc = \acc _ -> acc + 4
-  {-# inline flengthAcc #-}
-
-instance FTraversable (F4 a b c d) where
-  ftraverse = \f (F4 a b c d) -> liftA2 F4 (f a) (f b) <*> f c <*> f d
-  {-# inline ftraverse #-}
-
-instance FApply (F4 a b c d) where
-  fliftA2 = \f (F4 a b c d) (F4 a' b' c' d') -> F4 (f a a') (f b b') (f c c') (f d d')
-  {-# inline fliftA2 #-}
-
-instance FApplicative (F4 a b c d) where
-  fpure = \x -> F4 x x x x
-  {-# inline fpure #-}
 
 type role F5 nominal nominal nominal nominal nominal representational
 data F5 a b c d e f = F5' (F1 a f) (F1 b f) (F1 c f) (F1 d f) (F1 e f)
-  deriving stock (Eq, Ord, Show, Read)
-  deriving anyclass FFunctor
+  deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
+  deriving anyclass (FFunctor, FFoldable, FTraversable, FApply, FApplicative)
 
 pattern F5 :: f a -> f b -> f c -> f d -> f e -> F5 a b c d e f
 pattern F5 a b c d e = F5' (F1 a) (F1 b) (F1 c) (F1 d) (F1 e)
-
 {-# complete F5 :: F5 #-}
-
-instance FFoldable (F5 a b c d e) where
-  flengthAcc = \acc _ -> acc + 5
-  {-# inline flengthAcc #-}
-
-instance FTraversable (F5 a b c d e) where
-  ftraverse = \f (F5 a b c d e) ->
-    liftA2 F5 (f a) (f b) <*> f c <*> f d <*> f e
-  {-# inline ftraverse #-}
-
-instance FApply (F5 a b c d e) where
-  fliftA2 = \f (F5 a b c d e) (F5 a' b' c' d' e') ->
-    F5 (f a a') (f b b') (f c c') (f d d') (f e e')
-  {-# inline fliftA2 #-}
-
-instance FApplicative (F5 a b c d e) where
-  fpure = \x -> F5 x x x x x
-  {-# inline fpure #-}
 
 -------------------------------------------------------------------------------
 -- "natural" transformations via parametricity
@@ -787,18 +712,47 @@ instance FTraversable Limit where
   ftraverse = \ f (Limit m) -> unsafeCoerce <$> f m
   {-# inline ftraverse #-}
 
+instance FApply Limit where
+  fliftA2 f (Limit x) (Limit y) = Limit (f x y)
+  {-# inline fliftA2 #-}
+
+instance FApplicative Limit where
+  fpure x = Limit x
+  {-# inline fpure #-}
+
 -- * Dicts
 
 data Dict1 p a where
   Dict1 :: p a => Dict1 p a
 
-newtype Dicts p f = Dicts
-  { runDicts :: f (Dict1 p)
-  }
+instance Eq (Dict1 p a) where
+  Dict1 == Dict1 = True
 
-instance FFunctor (Dicts p) where
-  ffmap = \ f -> Dicts #. f .# runDicts
-  {-# inline ffmap #-}
+instance Ord (Dict1 p a) where
+  compare Dict1 Dict1 = EQ
+
+instance Show (Dict1 p a) where
+  showsPrec _ Dict1 = showString "Dict1"
+
+instance p a => Read (Dict1 p a) where
+  readPrec = parens $ do
+    Ident "Dict1" <- lexP
+    pure Dict1
+
+newtype Dicts p f = Dicts'
+  { runDicts' :: F1 (Dict1 p) f
+  }
+  deriving stock (Generic, Generic1)
+  deriving anyclass (FFunctor, FFoldable, FTraversable, FApply, FApplicative)
+
+deriving newtype instance Eq (f (Dict1 p)) => Eq (Dicts p f)
+
+deriving newtype instance Ord (f (Dict1 p)) => Ord (Dicts p f)
+
+pattern Dicts :: f (Dict1 p) -> Dicts p f
+pattern Dicts { runDicts } = Dicts' (F1 runDicts)
+
+{-# complete Dicts #-}
 
 newtype FConstrained p f = FConstrained
   { runFConstrained :: forall x. p x => f x
@@ -811,6 +765,12 @@ instance FFunctor (FConstrained p) where
 instance (forall x. p x) => FFoldable (FConstrained p) where
   ffoldMap = \ f x -> f $ runFConstrained x
   {-# inline ffoldMap #-}
+
+instance FApply (FConstrained p) where
+  fliftA2 = \f g h -> FConstrained $ f (runFConstrained g) (runFConstrained h)
+
+instance FApplicative (FConstrained p) where
+  fpure x = FConstrained x
 
 -- instance (forall x. p x) => FTraversable (FConstrained p) where
 
@@ -826,5 +786,5 @@ instance Foldable f => FFoldable (FCompose a f) where
   {-# inline ffoldMap #-}
 
 instance Traversable f => FTraversable (FCompose a f) where
-  ftraverse = \f -> fmap FCompose . traverse f .# runFCompose 
+  ftraverse = \f -> fmap FCompose . traverse f .# runFCompose
   {-# inline ftraverse #-}
