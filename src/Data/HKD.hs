@@ -6,7 +6,7 @@
 --              (c) 2019 Oleg Grenrus
 --              (c) 2017-2021 Aaron Vargo
 -- License   :  BSD-2-Clause OR Apache-2.0
--- Maintainer:  Oleg Grenrus <oleg.grenrus@iki.fi>
+-- Maintainer:  Edward Kmett <ekmett@gmail.com>
 -- Stability :  experimental
 -- Portability: non-portable
 --

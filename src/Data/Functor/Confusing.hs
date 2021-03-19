@@ -5,7 +5,7 @@
 -- License     : BSD-2-Clause OR Apache-2.0
 -- Maintainer  : Edward Kmett <ekmett@gmail.com>
 -- Stability   : provisional
--- Portability : non-portable (ghc 8.0+)
+-- Portability : non-portable
 --
 -- This code is derived from Eric Mertens' implementation of the @confusing@ 
 -- combinator in @lens@. A description was later published in

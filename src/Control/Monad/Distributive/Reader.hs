@@ -7,14 +7,15 @@
 #endif
 
 -- |
--- Copyright   :  (c) Edward Kmett 2011-2021,
---                (c) Conal Elliott 2008
--- License     :  BSD3
--- Maintainer  :  ekmett@gmail.com
--- Stability   :  experimental
+-- Copyright   : (c) Edward Kmett 2011-2021,
+--               (c) Conal Elliott 2008
+-- License     : BSD-2-Clause OR Apache-2.0
+-- Maintainer  : Edward Kmett <ekmett@gmail.com>
+-- Stability   : experimental
+-- Portability : non-portable
 --
--- Distributive functors on Hask are all monads, because they are isomorphic to
--- a 'Reader' monad.
+-- A 'ReaderT' monad that uses a 'Distributive' functor instead
+-- of a function.
 
 module Control.Monad.Distributive.Reader
 (

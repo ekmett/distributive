@@ -6,11 +6,12 @@
 #endif
 
 -- |
--- Copyright   :  (c) Edward Kmett 2011-2021,
---                (c) Sjoerd Visscher 2011
--- License     :  BSD3
--- Maintainer  :  ekmett@gmail.com
--- Stability   :  experimental
+-- Copyright   : (c) Edward Kmett 2011-2021,
+--               (c) Sjoerd Visscher 2011
+-- License     : BSD-2-Clause OR Apache-2.0
+-- Maintainer  : Edward Kmett <ekmett@gmail.com>
+-- Stability   : experimental
+-- Portability : non-portable
 --
 -- A generalized State monad, parameterized by a 'Distributive' functor.
 -- The 'Log' of that functor serves as the state.

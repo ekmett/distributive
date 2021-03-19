@@ -3,6 +3,13 @@
 {-# options_ghc -Wno-orphans #-}
 {-# options_haddock hide #-}
 
+-- |
+-- Copyright   : (C) 2021 Edward Kmett,
+-- License     : BSD-2-Clause OR Apache-2.0
+-- Maintainer  : Edward Kmett <ekmett@gmail.com>
+-- Stability   : provisional
+-- Portability : non-portable
+
 module Data.Distributive.Internal.Orphans where
 
 import Data.Coerce

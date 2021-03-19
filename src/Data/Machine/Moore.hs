@@ -5,7 +5,7 @@
 -- License     :  BSD-2-Style OR Apache-2.0
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
 -- Stability   :  provisional
--- Portability :  non-portable (ghc 8.6+)
+-- Portability :  non-portable
 --
 -- <http://en.wikipedia.org/wiki/Moore_machine>
 

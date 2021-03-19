@@ -7,9 +7,7 @@
 -- License     : BSD-2-Clause OR Apache-2.0
 -- Maintainer  : Edward Kmett <ekmett@gmail.com>
 -- Stability   : provisional
--- Portability : non-portable (ghc 8.6+)
---
--- @Fin n@ is a natural number < n.
+-- Portability : non-portable
 
 module Data.Distributive.Internal.Fin
 ( Fin(UnsafeFin,Fin,FinZ,FinS,fromFin)
