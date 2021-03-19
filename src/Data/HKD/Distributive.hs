@@ -2,6 +2,7 @@
 
 module Data.HKD.Distributive
 ( type (%)
+, FIndexable(..)
 , FDistributive(..)
 , fdistribute
 , fdistrib
@@ -35,6 +36,7 @@ module Data.HKD.Distributive
 , findexRep
 , fscatterRep
 , fscatterDefault
+, Indices
 
 -- * Uniqueness of logarithms
 , flogToFLogarithm

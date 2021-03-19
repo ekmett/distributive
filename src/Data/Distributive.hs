@@ -32,7 +32,8 @@
 -- If you want a special form for the 'Log' of your functor you can
 -- implement tabulate and index directly, `Dist` can still be used.
 module Data.Distributive
-( Distributive(..)
+( Indexable(..)
+, Distributive(..)
 , distribute
 , distrib
 , dist

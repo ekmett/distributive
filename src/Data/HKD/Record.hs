@@ -20,7 +20,6 @@ module Data.HKD.Record
 --, lowerVec, liftVec
 , len
 , Record(Nil, Cons)
-, findexRecord
 , withLen
 ) where
 

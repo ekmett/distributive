@@ -76,22 +76,21 @@ instance FTraversableWithIndex (Index as) (Record as) where
       (V.toList xs)
   {-# inline iftraverse #-}
 
-instance KnownLength as => FDistributive (Record as) where
+instance FIndexable (Record as) where
   type FLog (Record as) = Index as
+  findex (UnsafeRecord as) (UnsafeIndex i) = unsafeCoerce (as ! i)
+  {-# inline findex #-}
+
+instance KnownLength as => FDistributive (Record as) where
   fscatter k f (ffmap f -> w) =
     UnsafeRecord $
     generate (len @as) \i ->
     Any $ k $ ffmap (\r -> F1 $ findex r (UnsafeIndex i)) w
   {-# inline fscatter #-}
-  findex (UnsafeRecord as) (UnsafeIndex i) = unsafeCoerce (as ! i)
-  {-# inline findex #-}
   ftabulate f =
     UnsafeRecord $
     generate (len @as) (Any . f .# UnsafeIndex)
   {-# inline ftabulate #-}
-
-findexRecord :: Record as f -> Index as ~> f
-findexRecord (UnsafeRecord as) (UnsafeIndex i) = unsafeCoerce (as ! i)
 
 instance FApply (Record as) where
   fliftA2 f as =

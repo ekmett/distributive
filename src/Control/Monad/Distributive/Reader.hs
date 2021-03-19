@@ -19,7 +19,7 @@
 module Control.Monad.Distributive.Reader
 (
 -- * Distributive functor monad
-Reader
+  Reader
 , pattern Reader
 , runReader
 -- * Monad Transformer
@@ -69,13 +69,15 @@ pattern ReaderT { runReaderT } = ReaderDistT (Tabulate runReaderT)
 instance (Functor f, Functor m) => Functor (ReaderT f m) where
   fmap = \f -> ReaderDistT #. fmap (fmap f) .# runReaderDistT
 
-instance (Distributive f, Distributive m) => Distributive (ReaderT f m) where
+instance (Indexable f, Indexable m) => Indexable (ReaderT f m) where
   type Log (ReaderT f m) = (Log f, Log m)
-  scatter = \k f -> coerce $ scatter k ((Comp1 . runReaderDistT) #. f)
   index = \(ReaderDistT f) (x, y) -> index (index f x) y
+  {-# inline index #-}
+
+instance (Distributive f, Distributive m) => Distributive (ReaderT f m) where
+  scatter = \k f -> coerce $ scatter k ((Comp1 . runReaderDistT) #. f)
   tabulate = \f -> ReaderDistT $ tabulate \i -> tabulate \j -> f (i, j)
   {-# inline tabulate #-}
-  {-# inline index #-}
 
 instance (Distributive f, Applicative m) => Applicative (ReaderT f m) where
   pure = ReaderDistT #. (pureDist . pure)

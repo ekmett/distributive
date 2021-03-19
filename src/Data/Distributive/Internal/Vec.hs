@@ -41,10 +41,15 @@ pattern Vec { toVector } <- UnsafeVec toVector
 
 {-# complete Vec :: Vec #-}
 
-instance KnownNat n => Distributive (Vec n) where
+instance Indexable (Vec n) where
   type Log (Vec n) = Fin n
   type KnownSize (Vec n) = 'Just n
 
+  index :: forall a. Vec n a -> Fin n -> a
+  index = coerce ((!) :: Vector a -> Int -> a)
+  {-# inline index #-}
+
+instance KnownNat n => Distributive (Vec n) where
   scatter = \(k :: w Identity -> r) f (ffmap f -> w) -> UnsafeVec $
     generate (int @n) \i -> k $ ffmap (\v -> Identity $ index v $ UnsafeFin i) w
   {-# inlinable scatter #-}
@@ -52,9 +57,6 @@ instance KnownNat n => Distributive (Vec n) where
   tabulate = \(f :: Fin n -> a) -> UnsafeVec $ generate (int @n) (f .# UnsafeFin)
   {-# inlinable tabulate #-}
 
-  index :: forall a. Vec n a -> Fin n -> a
-  index = coerce ((!) :: Vector a -> Int -> a)
-  {-# inline index #-}
 
 instance (KnownNat n, Read a) => Read (Vec n a) where
   readPrec = do

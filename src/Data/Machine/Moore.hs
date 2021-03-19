@@ -36,12 +36,16 @@ data Moore a b = Moore b (a -> Moore a b)
   deriving (Applicative, Monad, MonadFix, MonadZip, MonadReader [a], FunctorWithIndex [a]) via Dist (Moore a)
   deriving (Semigroup, Monoid, Num, Fractional, Floating)  via Dist (Moore a) b
 
-instance Distributive (Moore a) where
+instance Indexable (Moore a) where
   type Log (Moore a) = [a]
   index = \(Moore b k) -> \case 
     [] -> b
     (a:as) -> index (k a) as
+  {-# inline index #-}
+
+instance Distributive (Moore a) where
   tabulate = \f -> Moore (f []) \a -> tabulate (f.(a:))
+  {-# inline tabulate #-}
 
 -- | Accumulate the input as a sequence.
 logMoore :: Monoid m => Moore m m

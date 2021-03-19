@@ -6,11 +6,11 @@ module Data.HKD.Variant
 ) where
 
 import Data.HKD
+import Data.HKD.Distributive
 import Data.HKD.Record
 import Data.HKD.WithIndex
-import Data.Kind
 
-data Variant (as :: [i]) (f :: i -> Type) where
+data Variant as f where
     Variant :: {-# unpack #-} !(Index as a) -> f a -> Variant as f
   deriving anyclass (FFunctor, FFoldable)
 
@@ -22,7 +22,6 @@ instance FFoldableWithIndex (Index as) (Variant as)
 instance FTraversableWithIndex (Index as) (Variant as) where
   iftraverse f (Variant i x) = Variant i <$> f i x
 
--- split findex off of FDistributive to remove KnownLength here
 zapWith :: (forall x. f x -> g x -> r) -> Variant as f -> Record as g -> r
-zapWith k (Variant i f) g = k f (findexRecord g i)
+zapWith k (Variant i f) g = k f (findex g i)
 {-# inline zapWith #-}

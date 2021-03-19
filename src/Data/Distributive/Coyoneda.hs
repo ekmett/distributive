@@ -135,14 +135,16 @@ instance MonadPlus f => MonadPlus (Coyoneda f) where
   mplus = \m n -> lift $ lowerCoyoneda m `mplus` lowerCoyoneda n
   {-# inline mplus #-}
 
-instance Distributive f => Distributive (Coyoneda f) where
+instance Indexable f => Indexable (Coyoneda f) where
   type Log (Coyoneda f) = Log f
+  index = \(CoyonedaDist g flg) lf -> index g (index flg lf)
+  {-# inline index #-}
+
+instance Distributive f => Distributive (Coyoneda f) where
   scatter = \wid2r h2cyf wh -> liftCoyoneda (scatter wid2r (lowerCoyoneda . h2cyf) wh)
   tabulate = \logf2a -> CoyonedaDist (tabulate @f logf2a) askDist
-  index = \(CoyonedaDist g flg) lf -> index g (index flg lf)
   {-# inline scatter #-}
   {-# inline tabulate #-}
-  {-# inline index #-}
 
 liftCoyonedaDist :: forall g f. Distributive g => f (Log g) -> Coyoneda f (Log g)
 liftCoyonedaDist = CoyonedaDist (askDist @g)
