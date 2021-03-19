@@ -78,6 +78,7 @@ module Data.HKD
 
 import Control.Applicative
 import Control.Applicative.Backwards
+import Control.Monad(join)
 import Data.Proxy (Proxy (..))
 import Data.Coerce (coerce)
 import Data.Functor.Constant
@@ -376,10 +377,8 @@ class FApply t => FApplicative t where
 -- | For use with DerivingVia
 newtype FApplicativeInstances t f = FApplicativeInstances { runFApplicativeInstances :: t f }
 
-newtype Expo f g x = Expo { runExpo :: f x -> g x }
-
-instance FApplicative t => FFunctor (FApplicativeInstances t) where
-  ffmap = \f -> FApplicativeInstances #. fliftA2 runExpo (fpure $ Expo f) .# runFApplicativeInstances
+instance FApply t => FFunctor (FApplicativeInstances t) where
+  ffmap = \f -> FApplicativeInstances #. join (fliftA2 (const f)) .# runFApplicativeInstances
   {-# inline ffmap #-}
 
 instance FApply Proxy where
