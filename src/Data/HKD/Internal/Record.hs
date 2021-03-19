@@ -90,6 +90,9 @@ instance KnownLength as => FDistributive (Record as) where
     generate (len @as) (Any . f .# UnsafeIndex)
   {-# inline ftabulate #-}
 
+findexRecord :: Record as f -> Index as ~> f
+findexRecord (UnsafeRecord as) (UnsafeIndex i) = unsafeCoerce (as ! i)
+
 instance FApply (Record as) where
   fliftA2 f as =
     UnsafeRecord #.

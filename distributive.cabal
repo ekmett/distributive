@@ -79,6 +79,7 @@ library
     Data.HKD.Internal.Index
     Data.HKD.Internal.Record
     Data.HKD.Record
+    Data.HKD.Variant
     Data.HKD.WithIndex
     Data.Machine.Moore
     Control.Monad.Distributive.Reader
@@ -135,7 +136,7 @@ library
     UndecidableInstances
     UndecidableSuperClasses
     ViewPatterns
-    
+
   other-extensions:
     CPP
     GeneralizedNewtypeDeriving

@@ -1,18 +1,28 @@
+{-# Language Safe #-}
 
-module Data.HKD.Variant where
+module Data.HKD.Variant
+( Variant(..)
+, zapWith
+) where
 
 import Data.HKD
 import Data.HKD.Record
+import Data.HKD.WithIndex
+import Data.Kind
 
-data Variant (as :: [i]) (f :: i -> Type) where 
-    Variant :: {-# unpack #-} !Index as a -> f a -> Variant as f
-  deriving anyclass FFunctor, FFoldable
+data Variant (as :: [i]) (f :: i -> Type) where
+    Variant :: {-# unpack #-} !(Index as a) -> f a -> Variant as f
+  deriving anyclass (FFunctor, FFoldable)
 
 instance FTraversable (Variant as) where
+  ftraverse f (Variant i x) = Variant i <$> f x
 
-instance FFoldableWithIndex (Index as) 
+instance FFunctorWithIndex (Index as) (Variant as)
+instance FFoldableWithIndex (Index as) (Variant as)
 instance FTraversableWithIndex (Index as) (Variant as) where
-  iftraverse f (Variant i as) = Variant <$> f i as
+  iftraverse f (Variant i x) = Variant i <$> f i x
 
-zap :: (forall x. f x -> g x -> r) -> Variant as f -> Record as g -> r
-zap k (Variant i f) g = k f (index g i)
+-- split findex off of FDistributive to remove KnownLength here
+zapWith :: (forall x. f x -> g x -> r) -> Variant as f -> Record as g -> r
+zapWith k (Variant i f) g = k f (findexRecord g i)
+{-# inline zapWith #-}
