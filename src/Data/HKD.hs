@@ -64,10 +64,10 @@ module Data.HKD
 -- | See also "Data.Some" in @some@ package. This package provides instances for it.
 , F0(..)
 , F1(..)
-, F2(..)
-, F3(..)
-, F4(..)
-, F5(..)
+, F2(F2, ..)
+, F3(F3, ..)
+, F4(F4, ..)
+, F5(F5, ..)
 , FConstrained(..)
 , FCompose(..)
 , NT(..)
@@ -588,15 +588,21 @@ instance FTraversable (F1 a) where
   {-# inline ftraverse #-}
 
 instance FApplicative (F1 a) where
-  fpure x = F1 x
+  fpure = \ x -> F1 x
+  {-# inline fpure #-}
 
 instance FApply (F1 a) where
-  fliftA2 f (F1 a) (F1 b) = F1 (f a b)
+  fliftA2 = \ f (F1 a) (F1 b) -> F1 (f a b)
+  {-# inline fliftA2 #-}
 
 type role F2 nominal nominal representational
-data F2 a b f = F2 (f a) (f b)
+data F2 a b f = F2' (F1 a f) (F1 b f)
   deriving stock (Eq, Ord, Show, Read)
-  deriving anyclass FFunctor
+  deriving anyclass (FFunctor)
+
+pattern F2 :: f a -> f b -> F2 a b f
+pattern F2 a b = F2' (F1 a) (F1 b)
+{-# complete F2 :: F2 #-}
 
 instance FFoldable (F2 a b) where
   flengthAcc acc _ = acc + 2
@@ -615,9 +621,14 @@ instance FApplicative (F2 a b) where
   {-# inline fpure #-}
 
 type role F3 nominal nominal nominal representational
-data F3 a b c f = F3 (f a) (f b) (f c)
+data F3 a b c f = F3' (F1 a f) (F1 b f) (F1 c f)
   deriving stock (Eq, Ord, Show, Read)
   deriving anyclass FFunctor
+
+pattern F3 :: f a -> f b -> f c -> F3 a b c f
+pattern F3 a b c = F3' (F1 a) (F1 b) (F1 c)
+
+{-# complete F3 :: F3 #-}
 
 instance FFoldable (F3 a b c) where
   flengthAcc = \acc _ -> acc + 3
@@ -636,9 +647,14 @@ instance FApplicative (F3 a b c) where
   {-# inline fpure #-}
 
 type role F4 nominal nominal nominal nominal representational
-data F4 a b c d f = F4 (f a) (f b) (f c) (f d)
+data F4 a b c d f = F4' (F1 a f) (F1 b f) (F1 c f) (F1 d f)
   deriving stock (Eq, Ord, Show, Read)
   deriving anyclass FFunctor
+
+pattern F4 :: f a -> f b -> f c -> f d -> F4 a b c d f
+pattern F4 a b c d = F4' (F1 a) (F1 b) (F1 c) (F1 d)
+
+{-# complete F4 :: F4 #-}
 
 instance FFoldable (F4 a b c d) where
   flengthAcc = \acc _ -> acc + 4
@@ -657,20 +673,27 @@ instance FApplicative (F4 a b c d) where
   {-# inline fpure #-}
 
 type role F5 nominal nominal nominal nominal nominal representational
-data F5 a b c d e f = F5 (f a) (f b) (f c) (f d) (f e)
+data F5 a b c d e f = F5' (F1 a f) (F1 b f) (F1 c f) (F1 d f) (F1 e f)
   deriving stock (Eq, Ord, Show, Read)
   deriving anyclass FFunctor
+
+pattern F5 :: f a -> f b -> f c -> f d -> f e -> F5 a b c d e f
+pattern F5 a b c d e = F5' (F1 a) (F1 b) (F1 c) (F1 d) (F1 e)
+
+{-# complete F5 :: F5 #-}
 
 instance FFoldable (F5 a b c d e) where
   flengthAcc = \acc _ -> acc + 5
   {-# inline flengthAcc #-}
 
 instance FTraversable (F5 a b c d e) where
-  ftraverse = \f (F5 a b c d e) -> liftA2 F5 (f a) (f b) <*> f c <*> f d <*> f e
+  ftraverse = \f (F5 a b c d e) ->
+    liftA2 F5 (f a) (f b) <*> f c <*> f d <*> f e
   {-# inline ftraverse #-}
 
 instance FApply (F5 a b c d e) where
-  fliftA2 = \f (F5 a b c d e) (F5 a' b' c' d' e') -> F5 (f a a') (f b b') (f c c') (f d d') (f e e')
+  fliftA2 = \f (F5 a b c d e) (F5 a' b' c' d' e') ->
+    F5 (f a a') (f b b') (f c c') (f d d') (f e e')
   {-# inline fliftA2 #-}
 
 instance FApplicative (F5 a b c d e) where
