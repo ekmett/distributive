@@ -3,7 +3,7 @@
 {-# Language Unsafe #-}
 {-# options_haddock hide #-}
 
-module Data.Functor.Vec.Internal
+module Data.Vec.Internal
 ( Vec(UnsafeVec,Vec,toVector)
 , pattern V
 , FromVector(..)

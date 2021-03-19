@@ -7,11 +7,11 @@
 -- Stability   : provisional
 -- Portability : non-portable
 
-module Data.Functor.Vec
+module Data.Vec
 ( Vec(Vec,toVector)
 , FromVector(..)
 , pattern V
 , withDim
 ) where
 
-import Data.Functor.Vec.Internal
+import Data.Vec.Internal

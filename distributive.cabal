@@ -65,8 +65,8 @@ library
     Data.Rep.Internal
     Data.Fin
     Data.Fin.Internal
-    Data.Functor.Vec
-    Data.Functor.Vec.Internal
+    Data.Vec
+    Data.Vec.Internal
     Data.HKD
     Data.HKD.Classes
     Data.HKD.Contravariant
