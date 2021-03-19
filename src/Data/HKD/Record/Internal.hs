@@ -16,7 +16,6 @@ import Data.Vec.Internal
 import Data.HKD
 import Data.HKD.Index.Internal
 import Data.HKD.Rep
-import Data.HKD.WithIndex
 import Data.Kind
 -- import qualified Data.Monoid as Monoid
 import Data.Proxy

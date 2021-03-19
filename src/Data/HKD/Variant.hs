@@ -8,7 +8,6 @@ module Data.HKD.Variant
 import Data.HKD
 import Data.HKD.Record
 import Data.HKD.Rep
-import Data.HKD.WithIndex
 
 data Variant as f where
     Variant :: {-# unpack #-} !(Index as a) -> f a -> Variant as f

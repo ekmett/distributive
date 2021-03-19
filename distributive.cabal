@@ -76,9 +76,7 @@ library
     Data.HKD.Record.Internal
     Data.HKD.Rep
     Data.HKD.Rep.Endo
-    Data.HKD.Types
     Data.HKD.Variant
-    Data.HKD.WithIndex
     Data.Machine.Mealy
     Data.Machine.Moore
     -- Data.Machine.Rep.Moore

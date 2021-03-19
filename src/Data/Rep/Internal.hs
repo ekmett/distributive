@@ -38,11 +38,9 @@ import Data.Functor.Product
 import Data.Functor.Reverse
 import Data.Functor.WithIndex
 import Data.GADT.Compare
-import Data.HKD.Classes
+import Data.HKD
 import Data.HKD.Contravariant
 import Data.HKD.Index.Internal
-import Data.HKD.Types
-import Data.HKD.WithIndex
 import Data.Kind
 import Data.Maybe
 import qualified Data.Monoid as Monoid
