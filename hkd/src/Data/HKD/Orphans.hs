@@ -10,7 +10,7 @@
 -- Stability   : provisional
 -- Portability : non-portable
 
-module Data.HKD.Orphans where
+module Data.HKD.Orphans () where
 
 import Data.Coerce
 import Data.Functor.Classes

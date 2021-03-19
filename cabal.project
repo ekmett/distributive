@@ -1,1 +1,4 @@
-packages: distributive
+packages:
+  distributive
+  hkd
+  numeric-fin

@@ -8,6 +8,14 @@
 -- Portability : non-portable
 --
 -- @'Fin' n@ is a natural number < @n@.
+--
+-- Here we represent them internally by an actual 'Int'
+-- enabling the data type to be efficiently unpacked into
+-- other constructors.
+--
+-- This compromises the use of 'Fin' for _very large_ numbers.
+-- but for many uses involving containers or compilers, this
+-- is a good balance.
 
 module Numeric.Fin
 ( Fin(Fin,FinZ,FinS,fromFin)

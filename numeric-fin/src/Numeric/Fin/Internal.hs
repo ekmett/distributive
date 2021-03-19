@@ -1,5 +1,17 @@
-{-# Language UnboxedTuples #-}
+{-# Language AllowAmbiguousTypes #-}
+{-# Language DataKinds #-}
+{-# Language DerivingStrategies #-}
+{-# Language GADTs #-}
+{-# Language KindSignatures #-}
+{-# Language MagicHash #-}
+{-# Language PatternSynonyms #-}
+{-# Language RankNTypes #-}
+{-# Language RoleAnnotations #-}
+{-# Language ScopedTypeVariables #-}
+{-# Language TypeApplications #-}
+{-# Language TypeOperators #-}
 {-# Language Unsafe #-}
+{-# Language ViewPatterns #-}
 {-# options_haddock hide #-}
 
 -- |

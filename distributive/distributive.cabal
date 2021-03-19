@@ -23,6 +23,7 @@ tested-with:
   GHC == 8.6.5,
   GHC == 8.8.4,
   GHC == 8.10.3
+
 extra-source-files:
   .hlint.yaml
   .vim.custom
@@ -45,35 +46,19 @@ flag tagged
 
 library
   build-depends:
-    base         >= 4.10 && < 5,
-    base-orphans >= 0.5.2 && < 1,
-    contravariant >= 1.5.3 && < 1.6,
-    ghc-prim,
-    indexed-traversable >= 0.1 && < 0.2,
-    mtl          >= 2.2 && < 2.3,
-    some         >= 1.0 && < 1.1,
-    transformers >= 0.3 && < 0.6,
-    vector       >= 0.12 && < 0.13
+    , base >= 4.10 && < 5
+    , base-orphans >= 0.5.2 && < 1
+    , contravariant >= 1.5.3 && < 1.6
+    , ghc-prim
+    , hkd ^>= 0.2
+    , indexed-traversable >= 0.1 && < 0.2
+    , mtl >= 2.2 && < 2.3
+    , numeric-fin  >= 0 && < 0.1
+    , some >= 1.0 && < 1.1
+    , transformers >= 0.3 && < 0.6
+    , vector >= 0.12 && < 0.13
 
   hs-source-dirs:  src
-
-  -- fin
-  
-  exposed-modules:
-    Numeric.Fin
-    Numeric.Fin.Internal
-
-  -- hkd
-  other-modules:
-    Data.HKD.Orphans
-  exposed-modules:
-    Data.HKD
-    Data.HKD.Classes
-    Data.HKD.Contravariant
-    Data.HKD.Index
-    Data.HKD.Index.Internal
-    Data.Function.Coerce
-    Data.Traversable.Confusing
 
   exposed-modules:
     Data.Rep
