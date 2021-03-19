@@ -621,6 +621,10 @@ instance FApply (F1 a) where
   fliftA2 = \ f (F1 a) (F1 b) -> F1 (f a b)
   {-# inline fliftA2 #-}
 
+instance FMonad (F1 a) where
+  fbind = \k (F1 a) f -> F1 $ k $ runF1 $ f a
+  {-# inline fbind #-}
+
 type role F2 nominal nominal representational
 data F2 a b f = F2' (F1 a f) (F1 b f)
   deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
@@ -630,6 +634,13 @@ pattern F2 :: f a -> f b -> F2 a b f
 pattern F2 a b = F2' (F1 a) (F1 b)
 {-# complete F2 :: F2 #-}
 
+instance FMonad (F2 a b) where
+  fbind = \k (F2 a b) f -> 
+    F2 
+      (k $ case f a of F2 x _ -> x) 
+      (k $ case f b of F2 _ y -> y)
+  {-# inline fbind #-}
+
 type role F3 nominal nominal nominal representational
 data F3 a b c f = F3' (F1 a f) (F1 b f) (F1 c f)
   deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
@@ -638,6 +649,14 @@ data F3 a b c f = F3' (F1 a f) (F1 b f) (F1 c f)
 pattern F3 :: f a -> f b -> f c -> F3 a b c f
 pattern F3 a b c = F3' (F1 a) (F1 b) (F1 c)
 {-# complete F3 :: F3 #-}
+
+instance FMonad (F3 a b c) where
+  fbind = \k (F3 a b c) f -> 
+    F3 
+      (k $ case f a of F3 x _ _ -> x) 
+      (k $ case f b of F3 _ y _ -> y)
+      (k $ case f c of F3 _ _ z -> z)
+  {-# inline fbind #-}
 
 type role F4 nominal nominal nominal nominal representational
 data F4 a b c d f = F4' (F1 a f) (F1 b f) (F1 c f) (F1 d f)
