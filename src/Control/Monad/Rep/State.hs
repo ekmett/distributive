@@ -13,7 +13,7 @@
 -- Stability   : experimental
 -- Portability : non-portable
 --
--- A generalized State monad, parameterized by a 'Distributive' functor.
+-- A generalized State monad, parameterized by a 'Representable' functor.
 -- The 'Log' of that functor serves as the state.
 
 module Control.Monad.Rep.State
@@ -52,14 +52,14 @@ import Data.Functor.Rep
 import Data.Functor.Rep.Internal.Coerce
 import Data.HKD
 
--- | A memoized state monad parameterized by a 'Distributive' functor @g@, where
+-- | A memoized state monad parameterized by a 'Representable' functor @g@, where
 -- 'Log' g is the state to carry.
 --
 -- 'return' leaves the state unchanged, while '(>>=)' uses the final state of
 -- the first computation as the initial state of the second.
 type State g = StateT g Identity
 
-pattern State :: Distributive g => (Log g -> (a, Log g)) -> State g a
+pattern State :: Representable g => (Log g -> (a, Log g)) -> State g a
 pattern State { runState } <- StateT (Coerce runState)
 
 {-# complete State #-}
@@ -69,7 +69,7 @@ pattern State { runState } <- StateT (Coerce runState)
 --
 -- * @'evalState' m s = 'fst' ('runState' m s)@
 evalState
-  :: Distributive g
+  :: Representable g
   => State g a  -- ^state-passing computation to execute
   -> Log g      -- ^initial value
   -> a          -- ^return value of the state computation
@@ -81,7 +81,7 @@ evalState m s = fst (runState m s)
 --
 -- * @'execState' m s = 'snd' ('runState' m s)@
 execState
-  :: Distributive g
+  :: Representable g
   => State g a  -- ^state-passing computation to execute
   -> Log g      -- ^initial value
   -> Log g      -- ^final state
@@ -115,7 +115,7 @@ newtype StateT g m a = StateDistT
   }
 
 -- | Emulate a traditional state monad
-pattern StateT :: Distributive g => (Log g -> m (a, Log g)) -> StateT g m a
+pattern StateT :: Representable g => (Log g -> m (a, Log g)) -> StateT g m a
 pattern StateT { runStateT } = StateDistT (Tabulate runStateT) 
 
 {-# complete StateT #-}
@@ -128,7 +128,7 @@ mapStateT = \f -> StateDistT #. fmap f .# runStateDistT
 -- and return the final value, discarding the final state.
 --
 -- * @'evalStateT' m s = 'fmap' 'fst' ('runStateT' m s)@
-evalStateT :: (Distributive g, Functor m) => StateT g m a -> Log g -> m a
+evalStateT :: (Representable g, Functor m) => StateT g m a -> Log g -> m a
 evalStateT = \m -> fmap fst . runStateT m 
 {-# inline evalStateT #-}
 
@@ -136,7 +136,7 @@ evalStateT = \m -> fmap fst . runStateT m
 -- and return the final state, discarding the final value.
 --
 -- * @'execStateT' m s = 'fmap' 'snd' ('runStateT' m s)@
-execStateT :: (Distributive g, Functor m) => StateT g m a -> Log g -> m (Log g)
+execStateT :: (Representable g, Functor m) => StateT g m a -> Log g -> m (Log g)
 execStateT = \m -> fmap snd . runStateT m
 {-# inline execStateT #-}
 
@@ -144,13 +144,13 @@ instance (Functor g, Functor m) => Functor (StateT g m) where
   fmap = \f -> StateDistT #. fmap (fmap (\ ~(a, s) -> (f a, s))) .# runStateDistT
   {-# inline fmap #-}
 
-instance (Distributive g, Functor m, Monad m) => Applicative (StateT g m) where
+instance (Representable g, Functor m, Monad m) => Applicative (StateT g m) where
   pure = StateDistT #. leftAdjunctDist pure
   {-# inline pure #-}
   (<*>) = \mf ma -> mf >>= \f -> fmap f ma
   {-# inline (<*>) #-}
 
-instance (Distributive g, Monad m) => Monad (StateT g m) where
+instance (Representable g, Monad m) => Monad (StateT g m) where
   (>>=) = \(StateDistT m) f -> StateDistT $ fmap (>>= rightAdjunctDist (runStateT . f)) m
   {-# inline (>>=) #-}
 #if !(MIN_VERSION_base(4,13,0))
@@ -158,19 +158,19 @@ instance (Distributive g, Monad m) => Monad (StateT g m) where
   {-# inline fail #-}
 #endif
 
-instance (Distributive g, MonadFail m) => MonadFail (StateT g m) where
+instance (Representable g, MonadFail m) => MonadFail (StateT g m) where
   fail = lift . Control.Monad.Fail.fail
   {-# inline fail #-}
 
-instance Distributive f => MonadTrans (StateT f) where
+instance Representable f => MonadTrans (StateT f) where
   lift = \m -> StateT $ \s -> (,s) <$> m
   {-# inline lift #-}
 
-liftStateT :: (Distributive f, Functor m) => m a -> StateT f m a
+liftStateT :: (Representable f, Functor m) => m a -> StateT f m a
 liftStateT = \m -> StateT $ \s -> (,s) <$> m
 {-# inline liftStateT #-}
 
-instance (Distributive g, Monad m, Log g ~ s) => MonadState s (StateT g m) where
+instance (Representable g, Monad m, Log g ~ s) => MonadState s (StateT g m) where
   get = StateT $ \s -> pure (s, s)
   {-# inline get #-}
   put = \s -> StateDistT $ pureDist $ pure ((),s)
@@ -178,7 +178,7 @@ instance (Distributive g, Monad m, Log g ~ s) => MonadState s (StateT g m) where
   state = \f -> StateT $ pure . f
   {-# inline state #-}
 
-instance (Distributive g, MonadReader e m) => MonadReader e (StateT g m) where
+instance (Representable g, MonadReader e m) => MonadReader e (StateT g m) where
   ask = lift ask
   {-# inline ask #-}
   local = mapStateT . local
@@ -186,7 +186,7 @@ instance (Distributive g, MonadReader e m) => MonadReader e (StateT g m) where
   reader = lift . reader
   {-# inline reader #-}
 
-instance (Distributive g, MonadWriter w m) => MonadWriter w (StateT g m) where
+instance (Representable g, MonadWriter w m) => MonadWriter w (StateT g m) where
   tell = lift . tell
   {-# inline tell #-}
   listen = liftListen listen
@@ -194,16 +194,16 @@ instance (Distributive g, MonadWriter w m) => MonadWriter w (StateT g m) where
   pass = liftPass pass
   {-# inline pass #-}
 
-liftListen :: (Distributive f, Functor m) => Listen w m (a, Log f) -> Listen w (StateT f m) a
+liftListen :: (Representable f, Functor m) => Listen w m (a, Log f) -> Listen w (StateT f m) a
 liftListen = \listen' -> mapStateT $ 
   fmap (\((a,s'), w) -> ((a,w), s')) . listen'
 {-# inline liftListen #-}
 
-liftPass :: (Distributive f, Functor m) => Pass w m (a, Log f) -> Pass w (StateT f m) a
+liftPass :: (Representable f, Functor m) => Pass w m (a, Log f) -> Pass w (StateT f m) a
 liftPass = \pass' -> mapStateT $ \m -> pass' $ (\((a, f), s') -> ((a, s'), f)) <$> m
 {-# inline liftPass #-}
 
-instance (Distributive g, MonadCont m) => MonadCont (StateT g m) where
+instance (Representable g, MonadCont m) => MonadCont (StateT g m) where
   callCC = liftCallCC' callCC
   {-# inline callCC #-}
 
@@ -211,7 +211,7 @@ instance (Distributive g, MonadCont m) => MonadCont (StateT g m) where
 -- This version rolls back to the original state on entering the
 -- continuation.
 liftCallCC
-  :: Distributive g
+  :: Representable g
   => ((((a,Log g) -> m (b,Log g)) -> m (a,Log g)) -> m (a,Log g))
   -> ((a -> StateT g m b) -> StateT g m a)
   -> StateT g m a
@@ -224,22 +224,22 @@ liftCallCC = \callCC' f -> StateT $ \s ->
 -- This version uses the current state on entering the continuation.
 -- It does not satisfy the uniformity property (see "Control.Monad.Signatures").
 liftCallCC'
-  :: Distributive g => ((((a,Log g) -> m (b,Log g)) -> m (a,Log g)) -> m (a,Log g))
+  :: Representable g => ((((a,Log g) -> m (b,Log g)) -> m (a,Log g)) -> m (a,Log g))
   -> ((a -> StateT g m b) -> StateT g m a)
   -> StateT g m a
 liftCallCC' = \callCC' f -> StateT $ \s ->
   callCC' $ \c -> runStateT (f (\a -> StateT $ \s' -> c (a, s'))) s
 {-# inline liftCallCC' #-}
 
-instance (Distributive f, MonadPlus m) => Alternative (StateT f m) where
+instance (Representable f, MonadPlus m) => Alternative (StateT f m) where
   empty = liftStateT mzero
   {-# inline empty #-}
   (<|>) = \(StateDistT fm) (StateDistT fn) -> StateDistT (liftD2 mplus fm fn)
   {-# inline (<|>) #-}
 
-instance (Distributive f, MonadPlus m) => MonadPlus (StateT f m)
+instance (Representable f, MonadPlus m) => MonadPlus (StateT f m)
 
-instance (Distributive f, MonadError e m) => MonadError e (StateT f m) where
+instance (Representable f, MonadError e m) => MonadError e (StateT f m) where
   throwError = lift . throwError
   {-# inline throwError #-}
   catchError = liftCatch catchError
@@ -252,17 +252,17 @@ instance FFunctor (DCatch x y m) where
   {-# inline ffmap #-}
 
 -- | Lift a @catchE@ operation to the new monad.
-liftCatch :: Distributive f => Catch e m (a, Log f) -> Catch e (StateT f m) a
+liftCatch :: Representable f => Catch e m (a, Log f) -> Catch e (StateT f m) a
 liftCatch = \catchE (StateDistT m) h ->
   StateDistT $ distrib (DCatch m (runStateDistT #. h)) $ \(DCatch m' h') -> coerce catchE m' h'
 {-# INLINE liftCatch #-}
 
-instance (Distributive f, MonadFix m) => MonadFix (StateT f m) where
+instance (Representable f, MonadFix m) => MonadFix (StateT f m) where
   -- mfix f = StateT $ \s -> mfix \ ~(a, _) -> runStateT (f a) s
   mfix = \f ->
     StateDistT $ distrib (FCompose (runStateDistT #. f)) $ \f' -> mfix (coerce f' . fst)
   {-# inline mfix #-}
 
-instance (Distributive f, Contravariant m) => Contravariant (StateT f m) where
+instance (Representable f, Contravariant m) => Contravariant (StateT f m) where
   contramap = \f (StateDistT m) -> StateDistT $ contramap (\ ~(a, s') -> (f a, s')) <$> m
   {-# inline contramap #-}

@@ -23,16 +23,16 @@ import Data.HKD.Rep
 -- Many representable functors can be used to memoize functions.
 newtype FEndo f = FEndoDist { runFEndoDist :: f (FLog f) }
 
-pattern FEndo :: FDistributive f => (FLog f ~> FLog f) -> FEndo f
+pattern FEndo :: FRepresentable f => (FLog f ~> FLog f) -> FEndo f
 pattern FEndo { appFEndo } = FEndoDist (FTabulate appFEndo)
 
 {-# complete FEndo #-}
 
-instance FDistributive f => Semigroup (FEndo f) where
+instance FRepresentable f => Semigroup (FEndo f) where
   (<>) = \ f g -> FEndo (appFEndo f . appFEndo g)
   {-# inline (<>) #-}
 
-instance FDistributive f => Monoid (FEndo f) where
+instance FRepresentable f => Monoid (FEndo f) where
   mempty = FEndoDist faskFDist
   {-# inline mempty #-}
 

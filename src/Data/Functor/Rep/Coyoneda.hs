@@ -28,7 +28,7 @@ import Text.Read hiding (lift)
 
 type role Coyoneda representational nominal
 data Coyoneda f a where
-  CoyonedaDist :: Distributive g => g a -> f (Log g) -> Coyoneda f a 
+  CoyonedaDist :: Representable g => g a -> f (Log g) -> Coyoneda f a 
 
 -- I'm not sure whether this pattern can be made work on GHC-8.0,
 -- or it's unworkaroundable bug
@@ -147,13 +147,13 @@ instance Indexable f => Indexable (Coyoneda f) where
   index = \(CoyonedaDist g flg) lf -> index g (index flg lf)
   {-# inline index #-}
 
-instance Distributive f => Distributive (Coyoneda f) where
+instance Representable f => Representable (Coyoneda f) where
   scatter = \wid2r h2cyf wh -> liftCoyoneda (scatter wid2r (lowerCoyoneda . h2cyf) wh)
   tabulate = \logf2a -> CoyonedaDist (tabulate @f logf2a) askDist
   {-# inline scatter #-}
   {-# inline tabulate #-}
 
-liftCoyonedaDist :: forall g f. Distributive g => f (Log g) -> Coyoneda f (Log g)
+liftCoyonedaDist :: forall g f. Representable g => f (Log g) -> Coyoneda f (Log g)
 liftCoyonedaDist = CoyonedaDist (askDist @g)
 {-# inline liftCoyonedaDist #-}
 

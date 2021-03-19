@@ -3,7 +3,7 @@
 module Data.HKD.Rep
 ( type (%)
 , FIndexable(..)
-, FDistributive(..)
+, FRepresentable(..)
 , fdistribute
 , fdistrib
 , fcollect
@@ -60,7 +60,7 @@ module Data.HKD.Rep
 , HKD(..)
 , Atkey(..)
 
--- * Constrained Distributive operations
+-- * Constrained Representable operations
 , FAll(..)
 , cfdistrib
 ) where

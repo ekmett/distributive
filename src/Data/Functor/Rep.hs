@@ -18,7 +18,7 @@
 --   ( Show, Read, Eq, Ord
 --   , Functor, Foldable, Traversable
 --   , Generic, Generic1, Data )
---   deriving anyclass Distributive
+--   deriving anyclass Representable
 --   deriving
 --   ( Applicative, Monad, MonadFix, MonadZip
 --   , MonadReader (Fin 3)
@@ -35,7 +35,7 @@
 -- See 'Data.Machine.Moore' for an example of this pattern.
 module Data.Functor.Rep
 ( Indexable(..)
-, Distributive(..)
+, Representable(..)
 , distribute
 , distrib
 , dist

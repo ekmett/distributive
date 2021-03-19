@@ -73,7 +73,7 @@ import Data.Tagged
 --
 -- Due to the lack of non-trivial comonoids in Haskell, we can restrict
 -- ourselves to requiring a 'Functor' rather than some Coapplicative class.
--- Categorically every 'Distributive' functor is actually a right adjoint,
+-- Categorically every 'Representable' functor is actually a right adjoint,
 -- and so it must be 'Representable' endofunctor and preserve all limits.
 -- This is a fancy way of saying @f@ is isomorphic to @(->) x@ for some x.
 -- We use the name @'Log' f@ for @x@.
@@ -104,7 +104,7 @@ class Indexable f where
   index = defaultIndex
   {-# inline index #-}
 
-class (Indexable f, Functor f) => Distributive f where
+class (Indexable f, Functor f) => Representable f where
 
   -- | Defaults to 'tabulateLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'tabulateRep'
   tabulate :: (Log f -> a) -> f a
@@ -113,7 +113,7 @@ class (Indexable f, Functor f) => Distributive f where
   {-# inline tabulate #-}
 
   -- | Scatter the contents of an 'FFunctor'. This admittedly complicated operation
-  -- is necessary to get asymptotically optimal performance for 'Distributive' functors
+  -- is necessary to get asymptotically optimal performance for 'Representable' functors
   -- like Mealy and Moore machines that have many layers to them.
   --
   -- If you have a 'Generic1' instance for your 'Functor', this should be able to be
@@ -130,7 +130,7 @@ class (Indexable f, Functor f) => Distributive f where
   -- The obvious API for this function is the much simpler
   --
   -- @
-  -- 'dist ':: ('Distributive' f, 'FFunctor' w) => w f -> f (w 'Identity')
+  -- 'dist ':: ('Representable' f, 'FFunctor' w) => w f -> f (w 'Identity')
   -- @
   --
   -- However, most uses of this function aren't interested in leaving a @w 'Identity'@ inside @f@
@@ -145,13 +145,13 @@ class (Indexable f, Functor f) => Distributive f where
   -- dictionary to be derived with GND. This latter mapping is a lot less useful, so we supply
   --
   -- @
-  -- 'distrib' :: ('Distributive' f, 'FFunctor' w) => w f -> (w 'Identity' -> r) -> f r
+  -- 'distrib' :: ('Representable' f, 'FFunctor' w) => w f -> (w 'Identity' -> r) -> f r
   -- @
   --
   -- as well, outside o the class, which is quite concise for many workloads.
   scatter :: FFunctor w => (w Identity -> r) -> (g ~> f) -> w g -> f r
   default scatter
-    :: (Generic1 f, Distributive (Rep1 f), FFunctor w)
+    :: (Generic1 f, Representable (Rep1 f), FFunctor w)
     => (w Identity -> r) -> (g ~> f) -> w g -> f r
   scatter = scatterRep
   {-# inline scatter #-}
@@ -160,7 +160,7 @@ class (Indexable f, Functor f) => Distributive f where
 -- @'Log' ('Rep1' f)@
 tabulateRep
   :: forall f a.
-     (Distributive (Rep1 f), Generic1 f, Coercible (Log f) (Log (Rep1 f)))
+     (Representable (Rep1 f), Generic1 f, Coercible (Log f) (Log (Rep1 f)))
   => (Log f -> a) -> f a
 tabulateRep = coerce (to1 . tabulate :: (Log (Rep1 f) -> a) -> f a)
 {-# inline tabulateRep #-}
@@ -176,14 +176,14 @@ indexRep = coerce (index . from1 :: f a -> Log (Rep1 f) -> a)
 
 -- | derive 'scatter' via 'Generic1'
 scatterRep
-  :: (Distributive (Rep1 f), Generic1 f, FFunctor w)
+  :: (Representable (Rep1 f), Generic1 f, FFunctor w)
   => (w Identity -> r) -> (g ~> f) -> w g -> f r
 scatterRep = \k phi -> to1 . scatter k (from1 . phi)
 {-# inline scatterRep #-}
 
--- | This pattern synonym lets you work with any 'Distributive' functor as if
+-- | This pattern synonym lets you work with any 'Representable' functor as if
 -- it were a function.
-pattern Tabulate :: Distributive f => (Log f -> a) -> f a
+pattern Tabulate :: Representable f => (Log f -> a) -> f a
 pattern Tabulate i <- (index -> i) where
   Tabulate i = tabulate i
 
@@ -212,13 +212,13 @@ type family DefaultLog'' (hasUnknownSize :: Bool) f :: Type where
   DefaultLog'' 'False f = Fin (Size f)
 
 type family DefaultTabulateImplC (t :: LogType) f :: Constraint where
-  DefaultTabulateImplC 'UseLogarithm f = (Distributive f, Log f ~ Logarithm f)
-  DefaultTabulateImplC 'UseLogRep f = (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
+  DefaultTabulateImplC 'UseLogarithm f = (Representable f, Log f ~ Logarithm f)
+  DefaultTabulateImplC 'UseLogRep f = (Generic1 f, Representable (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
   DefaultTabulateImplC 'UseLogFin f = (Generic1 f, GTabulateFin (Rep1 f), Size f ~ GSize (Rep1 f), Log f ~ Fin (GSize (Rep1 f)))
 
 type family DefaultIndexImplC (t :: LogType) f :: Constraint where
   DefaultIndexImplC 'UseLogarithm f = (Log f ~ Logarithm f)
-  DefaultIndexImplC 'UseLogRep f = (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
+  DefaultIndexImplC 'UseLogRep f = (Generic1 f, Representable (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
   DefaultIndexImplC 'UseLogFin f = (Generic1 f, GIndexFin (Rep1 f), Size f ~ GSize (Rep1 f), Log f ~ Fin (GSize (Rep1 f)))
 
 -- individual type classes, so GHC needs to do less work
@@ -271,12 +271,12 @@ defaultIndex = defaultIndex' @(LogTypeOf f)
 -- @
 --
 -- flipped version of 'cotrav'
-distrib :: (Distributive f, FFunctor w) => w f -> (w Identity -> r) -> f r
+distrib :: (Representable f, FFunctor w) => w f -> (w Identity -> r) -> f r
 distrib = \ w k -> scatter k id w
 {-# inline distrib #-}
 
 -- | The essential essence of the new 'scatter' with administrative mapping removed.
-dist :: (Distributive f, FFunctor w) => w f -> f (w Identity)
+dist :: (Representable f, FFunctor w) => w f -> f (w Identity)
 dist = scatter id id
 {-# inline dist #-}
 
@@ -288,7 +288,7 @@ dist = scatter id id
 -- for some reason you are unable to define 'Generic1' and so canot simply use
 -- 'DeriveAnyClass'.
 scatterDefault
-  :: (Distributive f, FFunctor w)
+  :: (Representable f, FFunctor w)
   => (w Identity -> r)
   -> (g ~> f)
   -> w g -> f r
@@ -299,14 +299,14 @@ scatterDefault = \k phi wg ->
 -- | Default definition for 'tabulate' when @'Log' f@ = @'Logarithm' f@. Can be used
 -- to manipulate 'Logarithm's regardless of the choice of 'Log' for your distributive
 -- functor.
-tabulateLogarithm :: Distributive f => (Logarithm f -> a) -> f a
+tabulateLogarithm :: Representable f => (Logarithm f -> a) -> f a
 tabulateLogarithm = \ f ->
   distrib (Tab f) \(Tab f') -> f' (Logarithm runIdentity)
 {-# inline tabulateLogarithm #-}
 
 -- | @'Logarithm' f = f ~> 'Identity'@
 --
--- When @f@ is 'Distributive', this is the representation/logarithm of @f@, up to isomorphism. i.e.
+-- When @f@ is 'Representable', this is the representation/logarithm of @f@, up to isomorphism. i.e.
 --
 -- @f a ≅ Logarithm f -> a@
 --
@@ -318,7 +318,7 @@ tabulateLogarithm = \ f ->
 --
 -- @'Logarithm' ((->) r) = forall a. (r -> a) -> a ≅ r@
 --
--- This works more generally for any 'Distributive' functor. E.g. given
+-- This works more generally for any 'Representable' functor. E.g. given
 --
 -- @data V2 a = V2 a a@
 --
@@ -359,7 +359,7 @@ instance FFunctor (Tab a) where
 -- 'distribute' . 'distribute' ≡ 'id'
 -- @
 distribute
-  :: (Functor f, Distributive g)
+  :: (Functor f, Representable g)
   => f (g a) -> g (f a)
 distribute = \f -> distrib (FCompose f) \(FCompose f') -> runIdentity <$> f'
 {-# inline distribute #-}
@@ -371,7 +371,7 @@ distribute = \f -> distrib (FCompose f) \(FCompose f') -> runIdentity <$> f'
 -- 'fmap' 'distribute' . 'collect' f ≡ 'getCompose' . 'collect' ('Compose' . f)
 -- @
 collect
-  :: (Functor f, Distributive g)
+  :: (Functor f, Representable g)
   => (a -> g b)
   -> f a -> g (f b)
 collect = \ f fa -> distrib (FCompose f) \(FCompose f') -> coerce f' <$> fa
@@ -383,7 +383,7 @@ collect = \ f fa -> distrib (FCompose f) \(FCompose f') -> coerce f' <$> fa
 -- 'cotraverse' f ≡ 'fmap' f . 'distribute'
 -- @
 cotraverse
-  :: (Functor f, Distributive g)
+  :: (Functor f, Representable g)
   => (f a -> b)
   -> f (g a) -> g b
 cotraverse = \fab fga ->
@@ -397,7 +397,7 @@ instance (Indexable f, Indexable g) => Indexable (f :*: g) where
     Right y -> index g y
   {-# inline index #-}
 
-instance (Distributive f, Distributive g) => Distributive (f :*: g) where
+instance (Representable f, Representable g) => Representable (f :*: g) where
   scatter = \ k f (ffmap f -> w) ->
         scatter k (\(l :*: _) -> l) w
     :*: scatter k (\(_ :*: r) -> r) w
@@ -407,28 +407,28 @@ instance (Distributive f, Distributive g) => Distributive (f :*: g) where
 
 
 deriving newtype instance Indexable f => Indexable (M1 i c f)
-deriving newtype instance Distributive f => Distributive (M1 i c f)
+deriving newtype instance Representable f => Representable (M1 i c f)
 
 instance Indexable U1 where
   type Log U1 = Void
   index = \_ -> absurd
   {-# inline index #-}
 
-instance Distributive U1 where
+instance Representable U1 where
   scatter = \_ _ _ -> U1
   tabulate = \_ -> U1
   {-# inline scatter #-}
   {-# inline tabulate #-}
 
 deriving newtype instance Indexable f => Indexable (Rec1 f)
-deriving newtype instance Distributive f => Distributive (Rec1 f)
+deriving newtype instance Representable f => Representable (Rec1 f)
 
 instance Indexable Par1 where
   type Log Par1 = ()
   index = \x _ -> unPar1 x
   {-# inline index #-}
 
-instance Distributive Par1 where
+instance Representable Par1 where
   scatter = \k f -> coerce $ k . ffmap ((Identity . unPar1) #. f)
   tabulate = \f -> Par1 $ f ()
   {-# inline scatter #-}
@@ -439,7 +439,7 @@ instance (Indexable f, Indexable g) => Indexable (f :.: g) where
   index = \ (Comp1 f) (x, y) -> index (index f x) y
   {-# inline index #-}
 
-instance (Distributive f, Distributive g) => Distributive (f :.: g) where
+instance (Representable f, Representable g) => Representable (f :.: g) where
   scatter = \ k phi wg ->
     Comp1 $
     scatter
@@ -456,7 +456,7 @@ instance (Functor f, Indexable f, Indexable g) => Indexable (Compose f g) where
   index = indexRep
   {-# inline index #-}
 
-instance (Distributive f, Distributive g) => Distributive (Compose f g) where
+instance (Representable f, Representable g) => Representable (Compose f g) where
   tabulate = tabulateRep
   {-# inline tabulate #-}
 
@@ -465,74 +465,74 @@ instance (Indexable f, Indexable g) => Indexable (Product f g) where
   index = indexRep
   {-# inline index #-}
 
-instance (Distributive f, Distributive g) => Distributive (Product f g) where
+instance (Representable f, Representable g) => Representable (Product f g) where
   tabulate = tabulateRep
   {-# inline tabulate #-}
 
 instance Indexable Proxy
-instance Distributive Proxy
+instance Representable Proxy
 
 instance Indexable Identity
-instance Distributive Identity
+instance Representable Identity
 
 instance Indexable ((->) x) where
   type Log ((->) x) = x
   index = id
   {-# inline index #-}
 
-instance Distributive ((->) x) where
+instance Representable ((->) x) where
   scatter = \ k phi wg x -> k $ ffmap (\g -> Identity $ phi g x) wg
   tabulate = id
   {-# inline scatter #-}
   {-# inline tabulate #-}
 
 instance Indexable Down
-instance Distributive Down
+instance Representable Down
 instance Indexable Monoid.Product
-instance Distributive Monoid.Product
+instance Representable Monoid.Product
 instance Indexable Monoid.Sum
-instance Distributive Monoid.Sum
+instance Representable Monoid.Sum
 
 deriving newtype instance Indexable f => Indexable (Backwards f)
-deriving newtype instance Distributive f => Distributive (Backwards f)
+deriving newtype instance Representable f => Representable (Backwards f)
 deriving newtype instance Indexable f => Indexable (Reverse f)
-deriving newtype instance Distributive f => Distributive (Reverse f)
+deriving newtype instance Representable f => Representable (Reverse f)
 deriving newtype instance Indexable f => Indexable (Monoid.Alt f)
-deriving newtype instance Distributive f => Distributive (Monoid.Alt f)
+deriving newtype instance Representable f => Representable (Monoid.Alt f)
 instance Indexable Monoid.Dual
-instance Distributive Monoid.Dual
+instance Representable Monoid.Dual
 
 deriving newtype instance Indexable f => Indexable (Monoid.Ap f)
-deriving newtype instance Distributive f => Distributive (Monoid.Ap f)
+deriving newtype instance Representable f => Representable (Monoid.Ap f)
 
 instance Indexable Semigroup.First
-instance Distributive Semigroup.First
+instance Representable Semigroup.First
 instance Indexable Semigroup.Last
-instance Distributive Semigroup.Last
+instance Representable Semigroup.Last
 instance Indexable Semigroup.Min
-instance Distributive Semigroup.Min
+instance Representable Semigroup.Min
 instance Indexable Semigroup.Max
-instance Distributive Semigroup.Max
+instance Representable Semigroup.Max
 
 deriving newtype instance (Indexable f, Monad f) => Indexable (WrappedMonad f)
-deriving newtype instance (Distributive f, Monad f) => Distributive (WrappedMonad f)
+deriving newtype instance (Representable f, Monad f) => Representable (WrappedMonad f)
 
 instance Indexable f => Indexable (Kleisli f a) where
   type Log (Kleisli f a) = (a, Log f)
   index = index .# (Comp1 . runKleisli)
   {-# inline index #-}
 
-instance Distributive f => Distributive (Kleisli f a) where
+instance Representable f => Representable (Kleisli f a) where
   scatter = \k f -> coerce $ scatter k ((Comp1 . runKleisli) #. f)
   tabulate = (Kleisli . unComp1) #. tabulate
   {-# inline scatter #-}
   {-# inline tabulate #-}
 
--- instance Distributive f => Distributive (Cokleisli f a)
+-- instance Representable f => Representable (Cokleisli f a)
 
 #ifdef MIN_VERSION_tagged
 instance Indexable (Tagged r)
-instance Distributive (Tagged r)
+instance Representable (Tagged r)
 #endif
 
 instance Indexable Complex where
@@ -542,39 +542,39 @@ instance Indexable Complex where
     True -> i
   {-# inline index #-}
 
-instance Distributive Complex where
+instance Representable Complex where
   tabulate = \ f -> f False :+ f True
   {-# inline tabulate #-}
 
 deriving newtype instance Indexable f => Indexable (IdentityT f)
-deriving newtype instance Distributive f => Distributive (IdentityT f)
+deriving newtype instance Representable f => Representable (IdentityT f)
 
 deriving via (((->) e :.: f) :: Type -> Type)
   instance Indexable f => Indexable (ReaderT e f)
 
 deriving via (((->) e :.: f) :: Type -> Type)
-  instance Distributive f => Distributive (ReaderT e f)
+  instance Representable f => Representable (ReaderT e f)
 
 -- * DerivingVia
 
 -- | Provides defaults definitions for other classes in terms of
--- 'Distributive'. Supplied for use with @DerivingVia@ in GHC 8.6+
+-- 'Representable'. Supplied for use with @DerivingVia@ in GHC 8.6+
 --
--- Deriving 'Distributive', 'Foldable', or 'Traversable' via 'Dist' f leads to non-termination
+-- Deriving 'Representable', 'Foldable', or 'Traversable' via 'Dist' f leads to non-termination
 -- but all other instances are fine for use and are defined in terms of these three.
 
 type role Dist representational nominal
 newtype Dist f a = Dist { runDist :: f a }
   deriving stock (Foldable, Traversable)
 
-instance Distributive f => Functor (Dist f) where
+instance Representable f => Functor (Dist f) where
   fmap = fmapDist
   {-# inline fmap #-}
   (<$) = const . pure
   {-# inline (<$) #-}
 
--- | A default definition for 'fmap' from 'Functor' in terms of 'Distributive'
-fmapDist :: Distributive f => (a -> b) -> f a -> f b
+-- | A default definition for 'fmap' from 'Functor' in terms of 'Representable'
+fmapDist :: Representable f => (a -> b) -> f a -> f b
 fmapDist = \ f fa -> distrib (F1 fa) \(F1 a) -> coerce f a
 {-# inline fmapDist #-}
 
@@ -583,7 +583,7 @@ instance Indexable f => Indexable (Dist f) where
   index = index .# runDist
   {-# inline index #-}
 
-instance Distributive f => Distributive (Dist f) where
+instance Representable f => Representable (Dist f) where
   scatter = \ k f -> Dist #. scatter k (runDist #. f)
   tabulate = Dist #. tabulate
   {-# inline scatter #-}
@@ -591,7 +591,7 @@ instance Distributive f => Distributive (Dist f) where
 
 -- * Applicative
 
-instance Distributive f => Applicative (Dist f) where
+instance Representable f => Applicative (Dist f) where
   pure = pureDist
   {-# inline pure #-}
   (<*>) = apDist
@@ -603,45 +603,45 @@ instance Distributive f => Applicative (Dist f) where
   liftA2 = liftD2
   {-# inline liftA2 #-}
 
--- | A default definition for 'pure' from 'Applicative' in terms of 'Distributive'
-pureDist :: Distributive f => a -> f a
+-- | A default definition for 'pure' from 'Applicative' in terms of 'Representable'
+pureDist :: Representable f => a -> f a
 pureDist = scatter getConst id .# Const
 -- pureDist = distrib Proxy . const
 {-# inline pureDist #-}
 
--- | A default definition for '(<*>)' from 'Applicative' in terms of 'Distributive'
-apDist :: Distributive f => f (a -> b) -> f a -> f b
+-- | A default definition for '(<*>)' from 'Applicative' in terms of 'Representable'
+apDist :: Representable f => f (a -> b) -> f a -> f b
 apDist = \fab fa ->
   distrib (F2 fab fa) \(F2 ab a) -> coerce ab a
 {-# inline apDist #-}
 
--- | A default definition 'liftA2' from 'Applicative' in terms of 'Distributive'
-liftD2 :: Distributive f => (a -> b -> c) -> f a -> f b -> f c
+-- | A default definition 'liftA2' from 'Applicative' in terms of 'Representable'
+liftD2 :: Representable f => (a -> b -> c) -> f a -> f b -> f c
 liftD2 = \f fa fb ->
   distrib (F2 fa fb) \(F2 a b) -> coerce f a b
 {-# inline liftD2 #-}
 
--- | An implementation of 'liftA3' in terms of 'Distributive'.
-liftD3 :: Distributive f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
+-- | An implementation of 'liftA3' in terms of 'Representable'.
+liftD3 :: Representable f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
 liftD3 = \ f fa fb fc ->
   distrib (F3 fa fb fc) \(F3 a b c) -> coerce f a b c
 {-# inline liftD3 #-}
 
--- | An implementation of 'liftA4' in terms of 'Distributive'.
-liftD4 :: Distributive f => (a -> b -> c -> d -> e) -> f a -> f b -> f c -> f d -> f e
+-- | An implementation of 'liftA4' in terms of 'Representable'.
+liftD4 :: Representable f => (a -> b -> c -> d -> e) -> f a -> f b -> f c -> f d -> f e
 liftD4 = \f fa fb fc fd ->
   distrib (F4 fa fb fc fd) \(F4 a b c d) -> coerce f a b c d
 {-# inline liftD4 #-}
 
--- | An implementation of 'liftA5' in terms of 'Distributive'.
-liftD5 :: Distributive f => (a -> b -> c -> d -> e -> x) -> f a -> f b -> f c -> f d -> f e -> f x
+-- | An implementation of 'liftA5' in terms of 'Representable'.
+liftD5 :: Representable f => (a -> b -> c -> d -> e -> x) -> f a -> f b -> f c -> f d -> f e -> f x
 liftD5 = \f fa fb fc fd fe ->
   distrib (F5 fa fb fc fd fe) \(F5 a b c d e) -> coerce f a b c d e
 {-# inline liftD5 #-}
 
 -- * Monad
 
-instance Distributive f => Monad (Dist f) where
+instance Representable f => Monad (Dist f) where
   (>>=) = bindDist
   {-# inline (>>=) #-}
 #if !MIN_VERSION_base(4,13,0)
@@ -649,29 +649,29 @@ instance Distributive f => Monad (Dist f) where
   fail x = tabulate $ \_ -> error x
 #endif
 
--- | A default implementation of '(>>=)' in terms of 'Distributive'
-bindDist :: Distributive f => f a -> (a -> f b) -> f b
+-- | A default implementation of '(>>=)' in terms of 'Representable'
+bindDist :: Representable f => f a -> (a -> f b) -> f b
 bindDist = \ m f -> distrib (F1 m :*: FCompose f) \(F1 a :*: FCompose f') -> coerce f' a
 {-# inline bindDist #-}
 
 -- * MonadFix
 
-instance Distributive f => MonadFix (Dist f) where
+instance Representable f => MonadFix (Dist f) where
   mfix = mfixDist
   {-# inline mfix #-}
 
--- | A default definition for 'mfix' in terms of 'Distributive'
-mfixDist :: Distributive f => (a -> f a) -> f a
+-- | A default definition for 'mfix' in terms of 'Representable'
+mfixDist :: Representable f => (a -> f a) -> f a
 mfixDist = \ama -> distrib (FCompose ama) (fix . coerce)
 {-# inline mfixDist #-}
 
-instance Distributive f => MonadZip (Dist f) where
+instance Representable f => MonadZip (Dist f) where
   mzipWith = liftD2
   {-# inline mzipWith #-}
   munzip = fmap fst &&& fmap snd
   {-# inline munzip #-}
 
-instance (Distributive f, e ~ Log f) => MonadReader e (Dist f) where
+instance (Representable f, e ~ Log f) => MonadReader e (Dist f) where
   ask = askDist
   {-# inline ask #-}
   local = localDist
@@ -679,7 +679,7 @@ instance (Distributive f, e ~ Log f) => MonadReader e (Dist f) where
   reader = tabulate
   {-# inline reader #-}
 
-instance (Distributive f, Num a) => Num (Dist f a) where
+instance (Representable f, Num a) => Num (Dist f a) where
   (+) = liftA2 (+)
   (-) = liftA2 (-)
   (*) = liftA2 (*)
@@ -695,7 +695,7 @@ instance (Distributive f, Num a) => Num (Dist f a) where
   {-# inline signum #-}
   {-# inline fromInteger #-}
 
-instance (Distributive f, Fractional a) => Fractional (Dist f a) where
+instance (Representable f, Fractional a) => Fractional (Dist f a) where
   (/) = liftA2 (/)
   recip = fmap recip
   fromRational = pure . fromRational
@@ -703,7 +703,7 @@ instance (Distributive f, Fractional a) => Fractional (Dist f a) where
   {-# inline recip #-}
   {-# inline fromRational #-}
 
-instance (Distributive f, Floating a) => Floating (Dist f a) where
+instance (Representable f, Floating a) => Floating (Dist f a) where
   pi = pure pi
   exp = fmap exp
   log = fmap log
@@ -749,73 +749,73 @@ instance (Distributive f, Floating a) => Floating (Dist f a) where
   {-# inline log1pexp #-}
   {-# inline log1mexp #-}
 
-instance (Distributive f, Semigroup a) => Semigroup (Dist f a) where
+instance (Representable f, Semigroup a) => Semigroup (Dist f a) where
   (<>) = liftD2 (<>)
   {-# inline (<>) #-}
 
-instance (Distributive f, Monoid a) => Monoid (Dist f a) where
+instance (Representable f, Monoid a) => Monoid (Dist f a) where
   mempty = pure mempty
   {-# noinline[0] mempty #-}
 
-instance (Distributive f, Foldable f, Eq a) => Eq (Dist f a) where
+instance (Representable f, Foldable f, Eq a) => Eq (Dist f a) where
   (==) = eqDist
   {-# inline (==) #-}
   (/=) = neDist
   {-# inline (/=) #-}
 
 eqDist
-  :: (Distributive f, Foldable f, Eq a)
+  :: (Representable f, Foldable f, Eq a)
   => f a -> f a -> Bool
 eqDist = \ xs ys ->
   Monoid.getAll $ fold $ liftD2 (\x y -> Monoid.All (x == y)) xs ys
 {-# inline eqDist #-}
 
 neDist
-  :: (Distributive f, Foldable f, Eq a)
+  :: (Representable f, Foldable f, Eq a)
   => f a -> f a -> Bool
 neDist = \ xs ys ->
   Monoid.getAny $ fold $ liftD2 (\x y -> Monoid.Any (x /= y)) xs ys
 
-instance (Distributive f, Foldable f, Ord a) => Ord (Dist f a) where
+instance (Representable f, Foldable f, Ord a) => Ord (Dist f a) where
   compare = \xs ys -> fold $ liftD2 compare xs ys
   {-# inline compare #-}
 
 compareDist
-  :: (Distributive f, Foldable f, Ord a)
+  :: (Representable f, Foldable f, Ord a)
   => f a -> f a -> Ordering
 compareDist = \xs ys -> fold $ liftD2 compare xs ys
 {-# inline compareDist #-}
 
 liftCompareDist
-  :: (Distributive f, Foldable f)
+  :: (Representable f, Foldable f)
   => (a -> b -> Ordering)
   -> f a -> f b -> Ordering
 liftCompareDist = \f xs ys -> fold $ liftD2 f xs ys
 {-# inline liftCompareDist #-}
 
-liftEqDist :: (Distributive f, Foldable f) => (a -> b -> Bool) -> f a -> f b -> Bool
+liftEqDist :: (Representable f, Foldable f) => (a -> b -> Bool) -> f a -> f b -> Bool
 liftEqDist = \f xs ys ->
   Monoid.getAll $ fold $ liftD2 (\x y -> Monoid.All (f x y)) xs ys
 {-# inline liftEqDist #-}
 
-instance (Distributive f, Foldable f) => Eq1 (Dist f) where
+instance (Representable f, Foldable f) => Eq1 (Dist f) where
   liftEq = liftEqDist
   {-# inline liftEq #-}
 
-instance (Distributive f, Foldable f) => Ord1 (Dist f) where
+instance (Representable f, Foldable f) => Ord1 (Dist f) where
   liftCompare = liftCompareDist
   {-# inline liftCompare #-}
 
 -- * MonadZip
 
--- | A default definition for 'mzipWith' in terms of 'Distributive'
-mzipWithDist :: Distributive f => (a -> b -> c) -> f a -> f b -> f c
+-- | A default definition for 'mzipWith' in terms of 'Representable'
+mzipWithDist :: Representable f => (a -> b -> c) -> f a -> f b -> f c
 mzipWithDist = liftD2
 {-# inline mzipWithDist #-}
 
 -- * Comonad
 
--- instance (Distributive f, Monoid (Log f)) => Comonad (Dist f) where
+-- instance (Representable f, Monoid (Log f)) => Comonad (Dist f) where
 --  extract = extractDist
 --  {-# inline extract #-}
 --  duplicate = duplicateDist
@@ -823,102 +823,102 @@ mzipWithDist = liftD2
 --  extend = extendDist
 --  {-# inline extend #-}
 
--- | A default definition for 'extract' from @Comonad@ in terms of 'Distributive'
+-- | A default definition for 'extract' from @Comonad@ in terms of 'Representable'
 extractDist :: (Indexable f, Monoid (Log f)) => f a -> a
 extractDist = flip index mempty
 {-# inline extractDist #-}
 
--- | A default definition for 'extend' from @Comonad@ in terms of 'Distributive'
-extendDist :: (Distributive f, Semigroup (Log f)) => (f a -> b) -> f a -> f b
+-- | A default definition for 'extend' from @Comonad@ in terms of 'Representable'
+extendDist :: (Representable f, Semigroup (Log f)) => (f a -> b) -> f a -> f b
 extendDist = \f g -> tabulate \i -> f $ tabulate \j -> index g (i <> j)
 {-# inline extendDist #-}
 
--- | A default definition for 'duplicate' from @Comonad@ in terms of 'Distributive'
-duplicateDist :: (Distributive f, Semigroup (Log f)) => f a -> f (f a)
+-- | A default definition for 'duplicate' from @Comonad@ in terms of 'Representable'
+duplicateDist :: (Representable f, Semigroup (Log f)) => f a -> f (f a)
 duplicateDist = \f -> tabulate \i -> tabulate \j -> index f (i <> j)
 {-# inline duplicateDist #-}
 
--- | A default definition for 'extract' from @Comonad@ in terms of 'Distributive'
+-- | A default definition for 'extract' from @Comonad@ in terms of 'Representable'
 -- where the user chooses to supply a 'unit' logarithm other than 'mempty'
 extractDistBy :: Indexable f => Log f -> f a -> a
 extractDistBy = flip index
 {-# inline extractDistBy #-}
 
--- | A default definition for 'extend' from @Comonad@ in terms of 'Distributive'
+-- | A default definition for 'extend' from @Comonad@ in terms of 'Representable'
 -- where the user chooses to supply a semigroup on logarithms other than '<>'
-extendDistBy :: Distributive f => (Log f -> Log f -> Log f) -> (f a -> b) -> f a -> f b
+extendDistBy :: Representable f => (Log f -> Log f -> Log f) -> (f a -> b) -> f a -> f b
 extendDistBy = \t f g -> tabulate \i -> f $ tabulate \j -> index g (t i j)
 
 {-# inline extendDistBy #-}
--- | A default definition for 'duplicate' from @Comonad@ in terms of 'Distributive'
+-- | A default definition for 'duplicate' from @Comonad@ in terms of 'Representable'
 -- where the user chooses to supply an semigroup on logarithms other than '<>'
-duplicateDistBy :: Distributive f => (Log f -> Log f -> Log f) -> f a -> f (f a)
+duplicateDistBy :: Representable f => (Log f -> Log f -> Log f) -> f a -> f (f a)
 duplicateDistBy = \t f -> tabulate \i -> tabulate \j -> index f (t i j)
 {-# inline duplicateDistBy #-}
 
 -- * MonadReader
 
--- deriving via (f :.: ((->) e)) instance Distributive f => Distributive (TracedT e f)
+-- deriving via (f :.: ((->) e)) instance Representable f => Representable (TracedT e f)
 
--- | A default definition for 'ask' from 'MonadReader' in terms of 'Distributive'
-askDist :: Distributive f => f (Log f)
+-- | A default definition for 'ask' from 'MonadReader' in terms of 'Representable'
+askDist :: Representable f => f (Log f)
 askDist = tabulate id
 {-# noinline[0] askDist #-}
 
--- | A default definition for 'local' from 'MonadReader' in terms of 'Distributive'
-localDist :: Distributive f => (Log f -> Log f) -> f a -> f a
+-- | A default definition for 'local' from 'MonadReader' in terms of 'Representable'
+localDist :: Representable f => (Log f -> Log f) -> f a -> f a
 localDist = \f m -> tabulate (index m . f)
 {-# inline localDist #-}
 
 -- * ComonadTrace
 
--- | A default definition for 'trace' from @ComonadTrace@ in terms of 'Distributive'
+-- | A default definition for 'trace' from @ComonadTrace@ in terms of 'Representable'
 traceDist :: Indexable f => Log f -> f a -> a
 traceDist = flip index
 {-# inline traceDist #-}
 
 -- * FunctorWithIndex
 
-instance (Distributive f, Log f ~ i) => FunctorWithIndex i (Dist f) where
+instance (Representable f, Log f ~ i) => FunctorWithIndex i (Dist f) where
   imap = imapDist
   {-# inline imap #-}
 
--- | A default definition for 'imap' from @FunctorWithIndex@ in terms of 'Distributive'
+-- | A default definition for 'imap' from @FunctorWithIndex@ in terms of 'Representable'
 imapDist
-  :: Distributive f
+  :: Representable f
   => (Log f -> a -> b) -> f a -> f b
 imapDist = \f xs -> tabulate (f <*> index xs)
 {-# inline imapDist #-}
 
 -- * FoldableWithIndex
 
-instance (Distributive f, Foldable f, Log f ~ i) => FoldableWithIndex i (Dist f) where
+instance (Representable f, Foldable f, Log f ~ i) => FoldableWithIndex i (Dist f) where
   ifoldMap = ifoldMapDist
   {-# inline ifoldMap #-}
 
--- | A default definition for 'ifoldMap' from @FoldableWithIndex@ in terms of 'Distributive'
+-- | A default definition for 'ifoldMap' from @FoldableWithIndex@ in terms of 'Representable'
 ifoldMapDist
   :: forall f m a.
-     (Distributive f, Foldable f, Monoid m)
+     (Representable f, Foldable f, Monoid m)
   => (Log f -> a -> m) -> f a -> m
 ifoldMapDist = \ix xs -> fold (tabulate (\i -> ix i $ index xs i) :: f m)
 {-# inline ifoldMapDist #-}
 
 -- * TraversableWithIndex
 
-instance (Distributive f, Traversable f, Log f ~ i) => TraversableWithIndex i (Dist f) where
+instance (Representable f, Traversable f, Log f ~ i) => TraversableWithIndex i (Dist f) where
   itraverse = itraverseDist
   {-# inline itraverse #-}
 
--- | A default definition for 'itraverse' from @TraversableWithIndex@ in terms of 'Distributive'
+-- | A default definition for 'itraverse' from @TraversableWithIndex@ in terms of 'Representable'
 itraverseDist
   :: forall f m a b.
-     (Distributive f, Traversable f, Applicative m)
+     (Representable f, Traversable f, Applicative m)
   => (Log f -> a -> m b) -> f a -> m (f b)
 itraverseDist = \ix xs -> sequenceA $ tabulate (ix <*> index xs)
 {-# inline itraverseDist #-}
 
-leftAdjunctDist :: Distributive u => ((a, Log u) -> b) -> a -> u b
+leftAdjunctDist :: Representable u => ((a, Log u) -> b) -> a -> u b
 leftAdjunctDist = \f a -> tabulate (\s -> f (a,s))
 {-# inline leftAdjunctDist #-}
 
@@ -926,21 +926,21 @@ rightAdjunctDist :: Indexable u => (a -> u b) -> (a, Log u) -> b
 rightAdjunctDist = \f ~(a, k) -> f a `index` k
 {-# inline rightAdjunctDist #-}
 
-logarithmPath :: (Distributive f, Traversable f) => Logarithm f -> Path
+logarithmPath :: (Representable f, Traversable f) => Logarithm f -> Path
 logarithmPath = \ f -> runLogarithm f $ runTrail (traverse id $ pureDist end) id
 {-# inline logarithmPath #-}
 
-logPath :: forall f. (Distributive f, Traversable f) => Log f -> Path
+logPath :: forall f. (Representable f, Traversable f) => Log f -> Path
 logPath = index (runTrail (traverse id $ pureDist @f end) id)
 {-# inline logPath #-}
 
 -- unfortunate orphans, caused by having @hkd@ export the data type
 -- rather than making it up here.
-instance (Distributive f, Traversable f) => Eq (Logarithm f) where
+instance (Representable f, Traversable f) => Eq (Logarithm f) where
   (==) = on (==) logarithmPath
   {-# inline (==) #-}
 
-instance (Distributive f, Traversable f) => Ord (Logarithm f) where
+instance (Representable f, Traversable f) => Ord (Logarithm f) where
   (<) = on (<) logarithmPath
   (<=) = on (<=) logarithmPath
   (>=) = on (>=) logarithmPath
@@ -955,35 +955,35 @@ instance (Distributive f, Traversable f) => Ord (Logarithm f) where
 -- | Use explicit type application to call this function. e.g. @'eqLog' \@f@
 --
 -- Compare two logarithms for equality
-eqLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+eqLog :: forall f. (Representable f, Traversable f) => Log f -> Log f -> Bool
 eqLog = on (==) (logPath @f)
 
 -- | Use explicit type application to call this function. e.g. @'neLog' \@f@
 --
 -- Compare two logarithms for disequality
-neLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+neLog :: forall f. (Representable f, Traversable f) => Log f -> Log f -> Bool
 neLog = on (/=) (logPath @f)
 
 -- | Use explicit type application to call this function. e.g. @'ltLog' \@f@
-ltLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+ltLog :: forall f. (Representable f, Traversable f) => Log f -> Log f -> Bool
 ltLog = on (<) (logPath @f)
 
 -- | Use explicit type application to call this function. e.g. @'leLog' \@f@
-leLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+leLog :: forall f. (Representable f, Traversable f) => Log f -> Log f -> Bool
 leLog = on (<=) (logPath @f)
 
 -- | Use explicit type application to call this function. e.g. @'gtLog' \@f@
-gtLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+gtLog :: forall f. (Representable f, Traversable f) => Log f -> Log f -> Bool
 gtLog = on (>) (logPath @f)
 
 -- | Use explicit type application to call this function. e.g. @'geLog' \@f@
-geLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Bool
+geLog :: forall f. (Representable f, Traversable f) => Log f -> Log f -> Bool
 geLog = on (>=) (logPath @f)
 
 -- | Use explicit type application to call this function. e.g. @'compareLog' \@f@
 --
 -- Compare two logarithms
-compareLog :: forall f. (Distributive f, Traversable f) => Log f -> Log f -> Ordering
+compareLog :: forall f. (Representable f, Traversable f) => Log f -> Log f -> Ordering
 compareLog = on compare (logPath @f)
 
 -- | For any 'Traversable', each logarithm identifies a 'Lens'.
@@ -993,7 +993,7 @@ _logarithm = \(Logarithm f) a2ga fa ->
     (a, p) -> a2ga a <&> \a' -> runEvil (traverse (\a'' -> Evil a'' (const a')) fa) p
 {-# inline _logarithm #-}
 
--- | We can convert a 'Logarithm' of a 'Distributive' functor to any choice of 'Log', as the two forms are canonically isomorphic.
+-- | We can convert a 'Logarithm' of a 'Representable' functor to any choice of 'Log', as the two forms are canonically isomorphic.
 --
 -- @
 -- 'index' f . 'logFromLogarithm' ≡ 'indexLogarithm' f
@@ -1001,7 +1001,7 @@ _logarithm = \(Logarithm f) a2ga fa ->
 -- 'logFromLogarithm' '.' 'logToLogarithm' ≡ 'id'
 -- 'logToLogarithm' '.' 'logFromLogarithm' ≡ 'id'
 -- @
-logFromLogarithm :: Distributive f => Logarithm f -> Log f
+logFromLogarithm :: Representable f => Logarithm f -> Log f
 logFromLogarithm = \(Logarithm f) -> f askDist
 {-# inline logFromLogarithm #-}
 
@@ -1017,19 +1017,19 @@ logToLogarithm :: Indexable f => Log f -> Logarithm f
 logToLogarithm = \f -> Logarithm (traceDist f)
 {-# inline logToLogarithm #-}
 
--- | For any 'Traversable' 'Distributive' each 'Log' determines a 'Lens'.
+-- | For any 'Traversable' 'Representable' each 'Log' determines a 'Lens'.
 --
 -- @
 -- '_log' f = '_logarithm' ('logToLogarithm' f)
 -- @
-_log :: (Traversable f, Distributive f) => Log f -> Lens' (f a) a
+_log :: (Traversable f, Representable f) => Log f -> Lens' (f a) a
 _log = \lg a2ga fa ->
   case index (runTrail (traverse (\a -> (a,) <$> end) fa) id) lg of
     (a, p) -> a2ga a <&> \a' -> runEvil (traverse (\a'' -> Evil a'' (const a')) fa) p
 {-# inline _log #-}
 
 -- | Construct the lens using @'Eq' ('Log' f)@ instead of with @'Traversable' f@
-_logEq :: (Distributive f, Eq (Log f)) => Log f -> Lens' (f a) a
+_logEq :: (Representable f, Eq (Log f)) => Log f -> Lens' (f a) a
 _logEq = \i a2ga fa -> a2ga (index fa i) <&> \a' -> imapDist (\j a -> if i == j then a' else a) fa
 {-# inline _logEq #-}
 
@@ -1065,12 +1065,12 @@ class FIndexable (f :: (k -> Type) -> Type) where
   findex = defaultFIndex @(GFInvalid (Rep1 f))
   {-# inline findex #-}
 
-class (FIndexable f, FFunctor f) => FDistributive (f :: (k -> Type) -> Type) where
+class (FIndexable f, FFunctor f) => FRepresentable (f :: (k -> Type) -> Type) where
 
   -- | A higher-kinded 'scatter'
   fscatter :: FFunctor w => (w % F1 ~> r) -> (g ~> f) -> w g -> f r
   default fscatter
-    :: (Generic1 f, FDistributive (Rep1 f), FFunctor w)
+    :: (Generic1 f, FRepresentable (Rep1 f), FFunctor w)
     => (w % F1 ~> r) -> (g ~> f) -> w g -> f r
   fscatter = fscatterRep
   {-# inline fscatter #-}
@@ -1085,14 +1085,14 @@ class (FIndexable f, FFunctor f) => FDistributive (f :: (k -> Type) -> Type) whe
 
 -- | A higher-kinded 'distrib'
 fdistrib
-  :: (FFunctor w, FDistributive f)
+  :: (FFunctor w, FRepresentable f)
   => w f -> (w % F1 ~> r) -> f r
 fdistrib = \ w k -> fscatter k id w
 {-# inline fdistrib #-}
 
 -- | A higher-kinded 'tabulateLogarithm'
 ftabulateFLogarithm
-  :: FDistributive f => (FLogarithm f ~> a) -> f a
+  :: FRepresentable f => (FLogarithm f ~> a) -> f a
 ftabulateFLogarithm
   = \f -> fdistrib (FTab f) \(FTab f') -> f' (FLogarithm runF1)
 {-# inline ftabulateFLogarithm #-}
@@ -1105,7 +1105,7 @@ findexFLogarithm = \fa (FLogarithm k) -> k fa
 -- | A higher-kinded 'tabulateRep'
 ftabulateRep
   :: forall f a.
-     (FDistributive (Rep1 f), Generic1 f, Coercible (FLog f) (FLog (Rep1 f)))
+     (FRepresentable (Rep1 f), Generic1 f, Coercible (FLog f) (FLog (Rep1 f)))
   => (FLog f ~> a) -> f a
 ftabulateRep = \f -> to1 $ ftabulate (\x -> f (coerce x))
 {-# inline ftabulateRep #-}
@@ -1120,13 +1120,13 @@ findexRep = \fa flog -> findex (from1 fa) (coerce flog)
 
 -- | A higher-kinded 'scatterRep'
 fscatterRep
-  :: (FDistributive (Rep1 f), Generic1 f, FFunctor w)
+  :: (FRepresentable (Rep1 f), Generic1 f, FFunctor w)
   => (w % F1 ~> r) -> (g ~> f) -> w g -> f r
 fscatterRep = \k phi -> to1 . fscatter k (from1 . phi)
 {-# inline fscatterRep #-}
 
 fscatterDefault
-  :: (FDistributive f, FFunctor w)
+  :: (FRepresentable f, FFunctor w)
   => (w % F1 ~> r)
   -> (g ~> f)
   -> w g -> f r
@@ -1135,7 +1135,7 @@ fscatterDefault = \k phi wg ->
 {-# inline fscatterDefault #-}
 
 -- | A higher-kinded 'Tabulate'
-pattern FTabulate :: FDistributive f => (FLog f ~> a) -> f a
+pattern FTabulate :: FRepresentable f => (FLog f ~> a) -> f a
 pattern FTabulate i <- (findex -> i) where
   FTabulate i = ftabulate i
 
@@ -1144,8 +1144,8 @@ type family DefaultFLog' (containsRec1 :: Bool) (f :: (i -> Type) -> Type) :: i 
   DefaultFLog' 'False f = FLog (Rep1 f)
 
 type family DefaultFImplC (containsRec1 :: Bool) f :: Constraint where
-  DefaultFImplC 'True  f = (FDistributive f, FLog f ~ FLogarithm f)
-  DefaultFImplC 'False f = (Generic1 f, FDistributive (Rep1 f), Coercible (FLog f) (FLog (Rep1 f)))
+  DefaultFImplC 'True  f = (FRepresentable f, FLog f ~ FLogarithm f)
+  DefaultFImplC 'False f = (Generic1 f, FRepresentable (Rep1 f), Coercible (FLog f) (FLog (Rep1 f)))
 
 -- individual type classes, so there is GHC needs to less work
 class DefaultFImplC containsRec1 f => DefaultFTabulate' (containsRec1 :: Bool) f where
@@ -1180,7 +1180,7 @@ type DefaultFIndex f = DefaultFIndex' (GFInvalid (Rep1 f)) f
 -- 'fdistribute' = 'fcollect' 'id'
 -- @
 fdistribute
-  :: (Functor f, FDistributive g)
+  :: (Functor f, FRepresentable g)
   => f (g a) -> g (Compose f a)
 fdistribute = \f ->
   fdistrib (FCompose f) \(FCompose f') ->
@@ -1193,7 +1193,7 @@ fdistribute = \f ->
 -- 'fcollect' f = 'fdistribute' . 'fmap' f
 -- @
 fcollect
-  :: (Functor f, FDistributive g)
+  :: (Functor f, FRepresentable g)
   => (a -> g b)
   -> f a -> g (Compose f b)
 fcollect = \f fa ->
@@ -1207,7 +1207,7 @@ fcollect = \f fa ->
 -- 'fcotraverse' f = 'fmap' f . 'fdistribute'
 -- @
 fcotraverse
-  :: (Functor f, FDistributive g)
+  :: (Functor f, FRepresentable g)
   => (f % a ~> b)
   -> f (g a) -> g b
 fcotraverse = \fab fga ->
@@ -1222,7 +1222,7 @@ instance (FIndexable f, FIndexable g) => FIndexable (f :*: g) where
     R1 y -> findex g y
   {-# inline findex #-}
 
-instance (FDistributive f, FDistributive g) => FDistributive (f :*: g) where
+instance (FRepresentable f, FRepresentable g) => FRepresentable (f :*: g) where
   fscatter = \k f (ffmap f -> w) ->
         fscatter k (\(l :*: _) -> l) w
     :*: fscatter k (\(_ :*: r) -> r) w
@@ -1231,28 +1231,28 @@ instance (FDistributive f, FDistributive g) => FDistributive (f :*: g) where
   {-# inline ftabulate #-}
 
 deriving newtype instance FIndexable f => FIndexable (M1 i c f)
-deriving newtype instance FDistributive f => FDistributive (M1 i c f)
+deriving newtype instance FRepresentable f => FRepresentable (M1 i c f)
 
 instance FIndexable U1 where
   type FLog U1 = V1
   findex = \_ -> \case
   {-# inline findex #-}
 
-instance FDistributive U1 where
+instance FRepresentable U1 where
   fscatter = \_ _ _ -> U1
   ftabulate = \_ -> U1
   {-# inline fscatter #-}
   {-# inline ftabulate #-}
 
 deriving newtype instance FIndexable f => FIndexable (Rec1 f)
-deriving newtype instance FDistributive f => FDistributive (Rec1 f)
+deriving newtype instance FRepresentable f => FRepresentable (Rec1 f)
 
 instance (Indexable f, FIndexable g) => FIndexable (f :.: g) where
   type FLog (f :.: g) = K1 R (Log f) :*: FLog g
   findex = \(Comp1 f) (K1 x :*: y) -> findex (index f x) y
   {-# inline findex #-}
 
-instance (Distributive f, FDistributive g) => FDistributive (f :.: g) where
+instance (Representable f, FRepresentable g) => FRepresentable (f :.: g) where
   fscatter = \k phi wg -> Comp1 $
     scatter (fscatter k coerce .# runAppCompose) id $ AppCompose (ffmap phi wg)
   ftabulate = \f -> Comp1 $ tabulate \i -> ftabulate \j -> f (K1 i :*: j)
@@ -1265,7 +1265,7 @@ instance (Functor f, Indexable f, FIndexable g) => FIndexable (Compose f g) wher
   findex = findexRep
   {-# inline findex #-}
 
-instance (Distributive f, FDistributive g) => FDistributive (Compose f g) where
+instance (Representable f, FRepresentable g) => FRepresentable (Compose f g) where
   ftabulate = ftabulateRep
   {-# inline ftabulate #-}
 
@@ -1274,29 +1274,29 @@ instance (FIndexable f, FIndexable g) => FIndexable (Product f g) where
   findex = findexRep
   {-# inline findex #-}
 
-instance (FDistributive f, FDistributive g) => FDistributive (Product f g) where
+instance (FRepresentable f, FRepresentable g) => FRepresentable (Product f g) where
   ftabulate = ftabulateRep
   {-# inline ftabulate #-}
 
 instance FIndexable Proxy
-instance FDistributive Proxy
+instance FRepresentable Proxy
 
 deriving newtype instance FIndexable f => FIndexable (Backwards f)
 deriving newtype instance FIndexable f => FIndexable (Reverse f)
 deriving newtype instance FIndexable f => FIndexable (Monoid.Alt f)
 deriving newtype instance FIndexable f => FIndexable (Monoid.Ap f)
 
-deriving newtype instance FDistributive f => FDistributive (Backwards f)
-deriving newtype instance FDistributive f => FDistributive (Reverse f)
-deriving newtype instance FDistributive f => FDistributive (Monoid.Alt f)
-deriving newtype instance FDistributive f => FDistributive (Monoid.Ap f)
+deriving newtype instance FRepresentable f => FRepresentable (Backwards f)
+deriving newtype instance FRepresentable f => FRepresentable (Reverse f)
+deriving newtype instance FRepresentable f => FRepresentable (Monoid.Alt f)
+deriving newtype instance FRepresentable f => FRepresentable (Monoid.Ap f)
 
 instance FIndexable (F1 a) where
   type FLog (F1 a) = (:~:) a
   findex = \f Refl -> runF1 f
   {-# inline findex #-}
 
-instance FDistributive (F1 a) where
+instance FRepresentable (F1 a) where
   fscatter = \k f w -> F1 $ k $ ffmap f w
   ftabulate = \f -> F1 (f Refl)
   {-# inline fscatter #-}
@@ -1307,7 +1307,7 @@ instance FIndexable (NT f) where
   findex = runNT
   {-# inline findex #-}
 
-instance FDistributive (NT f) where
+instance FRepresentable (NT f) where
   fscatter = fscatterDefault
   ftabulate = NT
   {-# inline ftabulate #-}
@@ -1318,7 +1318,7 @@ instance FIndexable Limit where
   findex f = const $ runLimit f
   {-# inline findex #-}
 
-instance FDistributive Limit where
+instance FRepresentable Limit where
   fscatter = \k f w -> Limit $ k $ ffmap (\x -> F1 $ runLimit $ f x) w
   ftabulate = \f -> Limit $ f U1
   {-# inline ftabulate #-}
@@ -1331,7 +1331,7 @@ instance FIndexable (F2 a b) where
   findex = findexFLogarithm
   {-# inline findex #-}
 
-instance FDistributive (F2 a b) where
+instance FRepresentable (F2 a b) where
   ftabulate = ftabulateFLogarithm
   fscatter = \k f (ffmap f -> w) ->
      F2 (k $ ffmap (\(F2 x _) -> F1 x) w)
@@ -1344,7 +1344,7 @@ instance FIndexable (F3 a b c) where
   findex = findexFLogarithm
   {-# inline findex #-}
 
-instance FDistributive (F3 a b c) where
+instance FRepresentable (F3 a b c) where
   ftabulate = ftabulateFLogarithm
   fscatter = \k f (ffmap f -> w) ->
      F3 (k $ ffmap (\(F3 x _ _) -> F1 x) w)
@@ -1358,7 +1358,7 @@ instance FIndexable (F4 a b c d) where
   findex = findexFLogarithm
   {-# inline findex #-}
 
-instance FDistributive (F4 a b c d) where
+instance FRepresentable (F4 a b c d) where
   ftabulate = ftabulateFLogarithm
   fscatter = \k f (ffmap f -> w) ->
      F4 (k $ ffmap (\(F4 x _ _ _) -> F1 x) w)
@@ -1373,7 +1373,7 @@ instance FIndexable (F5 a b c d e) where
   findex = findexFLogarithm
   {-# inline findex #-}
 
-instance FDistributive (F5 a b c d e) where
+instance FRepresentable (F5 a b c d e) where
   ftabulate = ftabulateFLogarithm
   fscatter = \k f (ffmap f -> w) ->
      F5 (k $ ffmap (\(F5 x _ _ _ _) -> F1 x) w)
@@ -1390,57 +1390,57 @@ newtype FDist f a = FDist { runFDist :: f a }
   deriving stock (Data, Generic, Generic1)
   deriving newtype (FFoldable)
 
-instance (FDistributive f, FTraversable f) => FTraversable (FDist f) where
+instance (FRepresentable f, FTraversable f) => FTraversable (FDist f) where
   ftraverse = \f -> fmap FDist . ftraverse f .# runFDist
   {-# inline ftraverse #-}
 
 deriving newtype instance FIndexable f => FIndexable (FDist f)
-deriving newtype instance FDistributive f => FDistributive (FDist f)
+deriving newtype instance FRepresentable f => FRepresentable (FDist f)
 
--- | A default definition for 'ffmap' from 'FFunctor' in terms of 'FDistributive'
-ffmapFDist :: FDistributive f => (a ~> b) -> f a -> f b
+-- | A default definition for 'ffmap' from 'FFunctor' in terms of 'FRepresentable'
+ffmapFDist :: FRepresentable f => (a ~> b) -> f a -> f b
 ffmapFDist = \f -> fscatter (f .# (runF1 . runF1)) id .# F1
 {-# inline ffmapFDist #-}
 
-instance FDistributive f => FFunctor (FDist f) where
+instance FRepresentable f => FFunctor (FDist f) where
   ffmap = ffmapFDist
   {-# inline ffmap #-}
 
-instance FDistributive f => FApply (FDist f) where
+instance FRepresentable f => FApply (FDist f) where
   fliftA2 = fliftA2FDist
   {-# inline fliftA2 #-}
 
--- | A default definition of 'fliftA2' from 'FApply' in terms of 'FDistributive'
-fliftA2FDist :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
+-- | A default definition of 'fliftA2' from 'FApply' in terms of 'FRepresentable'
+fliftA2FDist :: FRepresentable f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
 fliftA2FDist = fliftD2
 {-# inline fliftA2FDist #-}
 
-fliftD2 :: FDistributive f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
+fliftD2 :: FRepresentable f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
 fliftD2 = \f m n ->
   fdistrib (F2 m n) \(F2 (F1 m') (F1 n')) -> f m' n'
 {-# inline fliftD2 #-}
 
-fliftD3 :: FDistributive f => (forall x. a x -> b x -> c x -> d x) -> f a -> f b -> f c -> f d
+fliftD3 :: FRepresentable f => (forall x. a x -> b x -> c x -> d x) -> f a -> f b -> f c -> f d
 fliftD3 = \f m n o ->
   fdistrib (F3 m n o) \(F3 (F1 m') (F1 n') (F1 o')) -> f m' n' o'
 {-# inline fliftD3 #-}
 
-fliftD4 :: FDistributive f => (forall x. a x -> b x -> c x -> d x -> e x) -> f a -> f b -> f c -> f d -> f e
+fliftD4 :: FRepresentable f => (forall x. a x -> b x -> c x -> d x -> e x) -> f a -> f b -> f c -> f d -> f e
 fliftD4 = \f m n o p ->
   fdistrib (F4 m n o p) \(F4 (F1 m') (F1 n') (F1 o') (F1 p')) -> f m' n' o' p'
 {-# inline fliftD4 #-}
 
-fliftD5 :: FDistributive f => (forall x. a x -> b x -> c x -> d x -> e x -> r x) -> f a -> f b -> f c -> f d -> f e -> f r
+fliftD5 :: FRepresentable f => (forall x. a x -> b x -> c x -> d x -> e x -> r x) -> f a -> f b -> f c -> f d -> f e -> f r
 fliftD5 = \f m n o p q ->
   fdistrib (F5 m n o p q) \(F5 (F1 m') (F1 n') (F1 o') (F1 p') (F1 q')) -> f m' n' o' p' q'
 {-# inline fliftD5 #-}
 
-instance FDistributive f => FApplicative (FDist f) where
+instance FRepresentable f => FApplicative (FDist f) where
   fpure = fpureFDist
   {-# inline fpure #-}
 
--- | A default definition of 'fpure' from 'FApplicative' in terms of 'FDistributive'
-fpureFDist :: FDistributive f => (forall x. a x) -> f a
+-- | A default definition of 'fpure' from 'FApplicative' in terms of 'FRepresentable'
+fpureFDist :: FRepresentable f => (forall x. a x) -> f a
 fpureFDist = \ax -> fscatter (\x -> runLimit (getConst x)) id $ Const $ Limit ax
 -- fpureDist a = fdistrib Proxy \_ -> a
 {-# inline fpureFDist #-}
@@ -1451,22 +1451,22 @@ instance FFunctor (DFBind a b) where
 
 data DFBind a b f = DFBind (f a) (a ~> f % b)
 
-fbindFDist :: FDistributive f => (forall x. b x x -> r x) -> f a -> (a ~> f % b) -> f r
+fbindFDist :: FRepresentable f => (forall x. b x x -> r x) -> f a -> (a ~> f % b) -> f r
 fbindFDist = \k fa f -> fdistrib (DFBind fa f) \(DFBind (F1 a) ab) -> k $ runF1 (ab a)
 {-# inline fbindFDist #-}
 
-instance FDistributive f => FMonad (FDist f) where
+instance FRepresentable f => FMonad (FDist f) where
   fbind = \k (FDist fa) f -> FDist $ fbindFDist k fa (runFDist #. f)
   {-# inline fbind #-}
 
-faskFDist :: FDistributive f => f (FLog f)
+faskFDist :: FRepresentable f => f (FLog f)
 faskFDist = ftabulate id
 {-# noinline[0] faskFDist #-}
 
 ftraceFDist :: FIndexable f => FLog f a -> f g -> g a
 ftraceFDist = \x y -> findex y x
 
--- | We can convert a 'FLogarithm' of a 'FDistributive' 'FFunctor' to any choice
+-- | We can convert a 'FLogarithm' of a 'FRepresentable' 'FFunctor' to any choice
 -- of 'FLog', as the two forms are canonically isomorphic.
 --
 -- @
@@ -1475,7 +1475,7 @@ ftraceFDist = \x y -> findex y x
 -- 'flogFromLogarithm' '.' 'flogToLogarithm' ≡ 'id'
 -- 'flogToLogarithm' '.' 'flogFromLogarithm' ≡ 'id'
 -- @
-flogFromFLogarithm :: FDistributive f => FLogarithm f ~> FLog f
+flogFromFLogarithm :: FRepresentable f => FLogarithm f ~> FLog f
 flogFromFLogarithm = \(FLogarithm f) -> f faskFDist
 {-# inline flogFromFLogarithm #-}
 
@@ -1554,7 +1554,7 @@ instance Indexable f => FIndexable (HKD f x) where
   findex = \(HKD fa) (Atkey lg) -> index fa lg
   {-# inline findex #-}
 
-instance Distributive f => FDistributive (HKD f x) where
+instance Representable f => FRepresentable (HKD f x) where
   fscatter = \k g w -> HKD $ distrib (DHKD (ffmap g w)) $ k . ffmap coerce .# runDHKD
   {-# inline fscatter #-}
   ftabulate = \f -> HKD $ tabulate (f . Atkey)
@@ -1656,7 +1656,7 @@ instance FIndexable f => Indexable (LKD f) where
   index = \fa (Some lg) -> getConst (findex (runLKD fa) lg)
   {-# inline index #-}
 
-instance FDistributive f => Distributive (LKD f) where
+instance FRepresentable f => Representable (LKD f) where
   scatter = \k g -> LKD . fscatter (Const #. k .  ffmap coerce .# runDLKD) id . DLKD . ffmap g
   {-# inline scatter #-}
   tabulate = \f -> LKD $ ftabulate (Const #. f . Some)
@@ -1666,50 +1666,50 @@ lowerLogarithm :: FLogarithm f x -> Logarithm (LKD f)
 lowerLogarithm = \(FLogarithm f) -> Logarithm $ getConst #. f .# runLKD
 {-# inline lowerLogarithm #-}
 
-liftLogarithm :: FDistributive f => Logarithm (LKD f) -> Some (FLogarithm f)
+liftLogarithm :: FRepresentable f => Logarithm (LKD f) -> Some (FLogarithm f)
 liftLogarithm = \(Logarithm f) -> f $ LKD $ ftabulateFLogarithm (Const #. Some)
 {-# inline liftLogarithm #-}
 
-instance (FTraversable f, FDistributive f) => Eq (FLogarithm f a) where
+instance (FTraversable f, FRepresentable f) => Eq (FLogarithm f a) where
   (==) = on (==) lowerLogarithm
   {-# inline (==) #-}
 
-instance (FTraversable f, FDistributive f) => Ord (FLogarithm f a) where
+instance (FTraversable f, FRepresentable f) => Ord (FLogarithm f a) where
   compare = on compare lowerLogarithm
   {-# inline compare #-}
 
 -- safer than it looks
-instance (FTraversable f, FDistributive f) => GEq (FLogarithm f) where
+instance (FTraversable f, FRepresentable f) => GEq (FLogarithm f) where
   geq = \x y ->
     if lowerLogarithm x == lowerLogarithm y
     then Just (unsafeCoerce Refl)
     else Nothing
   {-# inline geq #-}
 
-geqFLog :: forall f a b. (FDistributive f, FTraversable f) => FLog f a -> FLog f b -> Maybe (a :~: b)
+geqFLog :: forall f a b. (FRepresentable f, FTraversable f) => FLog f a -> FLog f b -> Maybe (a :~: b)
 geqFLog x y = geq (flogFPath @f x) (flogFPath @f y)
 {-# inline geqFLog #-}
 
-gcompareFLog :: forall f a b. (FDistributive f, FTraversable f) => FLog f a -> FLog f b -> GOrdering a b
+gcompareFLog :: forall f a b. (FRepresentable f, FTraversable f) => FLog f a -> FLog f b -> GOrdering a b
 gcompareFLog x y = gcompare (flogFPath @f x) (flogFPath @f y)
 {-# inline gcompareFLog #-}
 
-instance (FTraversable f, FDistributive f) => TestEquality (FLogarithm f) where
+instance (FTraversable f, FRepresentable f) => TestEquality (FLogarithm f) where
   testEquality = geq
   {-# inline testEquality #-}
 
-instance (FTraversable f, FDistributive f) => TestCoercion (FLogarithm f) where
+instance (FTraversable f, FRepresentable f) => TestCoercion (FLogarithm f) where
   testCoercion = \x y -> repr <$> geq x y
   {-# inline testCoercion #-}
 
-instance (FTraversable f, FDistributive f) => GCompare (FLogarithm f) where
+instance (FTraversable f, FRepresentable f) => GCompare (FLogarithm f) where
   gcompare = \x y -> case compare (lowerLogarithm x) (lowerLogarithm y) of
     LT -> GLT
     EQ -> unsafeCoerce GEQ
     GT -> GGT
   {-# inline gcompare #-}
 
-flogFPath :: forall f. (FDistributive f, FTraversable f) => FLog f ~> FPath Proxy
+flogFPath :: forall f. (FRepresentable f, FTraversable f) => FLog f ~> FPath Proxy
 flogFPath = findex $ runTrail (ftraverse fend $ fpureFDist @f Proxy) id
 {-# inline flogFPath #-}
 
@@ -1741,49 +1741,49 @@ _flogarithm = \(FLogarithm f) a2ga tf ->
     FPath a p -> a2ga a <&> \a' -> runEvil (ftraverse (\a'' -> Evil a'' (const (unsafeCoerce a'))) tf) p
 {-# inline _flogarithm #-}
 
-_flog :: (FTraversable t, FDistributive t) => FLog t a -> Lens' (t f) (f a)
+_flog :: (FTraversable t, FRepresentable t) => FLog t a -> Lens' (t f) (f a)
 _flog = \i a2ga tf ->
   case findex (runTrail (ftraverse fend tf) id) i of
     FPath a p -> a2ga a <&> \a' -> runEvil (ftraverse (\a'' -> Evil a'' (const (unsafeCoerce a'))) tf) p
 {-# inline _flog #-}
 
 -- | Construct the lens for a logarithm using @'GEq' ('FLog' t)@ instead of with @'FTraversable' t@
-_flogGEq :: (FDistributive t, GEq (FLog t)) => FLog t a -> Lens' (t f) (f a)
+_flogGEq :: (FRepresentable t, GEq (FLog t)) => FLog t a -> Lens' (t f) (f a)
 _flogGEq = \i a2ga fa -> a2ga (findex fa i) <&> \a' -> ifmapFDist (\j a -> case geq i j of
   Just Refl -> a'
   Nothing -> a) fa
 {-# inline _flogGEq #-}
 
-instance (FDistributive f, FLog f ~ i) => FFunctorWithIndex i (FDist f) where
+instance (FRepresentable f, FLog f ~ i) => FFunctorWithIndex i (FDist f) where
   ifmap = ifmapFDist
   {-# inline ifmap #-}
 
 ifmapFDist
-  :: forall f a b. FDistributive f
+  :: forall f a b. FRepresentable f
   => (forall x. FLog f x -> a x -> b x) -> f a -> f b
 ifmapFDist = \f -> fliftA2FDist f is
   where is = faskFDist :: f (FLog f)
 {-# inline ifmapFDist #-}
 
-instance (FDistributive f, FFoldable f, FLog f ~ i) => FFoldableWithIndex i (FDist f) where
+instance (FRepresentable f, FFoldable f, FLog f ~ i) => FFoldableWithIndex i (FDist f) where
   iffoldMap = iffoldMapFDist
   {-# inline iffoldMap #-}
 
--- | A default definition for 'ifoldMap' from @FoldableWithIndex@ in terms of 'Distributive'
+-- | A default definition for 'ifoldMap' from @FoldableWithIndex@ in terms of 'Representable'
 iffoldMapFDist
   :: forall f m a.
-     (FDistributive f, FFoldable f, Monoid m)
+     (FRepresentable f, FFoldable f, Monoid m)
   => (forall x. FLog f x -> a x -> m) -> f a -> m
 iffoldMapFDist = \f -> ffoldMap getConst . ifmapFDist (\i -> Const #. f i)
 {-# inline iffoldMapFDist #-}
 
-instance (FDistributive f, FTraversable f, FLog f ~ i) => FTraversableWithIndex i (FDist f) where
+instance (FRepresentable f, FTraversable f, FLog f ~ i) => FTraversableWithIndex i (FDist f) where
   iftraverse = iftraverseFDist
   {-# inline iftraverse #-}
 
 iftraverseFDist
   :: forall f m a b.
-     (FDistributive f, FTraversable f, Applicative m)
+     (FRepresentable f, FTraversable f, Applicative m)
   => (forall x. FLog f x -> a x -> m (b x)) -> f a -> m (f b)
 iftraverseFDist = \f -> ftraverse getCompose . ifmapFDist (\i -> Compose #. f i)
 {-# inline iftraverseFDist #-}
@@ -1792,7 +1792,7 @@ instance FIndexable (FConstrained p) where
   type FLog (FConstrained p) = Dict1 p
   findex = \(FConstrained x) Dict1 -> x
 
-instance FDistributive (FConstrained p) where
+instance FRepresentable (FConstrained p) where
   fscatter = \k f (ffmap f -> w) -> FConstrained $ k $ ffmap (\(FConstrained x) -> F1 x) w
   ftabulate = \f -> FConstrained $ f Dict1
 
@@ -1804,7 +1804,7 @@ class FAll (p :: i -> Constraint) (f :: (i -> Type) -> Type) where
 instance (FAll p f, FAll p g) => FAll p (f :*: g) where
   fall = fall :*: fall
 
-instance (Distributive f, FAll p g) => FAll p (f :.: g) where
+instance (Representable f, FAll p g) => FAll p (f :.: g) where
   fall = Comp1 $ pureDist fall
 
 deriving newtype instance FAll p f => FAll p (M1 i c f)
@@ -1835,7 +1835,7 @@ instance (p a, p b, p c, p d, p e) => FAll p (F5 a b c d e) where
 instance q (Dict1 p) => FAll p (Dict1 q) where
   fall = Dict1
 
-instance (Distributive f, FAll p g) => FAll p (Compose f g)
+instance (Representable f, FAll p g) => FAll p (Compose f g)
 
 instance (FAll p f, FAll p g) => FAll p (Product f g)
 
@@ -1845,12 +1845,12 @@ instance (forall a. p a) => FAll p Limit where fall = Limit Dict1
 instance (forall a. q a => p a) => FAll p (FConstrained q) where
   fall = FConstrained Dict1
 
-fliftA2W :: (FDistributive f, FFunctor w) => (forall x. a x -> w (F1 x) -> r x) -> f a -> w f -> f r
+fliftA2W :: (FRepresentable f, FFunctor w) => (forall x. a x -> w (F1 x) -> r x) -> f a -> w f -> f r
 fliftA2W f fa w = fdistrib (F1 fa :*: w) \(F1 (F1 a) :*: w') -> f a w'
 
 cfdistrib
   :: forall i (p :: i -> Constraint) (f :: (i -> Type) -> Type) (r :: i -> Type) w.
-     (FAll p f, FFunctor w, FDistributive f)
+     (FAll p f, FFunctor w, FRepresentable f)
   => w f
   -> (forall x. p x => w (F1 x) -> r x)
   -> f r
@@ -1864,10 +1864,10 @@ type family EqC :: k -> Constraint where
 class DefaultFEq (w :: k -> Type) where
   feqDefault :: EqC i => w i -> w i -> Bool
 
-instance (Distributive w, Foldable w) => DefaultFEq (w :: Type -> Type) where
+instance (Representable w, Foldable w) => DefaultFEq (w :: Type -> Type) where
   feqDefault = \x -> and . liftD2 (==) x
 
-instance (FDistributive w, FFoldable w, FAll EqC w) => DefaultFEq (w :: (k -> Type) -> Type) where
+instance (FRepresentable w, FFoldable w, FAll EqC w) => DefaultFEq (w :: (k -> Type) -> Type) where
   feqDefault = \x y ->
     Monoid.getAll $
     ffoldMap getConst $
@@ -2067,7 +2067,7 @@ runEvil = \(Evil _ mg) -> mg
 -- for testing
 data V2 a = V2 a a
   deriving stock (Show, Read, Functor, Foldable, Traversable, Generic, Generic1, Data)
-  deriving anyclass (Indexable, Distributive)
+  deriving anyclass (Indexable, Representable)
   deriving (Eq1,Ord1,Applicative, Monad, MonadFix, MonadZip) via Dist V2
   deriving (Eq,Ord,Num,Fractional,Floating,Semigroup,Monoid) via Dist V2 a
 
@@ -2076,17 +2076,17 @@ instance Show1 V2 where
 
 class 
   ( Traversable f
-  , Distributive f
+  , Representable f
   , IsJust (KnownSize f) ~ 'True
   , KnownNat (Size f)
-  ) => FiniteDistributive f
+  ) => FiniteRepresentable f
 
 instance 
   ( Traversable f
-  , Distributive f
+  , Representable f
   , IsJust (KnownSize f) ~ 'True
   , KnownNat (Size f)
-  ) => FiniteDistributive f
+  ) => FiniteRepresentable f
 
 type Size f = FromJust (KnownSize f)
 type Indices f = FromJust (KnownIndices f)
@@ -2102,13 +2102,13 @@ lie = error "Data.Functor.Rep.Internal: logic error. index out of bounds or inva
 class DefaultIndexFin' (b :: Bool) (f :: Type -> Type) where
   indexFinDefault :: f a -> LogFin f -> a
 
-instance (Log f ~ LogFin f, Distributive f) => DefaultIndexFin' 'True f where
+instance (Log f ~ LogFin f, Representable f) => DefaultIndexFin' 'True f where
   indexFinDefault = index
   {-# inline indexFinDefault #-}
 
 type f /~ g = (f == g) ~ 'False
 
-instance (Log f /~ LogFin f, FiniteDistributive f) => DefaultIndexFin' 'False f where
+instance (Log f /~ LogFin f, FiniteRepresentable f) => DefaultIndexFin' 'False f where
   indexFinDefault = \ f (Fin i) ->
     fromMaybe lie $
     Monoid.getFirst $
@@ -2199,11 +2199,11 @@ instance (DefaultTabulateFin f, KnownNat (GSize g), GTabulateFin g) => GTabulate
 class DefaultTabulateFin' (b :: Bool) (f :: Type -> Type) where
   tabulateFinDefault :: (LogFin f -> a) -> f a
 
-instance (Log f ~ LogFin f, Distributive f) => DefaultTabulateFin' 'True f where
+instance (Log f ~ LogFin f, Representable f) => DefaultTabulateFin' 'True f where
   tabulateFinDefault = tabulate
   {-# inline tabulateFinDefault #-}
 
-instance (Log f /~ LogFin f, FiniteDistributive f) => DefaultTabulateFin' 'False f where
+instance (Log f /~ LogFin f, FiniteRepresentable f) => DefaultTabulateFin' 'False f where
   tabulateFinDefault f =
     case mapAccumL (\n () -> (n + 1, f $ UnsafeFin n)) 0 (pureDist ()) of
     (n', xs)

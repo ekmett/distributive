@@ -26,7 +26,7 @@ import Numeric
 import Prelude
 
 -- data Moore a b where
---   Moore :: Distributive f => f b -> (a -> Endo f) -> Log f -> Moore a b
+--   Moore :: Representable f => f b -> (a -> Endo f) -> Log f -> Moore a b
 
 -- [a] -> b
 
@@ -42,7 +42,7 @@ instance Indexable (Moore a) where
     (a:as) -> index (k a) as
   {-# inline index #-}
 
-instance Distributive (Moore a) where
+instance Representable (Moore a) where
   tabulate = \f -> Moore (f []) \a -> tabulate (f.(a:))
   {-# inline tabulate #-}
 

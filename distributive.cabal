@@ -12,8 +12,13 @@ bug-reports:   http://github.com/ekmett/distributive/issues
 copyright:     Copyright 2011-2021 Edward A. Kmett,
                Copyright 2017-2021 Aaron Vargo,
                Copyright 2021 Oleg Grenrus
-synopsis:      Distributive functors
-description:   Distributive functors.
+synopsis:      Representable (aka distributive) functors
+description:   
+  Representable (aka distributive) functors.
+  .
+  Representable functors can distribute out through any other Functor,
+  because they are isomorphic to a function from some fixed type.
+
 tested-with:
   GHC == 8.6.5,
   GHC == 8.8.4,

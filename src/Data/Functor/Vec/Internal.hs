@@ -49,7 +49,7 @@ instance Indexable (Vec n) where
   index = coerce ((!) :: Vector a -> Int -> a)
   {-# inline index #-}
 
-instance KnownNat n => Distributive (Vec n) where
+instance KnownNat n => Representable (Vec n) where
   scatter = \(k :: w Identity -> r) f (ffmap f -> w) -> UnsafeVec $
     generate (int @n) \i -> k $ ffmap (\v -> Identity $ index v $ UnsafeFin i) w
   {-# inlinable scatter #-}

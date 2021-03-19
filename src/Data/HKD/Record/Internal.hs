@@ -79,7 +79,7 @@ instance FIndexable (Record as) where
   findex (UnsafeRecord as) (UnsafeIndex i) = unsafeCoerce (as ! i)
   {-# inline findex #-}
 
-instance KnownLength as => FDistributive (Record as) where
+instance KnownLength as => FRepresentable (Record as) where
   fscatter k f (ffmap f -> w) =
     UnsafeRecord $
     generate (len @as) \i ->

@@ -21,18 +21,18 @@ import Data.Functor.Rep
 type role Endo nominal
 newtype Endo f = EndoDist { runEndoDist :: f (Log f) }
 
-pattern Endo :: Distributive f => (Log f -> Log f) -> Endo f
+pattern Endo :: Representable f => (Log f -> Log f) -> Endo f
 pattern Endo { appEndo } = EndoDist (Tabulate appEndo)
 
 {-# complete Endo :: Endo #-}
 
-instance Distributive f => Semigroup (Endo f) where
+instance Representable f => Semigroup (Endo f) where
   (<>) = \f g -> Endo (appEndo f . appEndo g)
   {-# inline (<>) #-}
 
-instance Distributive f => Monoid (Endo f) where
+instance Representable f => Monoid (Endo f) where
   mempty = EndoDist askDist
   {-# inline mempty #-}
 
---instance (Distributive f, Traversable f) => Eq (Endo f) where
+--instance (Representable f, Traversable f) => Eq (Endo f) where
 --  (==) = liftEqDist (on (==) logToLogarithm)

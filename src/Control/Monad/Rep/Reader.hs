@@ -14,12 +14,12 @@
 -- Stability   : experimental
 -- Portability : non-portable
 --
--- A 'ReaderT' monad that uses a 'Distributive' functor instead
+-- A 'ReaderT' monad that uses a 'Representable' functor instead
 -- of a function.
 
 module Control.Monad.Rep.Reader
 (
--- * Distributive functor monad
+-- * Representable functor monad
   Reader
 , pattern Reader
 , runReader
@@ -52,17 +52,17 @@ import GHC.Generics
 
 type Reader f = ReaderT f Identity
 
-pattern Reader :: Distributive f => (Log f -> a) -> Reader f a
+pattern Reader :: Representable f => (Log f -> a) -> Reader f a
 pattern Reader { runReader } <- ReaderT (Coerce runReader)
 
 {-# complete Reader #-}
 
--- | This 'representable monad transformer' transforms any monad @m@ with a 'Distributive' 'Monad'.
--- This monad in turn is also representable if @m@ is 'Distributive'.
+-- | This 'representable monad transformer' transforms any monad @m@ with a 'Representable' 'Monad'.
+-- This monad in turn is also representable if @m@ is 'Representable'.
 type role ReaderT representational nominal nominal
 newtype ReaderT f m b = ReaderDistT { runReaderDistT :: f (m b) }
 
-pattern ReaderT :: Distributive f => (Log f -> m a) -> ReaderT f m a
+pattern ReaderT :: Representable f => (Log f -> m a) -> ReaderT f m a
 pattern ReaderT { runReaderT } = ReaderDistT (Tabulate runReaderT)
 
 {-# complete ReaderT #-}
@@ -75,12 +75,12 @@ instance (Indexable f, Indexable m) => Indexable (ReaderT f m) where
   index = \(ReaderDistT f) (x, y) -> index (index f x) y
   {-# inline index #-}
 
-instance (Distributive f, Distributive m) => Distributive (ReaderT f m) where
+instance (Representable f, Representable m) => Representable (ReaderT f m) where
   scatter = \k f -> coerce $ scatter k ((Comp1 . runReaderDistT) #. f)
   tabulate = \f -> ReaderDistT $ tabulate \i -> tabulate \j -> f (i, j)
   {-# inline tabulate #-}
 
-instance (Distributive f, Applicative m) => Applicative (ReaderT f m) where
+instance (Representable f, Applicative m) => Applicative (ReaderT f m) where
   pure = ReaderDistT #. (pureDist . pure)
   {-# inline pure #-}
   (<*>) = \(ReaderDistT ff) (ReaderDistT fa) -> ReaderDistT $ liftD2 (<*>) ff fa
@@ -90,7 +90,7 @@ instance (Distributive f, Applicative m) => Applicative (ReaderT f m) where
   (<*) = \(ReaderDistT fa) (ReaderDistT fb) -> ReaderDistT $ liftD2 (<*) fa fb
   {-# inline (<*) #-}
 
-instance (Distributive f, Monad m) => Monad (ReaderT f m) where
+instance (Representable f, Monad m) => Monad (ReaderT f m) where
   (>>=) = \(ReaderDistT fm) f ->
     ReaderDistT $ liftD2 (>>=) fm $ distribute (runReaderDistT . f)
   {-# inline (>>=) #-}
@@ -99,11 +99,11 @@ instance (Distributive f, Monad m) => Monad (ReaderT f m) where
   {-# inline fail #-}
 #endif
 
-instance (Distributive f, MonadFail m) => MonadFail (ReaderT f m) where
+instance (Representable f, MonadFail m) => MonadFail (ReaderT f m) where
   fail = lift . Control.Monad.Fail.fail
   {-# inline fail #-}
 
-instance (Distributive f, Monad m, Log f ~ e) => MonadReader e (ReaderT f m) where
+instance (Representable f, Monad m, Log f ~ e) => MonadReader e (ReaderT f m) where
   ask = ReaderDistT $ tabulate pure
   {-# inline ask #-}
   local = \f m -> ReaderT \r -> runReaderT m (f r)
@@ -111,19 +111,19 @@ instance (Distributive f, Monad m, Log f ~ e) => MonadReader e (ReaderT f m) whe
   reader = ReaderT . fmap pure
   {-# inline reader #-}
 
-instance Distributive f => MonadTrans (ReaderT f) where
+instance Representable f => MonadTrans (ReaderT f) where
   lift = ReaderDistT #. pureDist
   {-# inline lift #-}
 
-liftReaderT :: Distributive f => m a -> ReaderT f m a
+liftReaderT :: Representable f => m a -> ReaderT f m a
 liftReaderT = ReaderDistT #. pureDist
 {-# inline liftReaderT #-}
 
-instance (Distributive f, MonadIO m) => MonadIO (ReaderT f m) where
+instance (Representable f, MonadIO m) => MonadIO (ReaderT f m) where
   liftIO = lift . liftIO
   {-# inline liftIO #-}
 
-instance (Distributive f, MonadWriter w m) => MonadWriter w (ReaderT f m) where
+instance (Representable f, MonadWriter w m) => MonadWriter w (ReaderT f m) where
   tell = lift . tell
   {-# inline tell #-}
   listen = ReaderDistT #. fmap listen .# runReaderDistT
@@ -139,7 +139,7 @@ instance (Traversable f, Traversable m) => Traversable (ReaderT f m) where
   traverse f = fmap ReaderDistT . traverse (traverse f) .# runReaderDistT
   {-# inline traverse #-}
 
-instance (Distributive f, MonadState s m) => MonadState s (ReaderT f m) where
+instance (Representable f, MonadState s m) => MonadState s (ReaderT f m) where
   get = lift get
   {-# inline get #-}
   put = lift . put
@@ -147,7 +147,7 @@ instance (Distributive f, MonadState s m) => MonadState s (ReaderT f m) where
   state = lift . state
   {-# inline state #-}
 
-instance (Distributive f, MonadError e m) => MonadError e (ReaderT f m) where
+instance (Representable f, MonadError e m) => MonadError e (ReaderT f m) where
   throwError = lift . throwError
   {-# inline throwError #-}
   catchError = liftCatch catchError
@@ -163,7 +163,7 @@ instance FFunctor (DCatch x y m) where
   {-# inline ffmap #-}
 
 -- | Lift a @catchE@ operation to the new monad.
-liftCatch :: Distributive f => Catch e m a -> Catch e (ReaderT f m) a
+liftCatch :: Representable f => Catch e m a -> Catch e (ReaderT f m) a
 -- liftCatch = \f m h -> ReaderT \ r -> f (runReaderT m r) (\ e -> runReaderT (h e) r)
 liftCatch = \ f m h ->
   ReaderDistT $ distrib (DCatch m h) \(DCatch m' h') -> coerce f m' h'
@@ -176,32 +176,32 @@ instance Functor g => FFunctor (DCompReaderT g m a) where
   {-# inline ffmap #-}
 
 -- | Lift a @callCC@ operation to the new monad.
-liftCallCC :: forall f m a b. Distributive f => CallCC m a b -> CallCC (ReaderT f m) a b
+liftCallCC :: forall f m a b. Representable f => CallCC m a b -> CallCC (ReaderT f m) a b
 liftCallCC = \callCC' f ->
   ReaderDistT $ distrib (DCompReaderT f) \(DCompReaderT f') ->
     callCC' \c -> coerce $ f' (ReaderDistT #. pureDist . c)
 {-# inline liftCallCC #-}
 
-instance (Distributive f, MonadCont m) => MonadCont (ReaderT f m) where
+instance (Representable f, MonadCont m) => MonadCont (ReaderT f m) where
   callCC = liftCallCC callCC
   {-# inline callCC #-}
 
-instance (Distributive f, Alternative m) => Alternative (ReaderT f m) where
+instance (Representable f, Alternative m) => Alternative (ReaderT f m) where
   empty = liftReaderT empty
   {-# inline empty #-}
   (<|>) = \(ReaderDistT fm) -> ReaderDistT #. liftD2 (<|>) fm .# runReaderDistT
   {-# inline (<|>) #-}
 
-instance (Distributive f, MonadPlus m) => MonadPlus (ReaderT f m)
+instance (Representable f, MonadPlus m) => MonadPlus (ReaderT f m)
 
-instance (Distributive f, MonadFix m) => MonadFix (ReaderT f m) where
+instance (Representable f, MonadFix m) => MonadFix (ReaderT f m) where
   mfix = \f -> ReaderDistT $ distrib (DCompReaderT f) $ mfix . coerce
   {-# inline mfix #-}
 
-instance (Distributive f, MonadZip m) => MonadZip (ReaderT f m) where
+instance (Representable f, MonadZip m) => MonadZip (ReaderT f m) where
   mzipWith = \f (ReaderDistT m) -> ReaderDistT #. liftD2 (mzipWith f) m .# runReaderDistT
   {-# inline mzipWith #-}
 
-instance (Distributive f, Contravariant m) => Contravariant (ReaderT f m) where
+instance (Representable f, Contravariant m) => Contravariant (ReaderT f m) where
   contramap = \f -> ReaderDistT #. fmap (contramap f) .# runReaderDistT
   {-# INLINE contramap #-}
