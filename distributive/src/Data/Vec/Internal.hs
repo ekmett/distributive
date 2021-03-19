@@ -14,7 +14,6 @@ import Control.Monad
 import Control.Monad.Reader.Class
 import Control.Monad.Fix
 import Control.Monad.Zip
-import Data.Fin.Internal
 import Data.Foldable.WithIndex
 import Data.Function.Coerce
 import Data.Functor.Classes
@@ -28,8 +27,9 @@ import Data.Type.Equality
 import Data.Vector as V
 import GHC.Exts
 import GHC.TypeNats
-import Unsafe.Coerce
+import Numeric.Fin.Internal
 import Text.Read
+import Unsafe.Coerce
 
 type role Vec nominal representational
 newtype Vec (n :: Nat) a = UnsafeVec (Vector a)

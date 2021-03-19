@@ -55,32 +55,40 @@ library
     vector       >= 0.12 && < 0.13
 
   hs-source-dirs:  src
+
+  -- fin
+  
+  exposed-modules:
+    Numeric.Fin
+    Numeric.Fin.Internal
+
+  -- hkd
   other-modules:
     Data.HKD.Orphans
   exposed-modules:
-    Data.Rep
-    Data.Rep.Coyoneda
-    Data.Rep.Endo
-    Data.Rep.Internal
-    Data.Fin
-    Data.Fin.Internal
-    Data.Vec
-    Data.Vec.Internal
     Data.HKD
     Data.HKD.Classes
     Data.HKD.Contravariant
     Data.HKD.Index
     Data.HKD.Index.Internal
+    Data.Function.Coerce
+    Data.Traversable.Confusing
+
+  exposed-modules:
+    Data.Rep
+    Data.Rep.Coyoneda
+    Data.Rep.Endo
+    Data.Rep.Internal
+    Data.Vec
+    Data.Vec.Internal
     Data.HKD.Record
     Data.HKD.Record.Internal
     Data.HKD.Rep
     Data.HKD.Rep.Endo
     Data.HKD.Variant
-    Data.Function.Coerce
     Data.Machine.Mealy
     Data.Machine.Moore
     -- Data.Machine.Rep.Moore
-    Data.Traversable.Confusing
     Control.Monad.Rep.Reader
     Control.Monad.Rep.State
 

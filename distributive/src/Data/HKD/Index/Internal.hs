@@ -21,7 +21,6 @@ module Data.HKD.Index.Internal
 
 import Control.Arrow (first)
 import Data.Coerce
-import Data.Fin.Internal
 import Data.GADT.Compare
 import Data.GADT.Show
 import Data.Kind
@@ -29,6 +28,7 @@ import Data.Some
 import Data.Type.Coercion
 import Data.Type.Equality
 import GHC.TypeLits
+import Numeric.Fin.Internal
 import Unsafe.Coerce
 
 type role Index nominal nominal
@@ -42,17 +42,11 @@ newtype Index (as :: [i]) (a :: i) = UnsafeIndex { fromIndex :: Int }
 
 pattern Index :: Int -> Index as i
 pattern Index i <- UnsafeIndex i
+{-# complete Index #-}
 
 len :: forall as. KnownLength as => Int
 len = int @(Length as)
 {-# inline len #-}
-
-{-# complete Index #-}
-
-type role Index' nominal nominal
-data Index' :: [i] -> i -> Type where
-  IndexZ' :: Index' (a:as) a
-  IndexS' :: Index as a -> Index' (b:as) a
 
 liftFin :: forall i (as :: [i]). Fin (Length as) -> Some (Index as)
 liftFin = \(Fin i) -> Some (UnsafeIndex i)
@@ -61,6 +55,11 @@ liftFin = \(Fin i) -> Some (UnsafeIndex i)
 lowerFin :: forall i (as :: [i]) (a :: i). Index as a -> Fin (Length as)
 lowerFin = coerce
 {-# inline lowerFin #-}
+
+type role Index' nominal nominal
+data Index' :: [i] -> i -> Type where
+  IndexZ' :: Index' (a:as) a
+  IndexS' :: Index as a -> Index' (b:as) a
 
 type KnownLength (as :: [i]) = KnownNat (Length as)
 

@@ -9,11 +9,11 @@
 --
 -- @'Fin' n@ is a natural number < @n@.
 
-module Data.Fin
+module Numeric.Fin
 ( Fin(Fin,FinZ,FinS,fromFin)
 , pattern IntFin
 , toFin
 , absurdFin
 ) where
 
-import Data.Fin.Internal
+import Numeric.Fin.Internal

@@ -24,7 +24,7 @@ import Control.Monad.Zip
 import Data.Coerce
 import Data.Complex
 import Data.Data
-import Data.Fin.Internal
+import Numeric.Fin.Internal
 import Data.Function.Coerce
 import Data.Foldable (fold)
 import Data.Foldable.WithIndex

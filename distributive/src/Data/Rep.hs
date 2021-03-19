@@ -123,4 +123,4 @@ module Data.Rep
 ) where
 
 import Data.Rep.Internal
-import Data.Fin.Internal
+import Numeric.Fin

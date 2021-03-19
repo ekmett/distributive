@@ -9,7 +9,7 @@
 -- Stability   : provisional
 -- Portability : non-portable
 
-module Data.Fin.Internal
+module Numeric.Fin.Internal
 ( Fin(UnsafeFin,Fin,FinZ,FinS,fromFin)
 , pattern IntFin
 , toFin
@@ -118,7 +118,8 @@ pattern FinS n <- (upFin -> FinS' n) where
 
 {-# complete FinZ, FinS :: Fin #-}
 
--- | Fin 0 is uninhabited
+-- | @'Fin' 0@ is uninhabited
 absurdFin :: Fin 0 -> a
 absurdFin (Fin _) = error "absurdFin: inhabited Fin 0"
 {-# inline absurdFin #-}
+
