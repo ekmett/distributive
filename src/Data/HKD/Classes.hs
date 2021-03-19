@@ -73,11 +73,11 @@ import Data.Functor.Constant
 import Data.Functor.Compose (Compose (..))
 import Data.Functor.Identity (Identity (..))
 import Data.Functor.Product (Product (..))
-import Data.Functor.Rep.Internal.Coerce
 import Data.Functor.Reverse
 import Data.Functor.Sum (Sum (..))
-import qualified Data.Monoid as Monoid
 import Data.Kind (Type, Constraint)
+import qualified Data.Monoid as Monoid
+import Data.Rep.Coerce
 import qualified Data.Some.GADT as G
 import Data.Some.Newtype (Some (..), mapSome, foldSome, withSome)
 import qualified Data.Some.Church as C

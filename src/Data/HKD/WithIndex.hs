@@ -24,7 +24,7 @@ import Data.Functor.Compose
 import Data.Functor.Constant
 import Data.Functor.Identity
 import Data.Functor.Product
-import Data.Functor.Rep.Internal.Coerce
+import Data.Rep.Coerce
 import Data.Functor.Reverse
 import Data.Functor.Sum
 import Data.Functor.WithIndex

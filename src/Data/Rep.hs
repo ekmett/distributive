@@ -33,7 +33,7 @@
 -- implement tabulate and index directly and `Dist` can still be used.
 --
 -- See 'Data.Machine.Moore' for an example of this pattern.
-module Data.Functor.Rep
+module Data.Rep
 ( Indexable(..)
 , Representable(..)
 , dist
@@ -122,5 +122,5 @@ module Data.Functor.Rep
 , rightAdjunctRep
 ) where
 
-import Data.Functor.Rep.Internal
+import Data.Rep.Internal
 import Data.Fin.Internal

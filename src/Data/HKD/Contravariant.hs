@@ -32,8 +32,6 @@ module Data.HKD.Contravariant
 import Control.Applicative
 import Control.Applicative.Backwards
 import Data.Coerce
-import Data.Functor.Rep.Internal.Coerce
-import Data.Functor.Rep.Internal.Orphans ()
 import Data.Functor.Compose
 import Data.Functor.Product
 import Data.Functor.Reverse
@@ -42,6 +40,8 @@ import Data.GADT.Compare
 import Data.HKD.Classes
 import Data.Kind
 import Data.Proxy
+import Data.Rep.Coerce
+import Data.Rep.Orphans ()
 import Data.Type.Equality
 import GHC.Generics
 import qualified Data.Monoid as Monoid

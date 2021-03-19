@@ -45,8 +45,8 @@ import Control.Monad.Writer.Class as Writer
 import Data.Coerce
 import Data.Functor.Contravariant
 import Data.Functor.Identity
-import Data.Functor.Rep
-import Data.Functor.Rep.Internal.Coerce
+import Data.Rep
+import Data.Rep.Coerce
 import Data.HKD
 import GHC.Generics
 

@@ -12,7 +12,7 @@
 -- Stability   : provisional
 -- Portability : non-portable (ghc 8.6+)
 
-module Data.Functor.Rep.Internal where
+module Data.Rep.Internal where
 
 import Control.Applicative
 import Control.Applicative.Backwards
@@ -25,8 +25,8 @@ import Data.Coerce
 import Data.Complex
 import Data.Data
 import Data.Fin.Internal
-import Data.Functor.Rep.Internal.Coerce
-import Data.Functor.Rep.Internal.Orphans ()
+import Data.Rep.Coerce
+import Data.Rep.Orphans ()
 import Data.Foldable (fold)
 import Data.Foldable.WithIndex
 import Data.Function

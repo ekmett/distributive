@@ -11,7 +11,7 @@
 module Data.HKD.Record.Internal where
 
 import Control.Applicative
-import Data.Functor.Rep.Internal.Coerce
+import Data.Rep.Coerce
 import Data.Functor.Vec.Internal
 import Data.HKD
 import Data.HKD.Index.Internal

@@ -10,7 +10,7 @@
 -- Stability   : provisional
 -- Portability : non-portable
 
-module Data.Functor.Rep.Internal.Orphans where
+module Data.Rep.Orphans where
 
 import Data.Coerce
 import Data.Functor.Classes

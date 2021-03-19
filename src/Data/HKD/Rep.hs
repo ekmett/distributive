@@ -59,4 +59,4 @@ module Data.HKD.Rep
 , cfdistrib
 ) where
 
-import Data.Functor.Rep.Internal
+import Data.Rep.Internal

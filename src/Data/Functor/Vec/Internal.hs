@@ -18,11 +18,11 @@ import Data.Fin.Internal
 import Data.Foldable.WithIndex
 import Data.Functor.Classes
 import Data.Functor.Identity
-import Data.Functor.Rep
-import Data.Functor.Rep.Internal.Coerce
 import Data.Functor.WithIndex
 import Data.HKD
 import Data.Proxy
+import Data.Rep
+import Data.Rep.Coerce
 import Data.Traversable.WithIndex
 import Data.Type.Equality
 import Data.Vector as V

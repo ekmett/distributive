@@ -55,16 +55,14 @@ library
     vector       >= 0.12 && < 0.13
 
   hs-source-dirs:  src
+  other-modules:
+    Data.Rep.Orphans
   exposed-modules:
-    Data.Functor.Rep.Internal
-
-    Control.Monad.Rep.Reader
-    Control.Monad.Rep.State
-    Data.Functor.Rep
-    Data.Functor.Rep.Coyoneda
-    Data.Functor.Rep.Endo
-    Data.Functor.Rep.Internal.Coerce
-    Data.Functor.Rep.Internal.Orphans
+    Data.Rep
+    Data.Rep.Coerce
+    Data.Rep.Coyoneda
+    Data.Rep.Endo
+    Data.Rep.Internal
     Data.Fin
     Data.Fin.Internal
     Data.Functor.Vec
@@ -81,9 +79,12 @@ library
     Data.HKD.Types
     Data.HKD.Variant
     Data.HKD.WithIndex
+    Data.Machine.Mealy
     Data.Machine.Moore
+    -- Data.Machine.Rep.Moore
     Data.Traversable.Confusing
-  -- Data.Machine.Rep.Moore
+    Control.Monad.Rep.Reader
+    Control.Monad.Rep.State
 
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1

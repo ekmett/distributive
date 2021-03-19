@@ -48,8 +48,8 @@ import Control.Monad.Writer.Class
 import Data.Coerce
 import Data.Functor.Contravariant
 import Data.Functor.Identity
-import Data.Functor.Rep
-import Data.Functor.Rep.Internal.Coerce
+import Data.Rep
+import Data.Rep.Coerce
 import Data.HKD
 
 -- | A memoized state monad parameterized by a 'Representable' functor @g@, where
