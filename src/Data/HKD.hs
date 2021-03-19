@@ -53,6 +53,9 @@ module Data.HKD
 , FApply(..)
 , FApplicative(..)
 , FApplicativeInstances(..)
+-- * FMonad
+, FMonad(..)
+, FMonadInstances(..)
 -- * FEq
 , EqC
 , FEq
@@ -508,6 +511,36 @@ deriving newtype instance FFoldable f => FFoldable (Monoid.Ap f)
 instance FTraversable f => FTraversable (Monoid.Ap f) where
   ftraverse = \f -> fmap Monoid.Ap . ftraverse f .# Monoid.getAp
   {-# inline ftraverse #-}
+
+-- * FMonad
+
+-- fjoin :: f (f :.: b) -> f (Join b)
+class FApplicative f => FMonad f where
+  fbind :: (forall x. b x x -> r x) -> f a -> (forall x. a x -> f (b x)) -> f r
+
+newtype Ignore a x y = Ignore { runIgnore :: a x }
+
+fliftM :: FMonad f => (a ~> b) -> f a -> f b
+fliftM = \f fa -> fbind runIgnore fa \a -> fpure $ Ignore $ f a
+{-# inline fliftM #-}
+
+newtype Foo a x y = Foo { runFoo :: x ~ y => a x }
+
+fliftM2 :: FMonad f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
+fliftM2 = \f fa fb -> fbind runFoo fa \a -> fliftM (\b -> Foo $ f a b) fb
+{-# inline fliftM2 #-}
+
+newtype FMonadInstances f a = FMonadInstances { runFMonadInstances :: f a }
+
+-- | Derive FFunctor from fbind and fpure
+instance FMonad f => FFunctor (FMonadInstances f) where
+  ffmap = \f -> FMonadInstances #. fliftM f .# runFMonadInstances
+  {-# inline ffmap #-}
+
+-- | Derive FApply from fbind and fpure
+instance FMonad f => FApply (FMonadInstances f) where
+  fliftA2 = \f (FMonadInstances fa) -> FMonadInstances #. fliftM2 f fa .# runFMonadInstances
+  {-# inline fliftA2 #-}
 
 -- * FEq
 
