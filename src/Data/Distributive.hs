@@ -4,33 +4,35 @@
 -- Copyright   : (C) 2011-2021 Edward Kmett,
 --               (c) 2017-2021 Aaron Vargo,
 --               (c) 2021 Oleg Grenrus
--- License     : BSD-style (see the file LICENSE)
+-- License     : BSD-2-Clause OR Apache-2.0
 -- Maintainer  : Edward Kmett <ekmett@gmail.com>
 -- Stability   : provisional
--- Portability : non-portable (ghc 8.0+)
+-- Portability : non-portable (ghc 8.6+)
 --
--- Examples:
---
--- For most data types you can use @GHC.Generics@ and @DeriveAnyClass@
+-- For most distributive data types you can use @GHC.Generics@ and @DeriveAnyClass@
 -- along with the `Dist` newtype to fill in a ton of instances.
 --
 -- @
 -- data V3 a = V3 a a a
---   deriving stock (Eq, Ord, Functor, Foldable, Traversable, Generic, Generic1, Data)
+--   deriving stock 
+--   ( Show, Read, Eq, Ord
+--   , Functor, Foldable, Traversable
+--   , Generic, Generic1, Data )
 --   deriving anyclass Distributive
 --   deriving
 --   ( Applicative, Monad, MonadFix, MonadZip
---   , MonadReader (Logarithm V3)
---   , FunctorWithIndex (Logarithm V3)
---   , FoldableWithIndex (Logarithm V3)
---   , TraversableWithIndex (Logarithm V3)
---   , Eq1, Ord1
---   ) via Dist V3
+--   , MonadReader (Fin 3)
+--   , FunctorWithIndex (Fin 3)
+--   , FoldableWithIndex (Fin 3)
+--   , TraversableWithIndex (Fin 3)
+--   , Eq1, Ord1 )                        via Dist V3
 --   deriving (Num, Fractional, Floating) via Dist V3 a
 -- @
 --
 -- If you want a special form for the 'Log' of your functor you can
--- implement tabulate and index directly, `Dist` can still be used.
+-- implement tabulate and index directly and `Dist` can still be used.
+--
+-- See 'Data.Machine.Moore' for an example of this pattern.
 module Data.Distributive
 ( Indexable(..)
 , Distributive(..)

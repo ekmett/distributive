@@ -1,9 +1,9 @@
+cabal-version: 2.4
 name:          distributive
 category:      Data Structures
 version:       1
-license:       BSD3
-cabal-version: >= 1.10
-license-file:  LICENSE
+license:       BSD-2-Clause OR Apache-2.0
+license-file:  LICENSE.md
 author:        Edward A. Kmett
 maintainer:    Edward A. Kmett <ekmett@gmail.com>
 stability:     provisional
@@ -12,9 +12,8 @@ bug-reports:   http://github.com/ekmett/distributive/issues
 copyright:     Copyright 2011-2021 Edward A. Kmett,
                Copyright 2017-2021 Aaron Vargo,
                Copyright 2021 Oleg Grenrus
-synopsis:      Distributive functors -- Dual to Traversable
-description:   Distributive functors -- Dual to @Traversable@
-build-type:    Simple
+synopsis:      Distributive functors
+description:   Distributive functors.
 tested-with:
   GHC == 8.6.5,
   GHC == 8.8.4,
@@ -29,14 +28,6 @@ extra-source-files:
 source-repository head
   type: git
   location: git://github.com/ekmett/distributive.git
-
-flag semigroups
-  manual: True
-  default: True
-  description:
-    You can disable the use of the `semigroups` package using `-f-semigroups` when compiling on versions of GHC < 8.0.
-    .
-    Disabling this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
 
 flag tagged
   manual: True
@@ -57,7 +48,6 @@ library
     some         >= 1.0 && < 1.1,
     transformers >= 0.3 && < 0.6,
     vector       >= 0.12 && < 0.13
-  --  primitive    >= 0.6.2 && < 0.8,
 
   hs-source-dirs:  src
   exposed-modules:
@@ -146,7 +136,7 @@ library
     UnboxedTuples
 
 test-suite spec
-  type:           exitcode-stdio-1.0
+  type: exitcode-stdio-1.0
   hs-source-dirs: tests
   build-tool-depends:
     hspec-discover:hspec-discover
@@ -159,6 +149,5 @@ test-suite spec
 
   main-is: Spec.hs
   other-modules: GenericsSpec
-
   ghc-options: -Wall -threaded -rtsopts
   default-language: Haskell2010

@@ -1,5 +1,12 @@
 {-# Language Safe #-}
 
+-- |
+-- Copyright   : (C) 2021 Edward Kmett, Emily Pillmore
+-- License     : BSD-2-Clause OR Apache-2.0
+-- Maintainer  : Edward Kmett <ekmett@gmail.com>
+-- Stability   : provisional
+-- Portability : non-portable (ghc 8.6+)
+
 module Data.Distributive.Coyoneda
 ( Coyoneda(CoyonedaDist, Coyoneda)
 , liftCoyonedaDist

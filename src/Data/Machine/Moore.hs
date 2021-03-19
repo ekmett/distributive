@@ -2,11 +2,10 @@
 
 -- |
 -- Copyright   :  (C) 2012-2021 Edward Kmett
--- License     :  BSD-style (see the file LICENSE)
---
+-- License     :  BSD-2-Style OR Apache-2.0
 -- Maintainer  :  Edward Kmett <ekmett@gmail.com>
 -- Stability   :  provisional
--- Portability :  portable
+-- Portability :  non-portable (ghc 8.6+)
 --
 -- <http://en.wikipedia.org/wiki/Moore_machine>
 
