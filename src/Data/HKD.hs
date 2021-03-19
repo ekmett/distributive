@@ -56,6 +56,8 @@ module Data.HKD
 -- * FMonad
 , FMonad(..)
 , FMonadInstances(..)
+, fbindInner
+, fbindOuter
 -- * FEq
 , EqC
 , FEq
@@ -518,10 +520,25 @@ instance FTraversable f => FTraversable (Monoid.Ap f) where
 class FApplicative f => FMonad f where
   fbind :: (forall x. b x x -> r x) -> f a -> (forall x. a x -> f (b x)) -> f r
 
-newtype Ignore a x y = Ignore { runIgnore :: a x }
+newtype Inner a x y = Inner { runInner :: a y }
+
+-- TODO: avoid the ffmap coerces
+
+-- | 'fbind' with @b@ indexed only on the inner layer
+fbindInner :: FMonad f => f a -> (forall x. a x -> f b) -> f b
+fbindInner = \fa f -> fbind runInner fa \a -> ffmap Inner $ f a
+{-# inline fbindInner #-}
+
+newtype Outer a x y = Outer { runOuter :: a x }
+
+-- | 'fbind' with @b@ indexed only on the outer layer
+fbindOuter :: FMonad f => f a -> (forall x. a x -> f (Const (b x))) -> f b
+fbindOuter = \fa f -> fbind runOuter fa \a -> ffmap coerce $ f a
+{-# inline fbindOuter #-}
+
 
 fliftM :: FMonad f => (a ~> b) -> f a -> f b
-fliftM = \f fa -> fbind runIgnore fa \a -> fpure $ Ignore $ f a
+fliftM = \f fa -> fbind runOuter fa \a -> fpure $ Outer $ f a
 {-# inline fliftM #-}
 
 newtype LiftM2 a x y = LiftM2 (x ~ y => a x)
@@ -667,6 +684,15 @@ pattern F4 :: f a -> f b -> f c -> f d -> F4 a b c d f
 pattern F4 a b c d = F4' (F1 a) (F1 b) (F1 c) (F1 d)
 {-# complete F4 :: F4 #-}
 
+instance FMonad (F4 a b c d) where
+  fbind = \k (F4 a b c d) f -> 
+    F4 
+      (k $ case f a of F4 x _ _ _ -> x) 
+      (k $ case f b of F4 _ x _ _ -> x)
+      (k $ case f c of F4 _ _ x _ -> x)
+      (k $ case f d of F4 _ _ _ x -> x)
+  {-# inline fbind #-}
+
 type role F5 nominal nominal nominal nominal nominal representational
 data F5 a b c d e f = F5' (F1 a f) (F1 b f) (F1 c f) (F1 d f) (F1 e f)
   deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
@@ -675,6 +701,16 @@ data F5 a b c d e f = F5' (F1 a f) (F1 b f) (F1 c f) (F1 d f) (F1 e f)
 pattern F5 :: f a -> f b -> f c -> f d -> f e -> F5 a b c d e f
 pattern F5 a b c d e = F5' (F1 a) (F1 b) (F1 c) (F1 d) (F1 e)
 {-# complete F5 :: F5 #-}
+
+instance FMonad (F5 a b c d e) where
+  fbind = \k (F5 a b c d e) f -> 
+    F5 
+      (k $ case f a of F5 x _ _ _ _ -> x) 
+      (k $ case f b of F5 _ x _ _ _ -> x)
+      (k $ case f c of F5 _ _ x _ _ -> x)
+      (k $ case f d of F5 _ _ _ x _ -> x)
+      (k $ case f e of F5 _ _ _ _ x -> x)
+  {-# inline fbind #-}
 
 -------------------------------------------------------------------------------
 -- "natural" transformations via parametricity
@@ -694,6 +730,10 @@ instance FApply (NT f) where
 instance FApplicative (NT a) where
   fpure = \x -> NT \_ -> x
   {-# inline fpure #-}
+
+instance FMonad (NT r) where
+  fbind = \k (NT ra) f -> NT \r -> k $ runNT (f $ ra r) r
+  {-# inline fbind #-}
 
 -------------------------------------------------------------------------------
 -- Some
@@ -771,6 +811,10 @@ instance FApplicative Limit where
   fpure x = Limit x
   {-# inline fpure #-}
 
+instance FMonad Limit where
+  fbind = \k (Limit a) f -> Limit $ k $ runLimit $ f a
+  {-# inline fbind #-}
+
 -- * Dicts
 
 data Dict1 p a where
@@ -805,6 +849,10 @@ pattern Dicts { runDicts } = Dicts' (F1 runDicts)
 
 {-# complete Dicts #-}
 
+instance FMonad (Dicts p) where
+  fbind = \k (Dicts a) f -> Dicts $ k $ runDicts (f a)
+  {-# inline fbind #-}
+
 newtype FConstrained p f = FConstrained
   { runFConstrained :: forall x. p x => f x
   }
@@ -819,9 +867,15 @@ instance (forall x. p x) => FFoldable (FConstrained p) where
 
 instance FApply (FConstrained p) where
   fliftA2 = \f g h -> FConstrained $ f (runFConstrained g) (runFConstrained h)
+  {-# inline fliftA2 #-}
 
 instance FApplicative (FConstrained p) where
   fpure x = FConstrained x
+  {-# inline fpure #-}
+
+instance FMonad (FConstrained p) where
+  fbind = \k (FConstrained a) f -> FConstrained $ k $ runFConstrained $ f a
+  {-# inline fbind #-}
 
 -- instance (forall x. p x) => FTraversable (FConstrained p) where
 
