@@ -1541,6 +1541,10 @@ instance Applicative f => FApplicative (HKD f x) where
   fpure f = HKD $ pure f
   {-# inline fpure #-}
 
+instance Monad f => FMonad (HKD f x) where
+  fbind = \k (HKD fa) f -> HKD $ fmap k $ fa >>= runHKD #. f
+  {-# inline fbind #-}
+
 instance Indexable f => FIndexable (HKD f x) where
   type FLog (HKD f x) = Atkey (Log f) x
   findex = \(HKD fa) (Atkey lg) -> index fa lg
@@ -1626,12 +1630,15 @@ instance FDecidable f => Decidable (LKD f) where
   lose = \f -> LKD $ flose (absurd . f .# getConst)
   {-# inline lose #-}
 
--- Assumes FApplicative is FApplicative
 instance FApplicative f => Applicative (LKD f) where
   (<*>) = \(LKD fab) -> LKD #. fliftA2 coerce fab .# runLKD
   {-# inline (<*>) #-}
   pure = \a -> LKD $ fpure (Const a)
   {-# inline pure #-}
+
+instance FMonad f => Monad (LKD f) where
+  (>>=) = \(LKD fa) f -> LKD $ fbindOuter fa \(Const a) -> ffmap coerce $ runLKD $ f a
+  {-#inline (>>=) #-}
 
 type role DLKD representational nominal
 newtype DLKD w f = DLKD { runDLKD :: w (LKD f) }
