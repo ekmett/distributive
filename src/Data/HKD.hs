@@ -1,12 +1,5 @@
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# language Trustworthy #-}
-{-# language TypeApplications #-}
-{-# language TypeFamilies #-}
-{-# language TypeOperators #-}
-{-# language LambdaCase #-}
-{-# language EmptyCase #-}
-{-# language UndecidableInstances #-}
-{-# language UndecidableSuperClasses #-}
 
 -- |
 -- Copyright :  (c) 2019-2021 Edward Kmett

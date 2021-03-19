@@ -69,6 +69,7 @@ library
     Data.Distributive.Internal.Fin
     Data.Distributive.Internal.Orphans
     Data.Distributive.Internal.Vec
+    Data.Distributive.Fin
     Data.Distributive.Vec
     Data.Functor.Confusing
     Data.HKD
@@ -118,6 +119,7 @@ library
     LambdaCase
     LiberalTypeSynonyms
     MagicHash
+    NoStarIsType
     PartialTypeSignatures
     PatternSynonyms
     PolyKinds

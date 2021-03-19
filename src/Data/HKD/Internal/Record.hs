@@ -12,12 +12,15 @@
 
 module Data.HKD.Internal.Record where
 
+import Control.Applicative
 import Data.Distributive.Internal.Coerce
+import Data.Distributive.Internal.Vec
 import Data.HKD
 import Data.HKD.Distributive
 import Data.HKD.Internal.Index
 import Data.HKD.WithIndex
 import Data.Kind
+-- import qualified Data.Monoid as Monoid
 import Data.Proxy
 import Data.Traversable.WithIndex
 import Data.Type.Equality
@@ -100,16 +103,16 @@ type family AllF (p :: i -> Constraint) (as :: [i]) :: Constraint where
   AllF _ '[] = ()
   AllF p (a ': as) = (p a, AllF p as)
 
--- class AllF p as => All (p :: i -> Constraint) (as :: [i]) where
---   para :: r '[] -> (forall b bs. (p b, All p bs) => Proxy# b -> r bs -> r (b ': bs)) -> r as
+class AllF p as => All (p :: i -> Constraint) (as :: [i]) where
+  para :: r '[] -> (forall b bs. (p b, All p bs) => Proxy# b -> r bs -> r (b ': bs)) -> r as
 
--- instance All p '[] where
---   para nil _ = nil
---   {-# inline para #-}
+instance All p '[] where
+  para nil _ = nil
+  {-# inline para #-}
 
--- instance (p a, All p as) => All (p :: i -> Constraint) (a ': as) where
---   para nil kons = kons (proxy# @a) (para @i @p nil kons)
---   {-# inline para #-}
+instance (p a, All p as) => All (p :: i -> Constraint) (a ': as) where
+  para nil kons = kons (proxy# @a) (para @i @p nil kons)
+  {-# inline para #-}
 
 withLen :: forall as f r. Record as f -> (KnownLength as => r) -> r
 withLen v r = case someNatVal (fromIntegral $ V.length (safeRecord v)) of
@@ -119,7 +122,6 @@ withLen v r = case someNatVal (fromIntegral $ V.length (safeRecord v)) of
 
 data IRec (f :: i -> Type) (as :: [i]) = IRec {-# unpack #-} !Int [Any]
 
-{-
 instance (KnownLength as, All p as) => FAll (p :: i -> Constraint) (Record as) where
   fall = case len @as of
     n ->
@@ -128,16 +130,32 @@ instance (KnownLength as, All p as) => FAll (p :: i -> Constraint) (Record as) w
         IRec i $ Any (Dict1 :: Dict1 p b) : t
       of
       IRec 0 r -> UnsafeRecord $ V.fromListN n r
-      _ -> error "cfdistrib: the impossible happened"
+      _ -> error "Data.HKD.Internal.Record.fall: the impossible happened"
   {-# inline[0] fall #-}
 
+{-
+instance (EqC f, All EqC as) => Eq (Record (as :: [Type]) f) where
+  xs == ys = 
+    withLen xs $
+    Monoid.getAll $
+    ffoldMap getConst $
+    fliftD3
+      (\Dict1 x y -> Const $ Monoid.All $ x == y)
+      (fall @_ @Eq) xs ys
+
+instance (EqC f, All EqC as) => Eq (Record (as :: [Type]) f) where
+  xs == ys = 
+    withLen xs $
+    Monoid.getAll $
+    ffoldMap getConst $
+    fliftD3
+      (\Dict1 x y -> Const $ Monoid.All $ x == y)
+      (fall @_ @Eq) xs ys
+-} 
+
+{-
 instance (Eq1 f, All Eq as) => Eq (Record (as :: [Type]) f) where
   xs == ys = Monoid.getAll $
-    ffoldMap getConst $
-    withLen xs $
-    fliftD3
-      (\Dict1 x y -> Const $ Monoid.All $ liftEq (==) x y)
-      (fall @Type @Eq) xs ys
   {-# inline (==) #-}
 
 instance (Ord1 f, All Ord as, All Eq as) => Ord (Record (as :: [Type]) f) where
@@ -172,3 +190,10 @@ pattern Any :: a -> Any
 pattern Any a <- (unsafeCoerce -> a) where
   Any a = unsafeCoerce a
 
+liftVec :: Vec (Length as) a -> Record as (Const a)
+liftVec (Vec as) = UnsafeRecord (unsafeCoerce as)
+{-# inline liftVec #-}
+
+lowerVec :: Record as (Const a) -> Vec (Length as) a
+lowerVec (UnsafeRecord as) = UnsafeVec (unsafeCoerce as)
+{-# inline lowerVec #-}

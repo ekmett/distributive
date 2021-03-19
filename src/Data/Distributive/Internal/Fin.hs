@@ -3,11 +3,12 @@
 {-# options_haddock hide #-}
 
 module Data.Distributive.Internal.Fin
-( Fin(UnsafeFin,Fin,FinZ,FinS)
+( Fin(UnsafeFin,Fin,FinZ,FinS,fromFin)
 , pattern IntFin
 , toFin
 , int
 , S
+, absurdFin
 ) where
 
 import Control.Monad
@@ -95,3 +96,7 @@ pattern FinS n <- (upFin -> FinS' n) where
   FinS n = UnsafeFin (fromFin n - 1)
 
 {-# complete FinZ, FinS :: Fin #-}
+
+absurdFin :: Fin 0 -> a
+absurdFin (Fin _) = error "absurdFin: inhabited Fin 0"
+{-# inline absurdFin #-}

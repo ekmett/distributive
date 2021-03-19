@@ -74,7 +74,7 @@ instance Functor (Coyoneda f) where
   {-# inline fmap #-}
 
 instance Applicative f => Applicative (Coyoneda f) where
-  pure = \a -> CoyonedaDist (Identity a) (pure ())
+  pure = \a -> CoyonedaDist (Identity a) (pure FinZ)
   {-# inline pure #-}
 
   liftA2 = \abc (CoyonedaDist ga flg) (CoyonedaDist hb flh) ->

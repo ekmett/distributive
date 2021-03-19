@@ -17,6 +17,7 @@ module Data.HKD.Record
 , Length
 , KnownLength
 , lowerFin, liftFin
+--, lowerVec, liftVec
 , len
 , Record(Nil, Cons)
 , withLen

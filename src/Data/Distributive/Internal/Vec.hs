@@ -43,6 +43,8 @@ pattern Vec { toVector } <- UnsafeVec toVector
 
 instance KnownNat n => Distributive (Vec n) where
   type Log (Vec n) = Fin n
+  type KnownSize (Vec n) = 'Just n
+
   scatter = \(k :: w Identity -> r) f (ffmap f -> w) -> UnsafeVec $
     generate (int @n) \i -> k $ ffmap (\v -> Identity $ index v $ UnsafeFin i) w
   {-# inlinable scatter #-}

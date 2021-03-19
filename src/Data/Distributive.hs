@@ -61,6 +61,17 @@ module Data.Distributive
 , ltLog
 , leLog
 , compareLog
+, Fin(Fin,FinZ,FinS,fromFin)
+, pattern IntFin
+, toFin
+, absurdFin
+, indexFin
+, tabulateFin
+-- * Generically deriving indexing by Fin
+, DefaultTabulateFin
+, gtabulateFin
+, DefaultIndexFin
+, gindexFin
 -- ** via DerivingVia
 , Dist(..)
 -- ** for other classes
@@ -107,3 +118,4 @@ module Data.Distributive
 ) where
 
 import Data.Distributive.Internal
+import Data.Distributive.Internal.Fin

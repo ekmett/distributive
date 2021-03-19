@@ -35,7 +35,7 @@ import Unsafe.Coerce
 
 type role Index nominal nominal
 
-type family Length (as ::[i]) :: Nat where
+type family Length (as :: [i]) :: Nat where
   Length '[] = 0
   Length (x ': xs) = 1 + Length xs
 

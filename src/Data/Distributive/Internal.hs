@@ -25,6 +25,7 @@ import Data.Coerce
 import Data.Complex
 import Data.Data
 import Data.Distributive.Internal.Coerce
+import Data.Distributive.Internal.Fin
 import Data.Distributive.Internal.Orphans ()
 import Data.Foldable (fold)
 import Data.Foldable.WithIndex
@@ -41,21 +42,23 @@ import Data.Functor.WithIndex
 import Data.GADT.Compare
 import Data.HKD
 import Data.HKD.Contravariant
+import Data.HKD.Internal.Index
 import Data.HKD.WithIndex
 import Data.Kind
+import Data.Maybe
 import qualified Data.Monoid as Monoid
 import Data.Ord (Down(..))
 import Data.Orphans ()
 import qualified Data.Semigroup as Semigroup
 import Data.Some
+import Data.Traversable
 import Data.Traversable.WithIndex
-import Data.Type.Bool (type (||))
+import Data.Type.Bool
 import Data.Type.Coercion
 import Data.Type.Equality
 import Data.Void
 import GHC.Generics
-import GHC.TypeLits (type (-))
-import GHC.Types
+import GHC.TypeLits
 import Numeric
 import Unsafe.Coerce
 
@@ -90,6 +93,9 @@ class Functor f => Distributive f where
   -- | Defaults to @'Log' ('Rep1' f)@ when @f@ is non-recursive, otherwise to 'Logarithm'.
   type Log f
   type Log f = DefaultLog f
+
+  type KnownSize f :: Maybe Nat
+  type KnownSize f = DefaultKnownSize f
 
   -- | Defaults to 'tabulateLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'tabulateRep'
   tabulate :: (Log f -> a) -> f a
@@ -180,55 +186,79 @@ pattern Tabulate i <- (index -> i) where
 
 -- * Generic derivation
 
+data LogType
+  = UseLogarithm
+  | UseLogFin
+  | UseLogRep
+
+type family HasLogType f t :: LogType where
+  HasLogType f (Logarithm f) = 'UseLogarithm
+  HasLogType f (Fin x) = If (x == Size f) 'UseLogFin 'UseLogRep
+  HasLogType f t = 'UseLogRep
+
+type LogTypeOf f = HasLogType f (Log f)
+
+type DefaultLog f = DefaultLog' (GInvalid (Rep1 f)) f
+
 type family DefaultLog' (containsRec1 :: Bool) f :: Type where
   DefaultLog' 'True  f = Logarithm f
-  DefaultLog' 'False f = Log (Rep1 f)
+  DefaultLog' 'False f = DefaultLog'' (GUnknownSize (Rep1 f)) f
 
-type DefaultLog f = DefaultLog' (ContainsSelfRec1 (Rep1 f) 3) f
+type family DefaultLog'' (hasUnknownSize :: Bool) f :: Type where
+  DefaultLog'' 'True f = Log (Rep1 f)
+  DefaultLog'' 'False f = Fin (Size f)
 
-type family IsLogarithm f t :: Bool where
-  IsLogarithm f (Logarithm f) = 'True
-  IsLogarithm f t = 'False
+type family DefaultTabulateImplC (t :: LogType) f :: Constraint where
+  DefaultTabulateImplC 'UseLogarithm f = (Distributive f, Log f ~ Logarithm f)
+  DefaultTabulateImplC 'UseLogRep f = (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
+  DefaultTabulateImplC 'UseLogFin f = (Generic1 f, GTabulateFin (Rep1 f), Size f ~ GSize (Rep1 f), Log f ~ Fin (GSize (Rep1 f)))
 
-type LogIsLogarithm f = IsLogarithm f (Log f)
-
-type family DefaultImplC (logIsLogarithm :: Bool) f :: Constraint where
-  DefaultImplC 'True  f = (Distributive f, Log f ~ Logarithm f)
-  DefaultImplC 'False f = (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
+type family DefaultIndexImplC (t :: LogType) f :: Constraint where
+  DefaultIndexImplC 'UseLogarithm f = (Log f ~ Logarithm f)
+  DefaultIndexImplC 'UseLogRep f = (Generic1 f, Distributive (Rep1 f), Coercible (Log f) (Log (Rep1 f)))
+  DefaultIndexImplC 'UseLogFin f = (Generic1 f, GIndexFin (Rep1 f), Size f ~ GSize (Rep1 f), Log f ~ Fin (GSize (Rep1 f)))
 
 -- individual type classes, so GHC needs to do less work
-class DefaultImplC logIsLogarithm f => DefaultTabulate' (logIsLogarithm :: Bool) f where
+class DefaultTabulateImplC logType f => DefaultTabulate' (logType :: LogType) f where
   defaultTabulate' :: (Log f -> a) -> f a
 
-instance DefaultImplC 'True f => DefaultTabulate' 'True f where
+instance DefaultTabulateImplC 'UseLogarithm f => DefaultTabulate' 'UseLogarithm f where
   defaultTabulate' = tabulateLogarithm
   {-# inline defaultTabulate' #-}
 
-instance DefaultImplC 'False f => DefaultTabulate' 'False f where
+instance DefaultTabulateImplC 'UseLogRep f => DefaultTabulate' 'UseLogRep f where
   defaultTabulate' = tabulateRep
   {-# inline defaultTabulate' #-}
 
-type DefaultTabulate f = DefaultTabulate' (LogIsLogarithm f) f
+instance DefaultTabulateImplC 'UseLogFin f => DefaultTabulate' 'UseLogFin f where
+  defaultTabulate' = gtabulateFin
+  {-# inline defaultTabulate' #-}
+
+type DefaultTabulate f = DefaultTabulate' (LogTypeOf f) f
 
 defaultTabulate :: forall f a. DefaultTabulate f => (Log f -> a) -> f a
-defaultTabulate = defaultTabulate' @(LogIsLogarithm f)
+defaultTabulate = defaultTabulate' @(LogTypeOf f)
 {-# inline defaultTabulate #-}
 
-class DefaultImplC logIsLogarithm f => DefaultIndex' (logIsLogarithm :: Bool) f where
+class DefaultIndexImplC logType f => DefaultIndex' (logType :: LogType) f where
   defaultIndex' :: f a -> Log f -> a
 
-instance DefaultImplC 'True f => DefaultIndex' 'True f where
+instance DefaultIndexImplC 'UseLogarithm f => DefaultIndex' 'UseLogarithm f where
   defaultIndex' = indexLogarithm
   {-# inline defaultIndex' #-}
 
-instance DefaultImplC 'False f => DefaultIndex' 'False f where
+instance DefaultIndexImplC 'UseLogRep f => DefaultIndex' 'UseLogRep f where
   defaultIndex' = indexRep
   {-# inline defaultIndex' #-}
 
-type DefaultIndex f = DefaultIndex' (LogIsLogarithm f) f
+instance DefaultIndexImplC 'UseLogFin f => DefaultIndex' 'UseLogFin f where
+  defaultIndex' = gindexFin
+  {-# inline defaultIndex' #-}
+
+type DefaultIndex f = DefaultIndex' (LogTypeOf f) f
 
 defaultIndex :: forall f a. DefaultIndex f => f a -> (Log f -> a)
-defaultIndex = defaultIndex' @(LogIsLogarithm f)
+defaultIndex = defaultIndex' @(LogTypeOf f)
 {-# inline defaultIndex #-}
 
 -- | A helper for the most common usage pattern when working with 'scatter'.
@@ -491,7 +521,7 @@ instance Distributive Complex where
 
 deriving newtype instance Distributive f => Distributive (IdentityT f)
 
-deriving via ((((->) e) :.: f) :: Type -> Type)
+deriving via (((->) e :.: f) :: Type -> Type)
   instance Distributive f => Distributive (ReaderT e f)
 
 -- * DerivingVia
@@ -990,6 +1020,9 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   type FLog f :: k -> Type
   type FLog f = DefaultFLog f
 
+  type KnownIndices f :: Maybe [k]
+  type KnownIndices f = DefaultKnownIndices f
+
   -- | A higher-kinded 'scatter'
   fscatter :: FFunctor w => (w % F1 ~> r) -> (g ~> f) -> w g -> f r
   default fscatter
@@ -1003,7 +1036,7 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   default ftabulate
     :: (Generic1 f, DefaultFTabulate f)
     => (FLog f ~> a) -> f a
-  ftabulate = defaultFTabulate @(ContainsSelfRec1 (Rep1 f) 3)
+  ftabulate = defaultFTabulate @(GFInvalid (Rep1 f))
   {-# inline ftabulate #-}
 
   -- | A higher-kinded 'index'
@@ -1011,7 +1044,7 @@ class FFunctor f => FDistributive (f :: (k -> Type) -> Type) where
   default findex
      :: (Generic1 f, DefaultFIndex f)
      => f a -> FLog f ~> a
-  findex = defaultFIndex @(ContainsSelfRec1 (Rep1 f) 3)
+  findex = defaultFIndex @(GFInvalid (Rep1 f))
   {-# inline findex #-}
 
 -- | A higher-kinded 'distrib'
@@ -1101,9 +1134,9 @@ instance DefaultFImplC 'False f => DefaultFIndex' 'False f where
   defaultFIndex = findexRep
   {-# inline defaultFIndex #-}
 
-type DefaultFLog f = DefaultFLog' (ContainsSelfRec1 (Rep1 f) 3) f
-type DefaultFTabulate f = DefaultFTabulate' (ContainsSelfRec1 (Rep1 f) 3) f
-type DefaultFIndex f = DefaultFIndex' (ContainsSelfRec1 (Rep1 f) 3) f
+type DefaultFLog f = DefaultFLog' (GFInvalid (Rep1 f)) f
+type DefaultFTabulate f = DefaultFTabulate' (GFInvalid (Rep1 f)) f
+type DefaultFIndex f = DefaultFIndex' (GFInvalid (Rep1 f)) f
 
 -- | A higher-kinded 'distribute'
 --
@@ -1187,11 +1220,11 @@ instance FDistributive f => FDistributive (Rec1 f) where
   {-# inline findex #-}
 
 instance (Distributive f, FDistributive g) => FDistributive (f :.: g) where
-  type FLog (f :.: g) = Const (Log f) :*: FLog g
+  type FLog (f :.: g) = K1 R (Log f) :*: FLog g
   fscatter = \k phi wg -> Comp1 $
     scatter (fscatter k coerce .# runAppCompose) id $ AppCompose (ffmap phi wg)
-  findex = \(Comp1 f) (Const x :*: y) -> findex (index f x) y
-  ftabulate = \f -> Comp1 $ tabulate \i -> ftabulate \j -> f (Const i :*: j)
+  findex = \(Comp1 f) (K1 x :*: y) -> findex (index f x) y
+  ftabulate = \f -> Comp1 $ tabulate \i -> ftabulate \j -> f (K1 i :*: j)
   {-# inline fscatter #-}
   {-# inline ftabulate #-}
   {-# inline findex #-}
@@ -1807,25 +1840,100 @@ instance (Eq1 f, FEq g) => FEq (f :.: g) where
 
 -- * Internals
 
--- Does Generic Rep contain 'Rec1'?
---
--- This is a Hack. If we loop i (= 3) times we declare that we are recursive.
-type family ContainsSelfRec1 (f :: j -> Type) (i :: Nat) :: Bool where
-  ContainsSelfRec1 _          0 = 'True
-  ContainsSelfRec1 (K1 _ _)   i = 'False
-  ContainsSelfRec1 (M1 _ _ f) i = ContainsSelfRec1 f i
-  ContainsSelfRec1 U1         i = 'False
-  ContainsSelfRec1 V1         i = 'False
-  ContainsSelfRec1 Par1       _ = 'False
-  ContainsSelfRec1 (f :*: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
-  ContainsSelfRec1 (f :+: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
-  ContainsSelfRec1 (f :.: g)  i = ContainsSelfRec1 f i || ContainsSelfRec1 g i
-
+-- Does @(Rep1 f)@ contain @'Rec1' f@, @K1@, @V1@, sums or a @Par1@?
+-- In any of these cases 'tabulateRep/indexRep and defining
+-- @Log f = Log (Rep1 f)@ will fail. In all of these cases
+-- we'll default to using Logarithm.
+-- In the other case we could try to use 'Index' or
+type family GInvalid' (f :: j -> Type) (parValid :: Bool) (i :: Nat) :: Bool where
+  GInvalid' _          _ 0 = 'True
+  GInvalid' (K1 _ _)   _ i = 'True
+  GInvalid' (M1 _ _ f) p i = GInvalid' f p i
+  GInvalid' U1         _ i = 'False
+  GInvalid' V1         _ i = 'True -- not
+  GInvalid' Par1       p _ = p
+  GInvalid' (f :*: g)  p i = GInvalid' f p i || GInvalid' g p i
+  GInvalid' (f :+: g)  _ i = 'True
+  GInvalid' (f :.: g)  p i = GInvalid' (Rep1 f) 'True i || GInvalid' g p i
   -- this clause is a hack. If pieces @f@ is built from are not 'Generic1',
   -- this will get stuck.
   --
   -- An alternative with non-linear match is suboptimal in other ways
-  ContainsSelfRec1 (Rec1 f)   i = ContainsSelfRec1 (Rep1 f) (i - 1)
+  GInvalid' (Rec1 f)   p i = GInvalid' (Rep1 f) p (i - 1)
+
+-- Log (Rep1 f) is usable
+type GInvalid (f :: j -> Type) = GInvalid' f 'False SearchDepth
+
+-- FLog (Rep1 f) is usable
+type GFInvalid (f :: j -> Type) = GInvalid' f 'True SearchDepth
+ 
+type family IsJust (xs :: Maybe a) :: Bool where
+  IsJust ('Just x) = 'True
+  IsJust 'Nothing = 'False
+
+type family IsNothing (xs :: Maybe a) :: Bool where
+  IsJust ('Just x) = 'False
+  IsJust 'Nothing = 'True
+
+type family FromJust (xs :: Maybe a) :: a where
+  FromJust ('Just x) = x
+
+-- assumes we're not GInvalid
+type family GUnknownSize (f :: j -> Type) :: Bool where
+  GUnknownSize (M1 _ _ f) = GUnknownSize f
+  GUnknownSize U1 = 'False
+  GUnknownSize Par1 = 'False
+  GUnknownSize (f :*: g) = GUnknownSize f || GUnknownSize g
+  GUnknownSize (f :.: g) = IsNothing (KnownSize f) || GUnknownSize g
+  GUnknownSize (Rec1 f) = IsNothing (KnownSize f)
+
+-- assumes we're not GInvalid and don't have GUnknownSize
+type family GSize (f :: j -> Type) :: Nat where
+  GSize (M1 _ _ f) = GSize f
+  GSize U1 = 0
+  GSize Par1 = 1
+  GSize (f :*: g) = GSize f + GSize g
+  GSize (f :.: g) = Size f * GSize g
+  GSize (Rec1 f) = Size f
+
+type family (++) (f :: [i]) (g :: [i]) :: [i] where
+  '[] ++ ys = ys
+  (x ': xs) ++ ys = x ': (xs ++ ys)
+
+type family Repeat (n :: Nat) (as :: [i]) :: [i] where
+  Repeat 0 as = '[]
+  Repeat n as = as ++ Repeat (n - 1) as
+
+type family GUnknownIndices (f :: j -> Type) :: Bool where
+  GUnknownIndices (M1 _ _ f) = GUnknownIndices f
+  GUnknownIndices U1 = 'False
+  GUnknownIndices (f :*: g) = GUnknownIndices f || GUnknownIndices g
+  GUnknownIndices (f :.: g) = IsNothing (KnownSize f) || GUnknownIndices g
+  GUnknownIndices (Rec1 f) = IsNothing (KnownIndices f)
+
+type family GIndices' (f :: (k -> Type) -> Type) (acc :: [k]) :: [k] where
+  GIndices' (M1 _ _ f) as = GIndices' f as
+  GIndices' U1 as = as
+  GIndices' (f :*: g) as = GIndices' f (GIndices' g as)
+  GIndices' (f :.: g) as = Repeat (Size f) (GIndices g) ++ as
+  GIndices' (Rec1 f) as = Indices f ++ as
+
+type GIndices (f :: (k -> Type) -> Type) = GIndices' f '[]
+
+type GKnownSize (f :: j -> Type) =
+  If (GInvalid f || GUnknownSize f)
+     'Nothing
+     ('Just (GSize f))
+
+type GKnownIndices (f :: (j -> Type) -> Type) =
+  If (GFInvalid f || GUnknownIndices f)
+     'Nothing
+    ('Just (GIndices f))
+
+type DefaultKnownSize f = GKnownSize (Rep1 f)
+type DefaultKnownIndices f = GKnownIndices (Rep1 f) 
+
+type SearchDepth = 3
 
 type role AppCompose representational nominal nominal
 newtype AppCompose w g f = AppCompose { runAppCompose :: w (f :.: g) }
@@ -1871,4 +1979,161 @@ runEvil :: Evil a -> Path -> a
 runEvil = \(Evil _ mg) -> mg
 {-# inline runEvil #-}
 
+-- for testing
+data V2 a = V2 a a
+  deriving stock (Show, Read, Functor, Foldable, Traversable, Generic, Generic1, Data)
+  deriving anyclass Distributive
+  deriving (Eq1,Ord1,Applicative, Monad, MonadFix, MonadZip) via Dist V2
+  deriving (Eq,Ord,Num,Fractional,Floating,Semigroup,Monoid) via Dist V2 a
 
+instance Show1 V2 where
+  liftShowsPrec f _ d (V2 a b) = showParen (d > 10) $ showString "V2 " . f 11 a . showChar ' ' . f 11 b
+
+class 
+  ( Traversable f
+  , Distributive f
+  , IsJust (KnownSize f) ~ 'True
+  , KnownNat (Size f)
+  ) => FiniteDistributive f
+
+instance 
+  ( Traversable f
+  , Distributive f
+  , IsJust (KnownSize f) ~ 'True
+  , KnownNat (Size f)
+  ) => FiniteDistributive f
+
+type Size f = FromJust (KnownSize f)
+type Indices f = FromJust (KnownIndices f)
+
+type LogFin f = Fin (Size f)
+type FLogIndex f = Index (Indices f)
+
+type HasLogFin f = Log f == LogFin f
+
+lie :: a
+lie = error "Data.Distributive.Internal: logic error. index out of bounds or invalid Size f"
+
+class DefaultIndexFin' (b :: Bool) (f :: Type -> Type) where
+  indexFinDefault :: f a -> LogFin f -> a
+
+instance (Log f ~ LogFin f, Distributive f) => DefaultIndexFin' 'True f where
+  indexFinDefault = index
+  {-# inline indexFinDefault #-}
+
+type f /~ g = (f == g) ~ 'False
+
+instance (Log f /~ LogFin f, FiniteDistributive f) => DefaultIndexFin' 'False f where
+  indexFinDefault = \ f (Fin i) ->
+    fromMaybe lie $
+    Monoid.getFirst $
+    fold $
+    liftD2
+      (\(Fin j) a -> Monoid.First $ if i == j then Just a else Nothing)
+      askFin
+      f
+  {-# inline indexFinDefault #-}
+
+type DefaultIndexFin f = DefaultIndexFin' (HasLogFin f) f
+
+indexFin :: forall f a. DefaultIndexFin f => f a -> LogFin f -> a
+indexFin = indexFinDefault @(HasLogFin f)
+{-# inline indexFin #-}
+
+-- assumes GSize f is defined and can be KnownNat
+class GIndexFin f where
+  gunsafeIndexFin :: f a -> LogFin f -> a
+
+deriving newtype instance GIndexFin f => GIndexFin (M1 i c f)
+
+-- this would be better if it knew if f has an index that was Fin (Size f) and used index instead
+instance DefaultIndexFin f => GIndexFin (Rec1 f) where
+  gunsafeIndexFin (Rec1 fa) (Fin i) = indexFin fa (UnsafeFin i)
+  {-# inline gunsafeIndexFin #-}
+
+instance GIndexFin U1 where
+  gunsafeIndexFin U1 (Fin _) = lie
+
+instance GIndexFin Par1 where
+  gunsafeIndexFin (Par1 x) (Fin 0) = x
+  gunsafeIndexFin _ _ = lie
+  {-# inline gunsafeIndexFin #-}
+
+instance (KnownNat (GSize f), GIndexFin f, GIndexFin g) => GIndexFin (f :*: g) where
+  gunsafeIndexFin (f :*: g) (Fin i)
+    | i < j = gunsafeIndexFin f (UnsafeFin i)
+    | otherwise = gunsafeIndexFin g (UnsafeFin $ i - j)
+    where j = int @(GSize f)
+  {-# inline gunsafeIndexFin #-}
+
+instance (DefaultIndexFin f, KnownNat (GSize g), GIndexFin g) => GIndexFin (f :.: g) where
+  gunsafeIndexFin (Comp1 fg) (Fin i) = case quotRem i $ int @(GSize g) of
+    (q, r) -> gunsafeIndexFin (indexFin fg (UnsafeFin q)) (UnsafeFin r)
+  {-# inline gunsafeIndexFin #-}
+
+gindexFin :: (Generic1 f, GIndexFin (Rep1 f), Log f ~ LogFin f, Size f ~ GSize (Rep1 f)) => f a -> LogFin f -> a
+gindexFin fa (Fin i) = gunsafeIndexFin (from1 fa) (UnsafeFin i)
+{-# inline gindexFin #-}
+
+askFin :: DefaultTabulateFin f => f (LogFin f)
+askFin = tabulateFin id
+{-# inline[0] askFin #-}
+
+class GTabulateFin f where
+  gunsafeTabulateFin :: (Fin (GSize f) -> a) -> f a
+
+instance GTabulateFin U1 where
+  gunsafeTabulateFin _ = U1
+
+instance DefaultTabulateFin f => GTabulateFin (Rec1 f) where
+  gunsafeTabulateFin f = Rec1 $ tabulateFin f
+  {-# inline gunsafeTabulateFin #-}
+
+deriving newtype instance GTabulateFin f => GTabulateFin (M1 i c f)
+
+instance GTabulateFin Par1 where
+  gunsafeTabulateFin f = Par1 $ f (UnsafeFin 0)
+  {-# inline gunsafeTabulateFin #-}
+
+instance (KnownNat (GSize f), GTabulateFin f, GTabulateFin g) => GTabulateFin (f :*: g) where
+  gunsafeTabulateFin f =
+        gunsafeTabulateFin (coerce f)
+    :*: gunsafeTabulateFin (\(Fin i) -> f (UnsafeFin (i + j)))
+    where j = int @(GSize f)
+  {-# inline gunsafeTabulateFin #-}
+
+instance (DefaultTabulateFin f, KnownNat (GSize g), GTabulateFin g) => GTabulateFin (f :.: g) where
+  gunsafeTabulateFin f =
+    Comp1 $
+    tabulateFin \(Fin i) ->
+    gunsafeTabulateFin \(Fin j) ->
+    f $ UnsafeFin (i * k + j)
+    where k = int @(GSize g)
+  {-# inline gunsafeTabulateFin #-}
+
+class DefaultTabulateFin' (b :: Bool) (f :: Type -> Type) where
+  tabulateFinDefault :: (LogFin f -> a) -> f a
+
+instance (Log f ~ LogFin f, Distributive f) => DefaultTabulateFin' 'True f where
+  tabulateFinDefault = tabulate
+  {-# inline tabulateFinDefault #-}
+
+instance (Log f /~ LogFin f, FiniteDistributive f) => DefaultTabulateFin' 'False f where
+  tabulateFinDefault f =
+    case mapAccumL (\n () -> (n + 1, f $ UnsafeFin n)) 0 (pureDist ()) of
+    (n', xs)
+      | n' == int @(Size f) -> xs
+      | otherwise -> lie
+  {-# inline tabulateFinDefault #-}
+
+type DefaultTabulateFin f = DefaultTabulateFin' (HasLogFin f) f
+
+tabulateFin :: forall f a. DefaultTabulateFin f => (LogFin f -> a) -> f a
+tabulateFin = tabulateFinDefault @(HasLogFin f)
+{-# inline tabulateFin #-}
+
+gtabulateFin
+  :: (Generic1 f, GTabulateFin (Rep1 f))
+  => (Fin (GSize (Rep1 f)) -> a) -> f a
+gtabulateFin f = to1 $ gunsafeTabulateFin f
+{-# inline gtabulateFin #-}
