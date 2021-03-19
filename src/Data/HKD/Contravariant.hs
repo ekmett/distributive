@@ -39,7 +39,7 @@ import Data.Functor.Product
 import Data.Functor.Reverse
 import Data.Functor.Sum
 import Data.GADT.Compare
-import Data.HKD
+import Data.HKD.Classes
 import Data.Kind
 import Data.Proxy
 import Data.Type.Equality
@@ -109,7 +109,6 @@ deriving newtype instance FContravariant f => FContravariant (Backwards f)
 deriving newtype instance FContravariant f => FContravariant (Reverse f)
 deriving newtype instance FContravariant f => FContravariant (Monoid.Alt f)
 deriving newtype instance FContravariant f => FContravariant (Monoid.Ap f)
-deriving anyclass instance FContravariant F0 
 
 newtype FEquivalence a = FEquivalence
   { getFEquivalence :: forall x y. a x -> a y -> Maybe (x :~: y)

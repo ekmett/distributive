@@ -28,8 +28,7 @@ import Data.Functor.Rep.Internal.Coerce
 import Data.Functor.Reverse
 import Data.Functor.Sum
 import Data.Functor.WithIndex
-import Data.HKD
-import Data.HKD.Index.Internal
+import Data.HKD.Classes
 import qualified Data.Monoid as Monoid
 import Data.Proxy
 import qualified Data.Some.GADT as G
@@ -158,11 +157,6 @@ instance FTraversableWithIndex V1 (Constant e) where
   iftraverse = \_ -> pure .# (Constant . getConstant)
   {-# inline iftraverse #-}
 
--- * NT
-
-instance FFunctorWithIndex f (NT f) where
-  ifmap f (NT g) = NT $ \r -> f r (g r)
-  {-# inline ifmap #-}
 
 -- * K1
 
@@ -318,54 +312,3 @@ instance FFoldableWithIndex i f => FFoldableWithIndex i (Reverse f) where
 instance FTraversableWithIndex i f => FTraversableWithIndex i (Reverse f) where
   iftraverse = \f -> forwards #. fmap Reverse . iftraverse (\i -> Backwards #. f i) .# getReverse
   {-# inline iftraverse #-}
-
-instance FFunctorWithIndex (Index '[]) F0
-instance FFoldableWithIndex (Index '[]) F0
-instance FTraversableWithIndex (Index '[]) F0 where
-  iftraverse _ F0 = pure F0
-  {-# inline iftraverse #-}
-
-instance FFunctorWithIndex (Index '[a]) (F1 a)
-instance FFoldableWithIndex (Index '[a]) (F1 a)
-instance FTraversableWithIndex (Index '[a]) (F1 a) where
-  iftraverse f (F1 a) = F1 <$> f (UnsafeIndex 0) a
-  {-# inline iftraverse #-}
-
-instance FFunctorWithIndex (Index '[a,b]) (F2 a b)
-instance FFoldableWithIndex (Index '[a,b]) (F2 a b)
-instance FTraversableWithIndex (Index '[a,b]) (F2 a b) where
-  iftraverse f (F2 a b) = liftA2 F2
-    (f (UnsafeIndex 0) a)
-    (f (UnsafeIndex 1) b)
-  {-# inline iftraverse #-}
-
-instance FFunctorWithIndex (Index '[a,b,c]) (F3 a b c)
-instance FFoldableWithIndex (Index '[a,b,c]) (F3 a b c)
-instance FTraversableWithIndex (Index '[a,b,c]) (F3 a b c) where
-  iftraverse f (F3 a b c) = liftA3 F3
-    (f (UnsafeIndex 0) a)
-    (f (UnsafeIndex 1) b)
-    (f (UnsafeIndex 2) c)
-  {-# inline iftraverse #-}
-
-instance FFunctorWithIndex (Index '[a,b,c,d]) (F4 a b c d)
-instance FFoldableWithIndex (Index '[a,b,c,d]) (F4 a b c d)
-instance FTraversableWithIndex (Index '[a,b,c,d]) (F4 a b c d) where
-  iftraverse f (F4 a b c d) = liftA2 F4
-       (f (UnsafeIndex 0) a)
-       (f (UnsafeIndex 1) b)
-    <*> f (UnsafeIndex 2) c
-    <*> f (UnsafeIndex 3) d
-  {-# inline iftraverse #-}
-
-instance FFunctorWithIndex (Index '[a,b,c,d,e]) (F5 a b c d e)
-instance FFoldableWithIndex (Index '[a,b,c,d,e]) (F5 a b c d e)
-instance FTraversableWithIndex (Index '[a,b,c,d,e]) (F5 a b c d e) where
-  iftraverse f (F5 a b c d e) = liftA2 F5
-       (f (UnsafeIndex 0) a)
-       (f (UnsafeIndex 1) b)
-    <*> f (UnsafeIndex 2) c
-    <*> f (UnsafeIndex 3) d
-    <*> f (UnsafeIndex 4) e
-  {-# inline iftraverse #-}
-

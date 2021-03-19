@@ -56,30 +56,33 @@ library
 
   hs-source-dirs:  src
   exposed-modules:
+    Data.Functor.Rep.Internal
+
+    Control.Monad.Rep.Reader
+    Control.Monad.Rep.State
     Data.Functor.Rep
     Data.Functor.Rep.Coyoneda
     Data.Functor.Rep.Endo
-    Data.Functor.Rep.Internal
     Data.Functor.Rep.Internal.Coerce
     Data.Functor.Rep.Internal.Orphans
     Data.Fin
     Data.Fin.Internal
     Data.Functor.Vec
     Data.Functor.Vec.Internal
-    Data.Functor.Confusing
     Data.HKD
+    Data.HKD.Classes
     Data.HKD.Contravariant
-    Data.HKD.Rep
-    Data.HKD.Rep.Endo
     Data.HKD.Index
     Data.HKD.Index.Internal
     Data.HKD.Record
     Data.HKD.Record.Internal
+    Data.HKD.Rep
+    Data.HKD.Rep.Endo
+    Data.HKD.Types
     Data.HKD.Variant
     Data.HKD.WithIndex
     Data.Machine.Moore
-    Control.Monad.Rep.Reader
-    Control.Monad.Rep.State
+    Data.Traversable.Confusing
   -- Data.Machine.Rep.Moore
 
   if flag(tagged)

@@ -33,16 +33,15 @@ import Data.Function
 import Data.Functor
 import Data.Functor.Classes
 import Data.Functor.Compose
-import Data.Functor.Contravariant
-import Data.Functor.Contravariant.Divisible
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
 import Data.Functor.WithIndex
 import Data.GADT.Compare
-import Data.HKD
+import Data.HKD.Classes
 import Data.HKD.Contravariant
 import Data.HKD.Index.Internal
+import Data.HKD.Types
 import Data.HKD.WithIndex
 import Data.Kind
 import Data.Maybe
@@ -1503,63 +1502,12 @@ flogToFLogarithm :: FIndexable f => FLog f ~> FLogarithm f
 flogToFLogarithm = \f -> FLogarithm (ftraceRep f)
 {-# inline flogToFLogarithm #-}
 
--------------------------------------------------------------------------------
--- HKD
--------------------------------------------------------------------------------
-
-type role HKD representational nominal nominal
-newtype HKD (f :: Type -> Type) (x :: i) (a :: i -> Type) = HKD { runHKD :: f (a x) }
-
-mapHKD :: (f (a x) -> g (b x)) -> HKD f x a -> HKD g x b
-mapHKD = \f -> HKD #. f .# runHKD
-{-# inline mapHKD #-}
-
+-- if HKD took x as its first parameter i could use FCompose
 type role DHKD representational nominal nominal
 newtype DHKD w x f = DHKD { runDHKD :: w (HKD f x) }
-
-type role Atkey representational nominal nominal
-data Atkey a i j where
-  Atkey :: a -> Atkey a k k
-
 instance FFunctor w => FFunctor (DHKD w x) where
   ffmap f = DHKD #. ffmap (mapHKD f) .# runDHKD
   {-# inline ffmap #-}
-
-instance Functor f => FFunctor (HKD f x) where
-  ffmap = \f -> mapHKD (fmap f)
-  {-# inline ffmap #-}
-
-instance FunctorWithIndex i f => FFunctorWithIndex (Atkey i x) (HKD f x) where
-  ifmap = \f -> mapHKD (imap (f . Atkey))
-  {-# inline ifmap #-}
-
-instance Foldable f => FFoldable (HKD f x) where
-  ffoldMap = \f -> foldMap f .# runHKD
-  {-# inline ffoldMap #-}
-
-instance FoldableWithIndex i f => FFoldableWithIndex (Atkey i x) (HKD f x) where
-  iffoldMap = \f -> ifoldMap (f . Atkey) .# runHKD
-  {-# inline iffoldMap #-}
-
-instance Traversable f => FTraversable (HKD f x) where
-  ftraverse = \f -> fmap HKD . traverse f .# runHKD
-  {-# inline ftraverse #-}
-
-instance TraversableWithIndex i f => FTraversableWithIndex (Atkey i x) (HKD f x) where
-  iftraverse = \f -> fmap HKD . itraverse (f . Atkey) .# runHKD
-  {-# inline iftraverse #-}
-
-instance Applicative f => FApply (HKD f x) where
-  fliftA2 = \f (HKD fab) -> HKD #. liftA2 f fab .# runHKD
-  {-# inline fliftA2 #-}
-
-instance Applicative f => FApplicative (HKD f x) where
-  fpure f = HKD $ pure f
-  {-# inline fpure #-}
-
-instance Monad f => FMonad (HKD f x) where
-  fbind = \k (HKD fa) f -> HKD $ fmap k $ fa >>= runHKD #. f
-  {-# inline fbind #-}
 
 instance Indexable f => FIndexable (HKD f x) where
   type FLog (HKD f x) = Atkey (Log f) x
@@ -1572,107 +1520,10 @@ instance Representable f => FRepresentable (HKD f x) where
   ftabulate = \f -> HKD $ tabulate (f . Atkey)
   {-# inline ftabulate #-}
 
-instance Contravariant f => FContravariant (HKD f x) where
-  fcontramap = \f -> HKD #. contramap f .# runHKD
-  {-# inline fcontramap #-}
-
-instance Divisible f => FSemidivisible (HKD f x) where
-  fdivide = \f g -> HKD #. divide (\a -> case f a of (b :*: c) -> (b, c)) (runHKD g) .# runHKD
-  {-# inline fdivide #-}
-
-instance Divisible f => FDivisible (HKD f x) where
-  fconquer = HKD conquer
-  {-# inline fconquer #-}
-
-instance Decidable f => FSemidecidable (HKD f x) where
-  fchoose = \f g -> HKD #. choose (\a -> case f a of
-    L1 x -> Left x
-    R1 y -> Right y) (runHKD g) .# runHKD
-  {-# inline fchoose #-}
-  flose f = HKD (lose \x -> case f x of)
-  {-# inline flose #-}
 
 -------------------------------------------------------------------------------
--- LKD
+-- HKD
 -------------------------------------------------------------------------------
-
-type role LKD representational nominal
-newtype LKD f a = LKD { runLKD :: f (Const a) }
-
-instance FFunctor f => Functor (LKD f) where
-  fmap = \f -> LKD #. ffmap (Const #. f .# getConst) .# runLKD
-  {-# inline fmap #-}
-
-instance FFunctorWithIndex i f => FunctorWithIndex (Some i) (LKD f) where
-  imap = \f -> LKD #. ifmap (\i -> Const #. f (Some i) .# getConst) .# runLKD
-
-instance FFoldable f => Foldable (LKD f) where
-  foldMap = \f -> ffoldMap (f .# getConst) .# runLKD
-  {-# inline foldMap #-}
-
-instance FFoldableWithIndex i f => FoldableWithIndex (Some i) (LKD f) where
-  ifoldMap = \f -> iffoldMap (\i -> f (Some i) .# getConst) .# runLKD
-  {-# inline ifoldMap #-}
-
-instance FTraversable f => Traversable (LKD f) where
-  traverse = \f -> fmap LKD . ftraverse (fmap Const . f .# getConst) .# runLKD
-  {-# inline traverse #-}
-
-instance FTraversableWithIndex i f => TraversableWithIndex (Some i) (LKD f) where
-  itraverse = \f -> fmap LKD . iftraverse (\i -> fmap Const . f (Some i) .# getConst) .# runLKD
-  {-# inline itraverse #-}
-
-instance FContravariant f => Contravariant (LKD f) where
-  contramap = \f -> LKD #. fcontramap (Const #. f .# getConst) .# runLKD
-  {-# inline contramap #-}
-
-instance FDivisible f => Divisible (LKD f) where
-  divide = \f g -> LKD #. fdivide
-    (\(Const a) -> case f a of
-      (b,c) -> Const b :*: Const c
-    )
-    (runLKD g) .# runLKD
-  {-# inline divide #-}
-  conquer = LKD fconquer
-  {-# inline conquer #-}
-
-instance FDecidable f => Decidable (LKD f) where
-  choose = \f g -> LKD #. fchoose
-    (\(Const a) -> case f a of
-      Left b -> L1 (Const b)
-      Right b -> R1 (Const b)) (runLKD g) .# runLKD
-  {-# inline choose #-}
-
-  lose = \f -> LKD $ flose (absurd . f .# getConst)
-  {-# inline lose #-}
-
-instance FApplicative f => Applicative (LKD f) where
-  (<*>) = \(LKD fab) -> LKD #. fliftA2 coerce fab .# runLKD
-  {-# inline (<*>) #-}
-  pure = \a -> LKD $ fpure (Const a)
-  {-# inline pure #-}
-
-instance FMonad f => Monad (LKD f) where
-  (>>=) = \(LKD fa) f -> LKD $ fbindOuter fa \(Const a) -> ffmap coerce $ runLKD $ f a
-  {-#inline (>>=) #-}
-
-type role DLKD representational nominal
-newtype DLKD w f = DLKD { runDLKD :: w (LKD f) }
-
-instance FFunctor w => FFunctor (DLKD w) where
-  ffmap = \f -> DLKD #. ffmap (LKD #. f .# runLKD) .# runDLKD
-  {-# inline ffmap #-}
-
-instance FIndexable f => Indexable (LKD f) where
-  type Log (LKD f) = Some (FLog f)
-  index = \fa (Some lg) -> getConst (findex (runLKD fa) lg)
-  {-# inline index #-}
-
-instance FRepresentable f => Representable (LKD f) where
-  scatter = \k g -> LKD . fscatter (Const #. k .  ffmap coerce .# runDLKD) id . DLKD . ffmap g
-  {-# inline scatter #-}
-  tabulate = \f -> LKD $ ftabulate (Const #. f . Some)
-  {-# inline tabulate #-}
 
 lowerLogarithm :: FLogarithm f x -> Logarithm (LKD f)
 lowerLogarithm = \(FLogarithm f) -> Logarithm $ getConst #. f .# runLKD
@@ -1681,6 +1532,25 @@ lowerLogarithm = \(FLogarithm f) -> Logarithm $ getConst #. f .# runLKD
 liftLogarithm :: FRepresentable f => Logarithm (LKD f) -> Some (FLogarithm f)
 liftLogarithm = \(Logarithm f) -> f $ LKD $ ftabulateFLogarithm (Const #. Some)
 {-# inline liftLogarithm #-}
+
+instance FIndexable f => Indexable (LKD f) where
+  type Log (LKD f) = Some (FLog f)
+  index = \fa (Some lg) -> getConst (findex (runLKD fa) lg)
+  {-# inline index #-}
+
+type role DLKD representational nominal
+newtype DLKD w f = DLKD { runDLKD :: w (LKD f) }
+
+instance FFunctor w => FFunctor (DLKD w) where
+  ffmap = \f -> DLKD #. ffmap (LKD #. f .# runLKD) .# runDLKD
+  {-# inline ffmap #-}
+
+instance FRepresentable f => Representable (LKD f) where
+  scatter = \k g -> LKD . fscatter (Const #. k .  ffmap coerce .# runDLKD) id . DLKD . ffmap g
+  {-# inline scatter #-}
+  tabulate = \f -> LKD $ ftabulate (Const #. f . Some)
+  {-# inline tabulate #-}
+
 
 instance (FTraversable f, FRepresentable f) => Eq (FLogarithm f a) where
   (==) = on (==) lowerLogarithm

@@ -51,13 +51,8 @@ module Data.HKD.Rep
 , _flogGEq
 
 -- * LKD
-, LKD(..)
 , lowerLogarithm
 , liftLogarithm
-
--- * HKD
-, HKD(..)
-, Atkey(..)
 
 -- * Constrained Representable operations
 , FAll(..)

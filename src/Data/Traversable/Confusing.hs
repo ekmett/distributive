@@ -13,7 +13,7 @@
 -- Csongor Kiss, Matthew Pickering, and Nicolas Wu. 2018. <https://arxiv.org/abs/1805.06798 Generic deriving of generic traversals>.
 -- Proc. ACM Program. Lang. 2, ICFP, Article 85 (July 2018), 30 pages. DOI: https://doi.org/10.1145/3236780
 
-module Data.Functor.Confusing
+module Data.Traversable.Confusing
 ( confusing, LensLike
 , iconfusing, IxLensLike
 , fconfusing, FLensLike
