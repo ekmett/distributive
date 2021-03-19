@@ -524,10 +524,10 @@ fliftM :: FMonad f => (a ~> b) -> f a -> f b
 fliftM = \f fa -> fbind runIgnore fa \a -> fpure $ Ignore $ f a
 {-# inline fliftM #-}
 
-newtype Foo a x y = Foo { runFoo :: x ~ y => a x }
+newtype LiftM2 a x y = LiftM2 (x ~ y => a x)
 
 fliftM2 :: FMonad f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
-fliftM2 = \f fa fb -> fbind runFoo fa \a -> fliftM (\b -> Foo $ f a b) fb
+fliftM2 = \f fa fb -> fbind (\(LiftM2 x) -> x) fa \a -> ffmap (\b -> LiftM2 $ f a b) fb
 {-# inline fliftM2 #-}
 
 newtype FMonadInstances f a = FMonadInstances { runFMonadInstances :: f a }
@@ -537,7 +537,7 @@ instance FMonad f => FFunctor (FMonadInstances f) where
   ffmap = \f -> FMonadInstances #. fliftM f .# runFMonadInstances
   {-# inline ffmap #-}
 
--- | Derive FApply from fbind and fpure
+-- | Derive FApply from fbind and ffmap
 instance FMonad f => FApply (FMonadInstances f) where
   fliftA2 = \f (FMonadInstances fa) -> FMonadInstances #. fliftM2 f fa .# runFMonadInstances
   {-# inline fliftA2 #-}

@@ -1932,8 +1932,8 @@ type family IsJust (xs :: Maybe a) :: Bool where
   IsJust 'Nothing = 'False
 
 type family IsNothing (xs :: Maybe a) :: Bool where
-  IsJust ('Just x) = 'False
-  IsJust 'Nothing = 'True
+  IsNothing ('Just x) = 'False
+  IsNothing 'Nothing = 'True
 
 type family FromJust (xs :: Maybe a) :: a where
   FromJust ('Just x) = x
