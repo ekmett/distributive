@@ -1,7 +1,7 @@
 {-# Language Trustworthy #-}
 {-# options_haddock hide #-}
 
-module Data.Distributive.Internal.Coerce where
+module Data.Functor.Rep.Internal.Coerce where
 
 import Data.Coerce
 

@@ -16,7 +16,7 @@
 -- A generalized State monad, parameterized by a 'Distributive' functor.
 -- The 'Log' of that functor serves as the state.
 
-module Control.Monad.Distributive.State
+module Control.Monad.Rep.State
   ( State
   , pattern State
   , runState
@@ -46,10 +46,10 @@ import Control.Monad.State.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Writer.Class
 import Data.Coerce
-import Data.Distributive
-import Data.Distributive.Internal.Coerce
 import Data.Functor.Contravariant
 import Data.Functor.Identity
+import Data.Functor.Rep
+import Data.Functor.Rep.Internal.Coerce
 import Data.HKD
 
 -- | A memoized state monad parameterized by a 'Distributive' functor @g@, where

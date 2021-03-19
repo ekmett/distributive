@@ -19,17 +19,17 @@ module Data.HKD.WithIndex
 import Control.Applicative
 import Control.Applicative.Backwards
 import Data.Coerce
-import Data.Distributive.Internal.Coerce
 import Data.Foldable.WithIndex
 import Data.Functor.Compose
 import Data.Functor.Constant
 import Data.Functor.Identity
 import Data.Functor.Product
+import Data.Functor.Rep.Internal.Coerce
 import Data.Functor.Reverse
 import Data.Functor.Sum
 import Data.Functor.WithIndex
 import Data.HKD
-import Data.HKD.Internal.Index
+import Data.HKD.Index.Internal
 import qualified Data.Monoid as Monoid
 import Data.Proxy
 import qualified Data.Some.GADT as G

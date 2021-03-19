@@ -12,7 +12,7 @@
 -- Stability   : provisional
 -- Portability : non-portable (ghc 8.6+)
 
-module Data.Distributive.Internal where
+module Data.Functor.Rep.Internal where
 
 import Control.Applicative
 import Control.Applicative.Backwards
@@ -24,9 +24,9 @@ import Control.Monad.Zip
 import Data.Coerce
 import Data.Complex
 import Data.Data
-import Data.Distributive.Internal.Coerce
-import Data.Distributive.Internal.Fin
-import Data.Distributive.Internal.Orphans ()
+import Data.Fin.Internal
+import Data.Functor.Rep.Internal.Coerce
+import Data.Functor.Rep.Internal.Orphans ()
 import Data.Foldable (fold)
 import Data.Foldable.WithIndex
 import Data.Function
@@ -42,7 +42,7 @@ import Data.Functor.WithIndex
 import Data.GADT.Compare
 import Data.HKD
 import Data.HKD.Contravariant
-import Data.HKD.Internal.Index
+import Data.HKD.Index.Internal
 import Data.HKD.WithIndex
 import Data.Kind
 import Data.Maybe
@@ -644,6 +644,10 @@ liftD5 = \f fa fb fc fd fe ->
 instance Distributive f => Monad (Dist f) where
   (>>=) = bindDist
   {-# inline (>>=) #-}
+#if !MIN_VERSION_base(4,13,0)
+  -- | What are you still doing using 'fail', anyways?
+  fail x = tabulate $ \_ -> error x
+#endif
 
 -- | A default implementation of '(>>=)' in terms of 'Distributive'
 bindDist :: Distributive f => f a -> (a -> f b) -> f b
@@ -2093,7 +2097,7 @@ type FLogIndex f = Index (Indices f)
 type HasLogFin f = Log f == LogFin f
 
 lie :: a
-lie = error "Data.Distributive.Internal: logic error. index out of bounds or invalid Size f"
+lie = error "Data.Functor.Rep.Internal: logic error. index out of bounds or invalid Size f"
 
 class DefaultIndexFin' (b :: Bool) (f :: Type -> Type) where
   indexFinDefault :: f a -> LogFin f -> a

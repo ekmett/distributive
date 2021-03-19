@@ -98,7 +98,7 @@ import Data.Kind (Type, Constraint)
 import qualified Data.Some.GADT as G
 import Data.Some.Newtype (Some (..), mapSome, foldSome, withSome)
 import qualified Data.Some.Church as C
-import Data.Distributive.Internal.Coerce
+import Data.Functor.Rep.Internal.Coerce
 import GHC.Generics
 import Text.Read
 import Unsafe.Coerce

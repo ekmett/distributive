@@ -3,7 +3,7 @@
 {-# Language Unsafe #-}
 {-# options_haddock hide #-}
 
-module Data.Distributive.Internal.Vec
+module Data.Functor.Vec.Internal
 ( Vec(UnsafeVec,Vec,toVector)
 , pattern V
 , FromVector(..)
@@ -14,12 +14,12 @@ import Control.Monad
 import Control.Monad.Reader.Class
 import Control.Monad.Fix
 import Control.Monad.Zip
-import Data.Distributive
-import Data.Distributive.Internal.Coerce
-import Data.Distributive.Internal.Fin
+import Data.Fin.Internal
 import Data.Foldable.WithIndex
 import Data.Functor.Classes
 import Data.Functor.Identity
+import Data.Functor.Rep
+import Data.Functor.Rep.Internal.Coerce
 import Data.Functor.WithIndex
 import Data.HKD
 import Data.Proxy

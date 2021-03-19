@@ -51,30 +51,31 @@ library
 
   hs-source-dirs:  src
   exposed-modules:
-    Data.Distributive
-    Data.Distributive.Coyoneda
-    Data.Distributive.Endo
-    Data.Distributive.Internal
-    Data.Distributive.Internal.Coerce
-    Data.Distributive.Internal.Fin
-    Data.Distributive.Internal.Orphans
-    Data.Distributive.Internal.Vec
-    Data.Distributive.Fin
-    Data.Distributive.Vec
+    Data.Functor.Rep
+    Data.Functor.Rep.Coyoneda
+    Data.Functor.Rep.Endo
+    Data.Functor.Rep.Internal
+    Data.Functor.Rep.Internal.Coerce
+    Data.Functor.Rep.Internal.Orphans
+    Data.Fin
+    Data.Fin.Internal
+    Data.Functor.Vec
+    Data.Functor.Vec.Internal
     Data.Functor.Confusing
     Data.HKD
     Data.HKD.Contravariant
-    Data.HKD.Distributive
-    Data.HKD.Distributive.Endo
-    Data.HKD.Internal.Index
-    Data.HKD.Internal.Record
+    Data.HKD.Rep
+    Data.HKD.Rep.Endo
+    Data.HKD.Index
+    Data.HKD.Index.Internal
     Data.HKD.Record
+    Data.HKD.Record.Internal
     Data.HKD.Variant
     Data.HKD.WithIndex
     Data.Machine.Moore
-    Control.Monad.Distributive.Reader
-    Control.Monad.Distributive.State
-  -- Data.Machine.Distributive.Moore
+    Control.Monad.Rep.Reader
+    Control.Monad.Rep.State
+  -- Data.Machine.Rep.Moore
 
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1

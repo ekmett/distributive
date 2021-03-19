@@ -6,8 +6,8 @@ module Data.HKD.Variant
 ) where
 
 import Data.HKD
-import Data.HKD.Distributive
 import Data.HKD.Record
+import Data.HKD.Rep
 import Data.HKD.WithIndex
 
 data Variant as f where

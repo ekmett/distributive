@@ -32,8 +32,8 @@ module Data.HKD.Contravariant
 import Control.Applicative
 import Control.Applicative.Backwards
 import Data.Coerce
-import Data.Distributive.Internal.Coerce
-import Data.Distributive.Internal.Orphans ()
+import Data.Functor.Rep.Internal.Coerce
+import Data.Functor.Rep.Internal.Orphans ()
 import Data.Functor.Compose
 import Data.Functor.Product
 import Data.Functor.Reverse

@@ -17,7 +17,7 @@
 -- A 'ReaderT' monad that uses a 'Distributive' functor instead
 -- of a function.
 
-module Control.Monad.Distributive.Reader
+module Control.Monad.Rep.Reader
 (
 -- * Distributive functor monad
   Reader
@@ -43,10 +43,10 @@ import Control.Monad.State.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Writer.Class as Writer
 import Data.Coerce
-import Data.Distributive
-import Data.Distributive.Internal.Coerce
 import Data.Functor.Contravariant
 import Data.Functor.Identity
+import Data.Functor.Rep
+import Data.Functor.Rep.Internal.Coerce
 import Data.HKD
 import GHC.Generics
 

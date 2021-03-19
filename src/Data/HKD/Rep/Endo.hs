@@ -11,12 +11,12 @@
 -- Portability : non-portable
 --
 -- Tabulated endomorphisms
-module Data.HKD.Distributive.Endo 
+module Data.HKD.Rep.Endo 
 ( FEndo(.., FEndo, appFEndo)
 ) where
 
 import Data.HKD
-import Data.HKD.Distributive
+import Data.HKD.Rep
 
 -- | Tabulated endomorphisms.
 --

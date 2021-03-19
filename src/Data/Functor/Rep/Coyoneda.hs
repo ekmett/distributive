@@ -7,7 +7,7 @@
 -- Stability   : provisional
 -- Portability : non-portable
 
-module Data.Distributive.Coyoneda
+module Data.Functor.Rep.Coyoneda
 ( Coyoneda(CoyonedaDist, Coyoneda)
 , liftCoyonedaDist
 , liftCoyoneda
@@ -20,10 +20,10 @@ import Control.Monad
 import Control.Monad.Fix
 import Control.Monad.Zip
 import Control.Monad.Trans
-import Data.Distributive
 import Data.Functor.Classes
 import Data.Functor.Compose
 import Data.Functor.Identity
+import Data.Functor.Rep
 import Text.Read hiding (lift)
 
 type role Coyoneda representational nominal

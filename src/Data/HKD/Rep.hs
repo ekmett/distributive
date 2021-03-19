@@ -1,6 +1,6 @@
 {-# Language Trustworthy #-}
 
-module Data.HKD.Distributive
+module Data.HKD.Rep
 ( type (%)
 , FIndexable(..)
 , FDistributive(..)
@@ -65,4 +65,4 @@ module Data.HKD.Distributive
 , cfdistrib
 ) where
 
-import Data.Distributive.Internal
+import Data.Functor.Rep.Internal

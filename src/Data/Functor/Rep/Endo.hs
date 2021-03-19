@@ -9,11 +9,11 @@
 --
 -- Tabulated endomorphisms
 --
-module Data.Distributive.Endo 
+module Data.Functor.Rep.Endo 
 ( Endo(.., Endo, appEndo)
 ) where
 
-import Data.Distributive
+import Data.Functor.Rep
 
 -- | Tabulated endomorphisms.
 --

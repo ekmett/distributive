@@ -1,6 +1,6 @@
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language Unsafe #-}
-{-# options_haddock hide #-}
+{-# options_haddock not-home #-}
 
 -- |
 -- Copyright   : (C) 2021 Edward Kmett,
@@ -9,7 +9,7 @@
 -- Stability   : provisional
 -- Portability : non-portable
 
-module Data.HKD.Internal.Index
+module Data.HKD.Index.Internal
 ( Index(UnsafeIndex,Index,IndexZ,IndexS)
 , lowerFin, liftFin
 , pattern IntIndex
@@ -21,7 +21,7 @@ module Data.HKD.Internal.Index
 
 import Control.Arrow (first)
 import Data.Coerce
-import Data.Distributive.Internal.Fin
+import Data.Fin.Internal
 import Data.GADT.Compare
 import Data.GADT.Show
 import Data.Kind

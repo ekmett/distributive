@@ -21,5 +21,5 @@ module Data.HKD.Record
 , withLen
 ) where
 
-import Data.HKD.Internal.Index
-import Data.HKD.Internal.Record
+import Data.HKD.Index.Internal
+import Data.HKD.Record.Internal

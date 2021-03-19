@@ -9,7 +9,7 @@
 -- Stability   : provisional
 -- Portability : non-portable
 
-module Data.Distributive.Internal.Fin
+module Data.Fin.Internal
 ( Fin(UnsafeFin,Fin,FinZ,FinS,fromFin)
 , pattern IntFin
 , toFin

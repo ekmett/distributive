@@ -19,7 +19,7 @@ import Control.Applicative
 import Control.Monad.Fix
 import Control.Monad.Zip
 import Control.Monad.Reader.Class
-import Data.Distributive
+import Data.Functor.Rep
 import Data.Functor.WithIndex
 import GHC.Generics
 import Numeric

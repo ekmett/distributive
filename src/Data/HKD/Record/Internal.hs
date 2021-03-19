@@ -1,5 +1,5 @@
 {-# Language Unsafe #-}
-{-# options_haddock hide #-}
+{-# options_haddock not-home #-}
 
 -- |
 -- Copyright   : (C) 2021 Edward Kmett,
@@ -8,14 +8,14 @@
 -- Stability   : provisional
 -- Portability : non-portable
 
-module Data.HKD.Internal.Record where
+module Data.HKD.Record.Internal where
 
 import Control.Applicative
-import Data.Distributive.Internal.Coerce
-import Data.Distributive.Internal.Vec
+import Data.Functor.Rep.Internal.Coerce
+import Data.Functor.Vec.Internal
 import Data.HKD
-import Data.HKD.Distributive
-import Data.HKD.Internal.Index
+import Data.HKD.Index.Internal
+import Data.HKD.Rep
 import Data.HKD.WithIndex
 import Data.Kind
 -- import qualified Data.Monoid as Monoid
