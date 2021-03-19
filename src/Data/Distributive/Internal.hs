@@ -1441,6 +1441,20 @@ fpureFDist = \ax -> fscatter (\x -> runLimit (getConst x)) id $ Const $ Limit ax
 -- fpureDist a = fdistrib Proxy \_ -> a
 {-# inline fpureFDist #-}
 
+instance FFunctor (DFBind a b) where
+  ffmap = \f (DFBind fa afb) -> DFBind (f fa) (f . afb)
+  {-# inline ffmap #-}
+
+data DFBind a b f = DFBind (f a) (a ~> f % b)
+
+fbindFDist :: FDistributive f => (forall x. b x x -> r x) -> f a -> (a ~> f % b) -> f r
+fbindFDist = \k fa f -> fdistrib (DFBind fa f) \(DFBind (F1 a) ab) -> k $ runF1 (ab a)
+{-# inline fbindFDist #-}
+
+instance FDistributive f => FMonad (FDist f) where
+  fbind = \k (FDist fa) f -> FDist $ fbindFDist k fa (runFDist #. f)
+  {-# inline fbind #-}
+
 faskFDist :: FDistributive f => f (FLog f)
 faskFDist = ftabulate id
 {-# noinline[0] faskFDist #-}

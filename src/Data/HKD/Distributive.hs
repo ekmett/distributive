@@ -17,10 +17,12 @@ module Data.HKD.Distributive
 , FDist(..)
 -- * FFunctor
 , ffmapFDist
--- * FRepeat
-, fpureFDist
 -- * FApply
 , fliftA2FDist
+-- * FApplicative
+, fpureFDist
+-- * FMonad
+, fbindFDist 
 -- * Others
 , faskFDist
 , ftraceFDist
