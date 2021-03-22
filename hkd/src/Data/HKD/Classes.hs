@@ -72,7 +72,7 @@ module Data.HKD.Classes
 import Control.Applicative
 import Control.Applicative.Backwards
 import Control.Monad(join)
-import Data.Coerce (coerce)
+import Data.Coerce
 import Data.Foldable.WithIndex
 import Data.Function.Coerce
 import Data.Functor.Constant
@@ -104,11 +104,34 @@ infixr 0 ~>
 -- FFunctor
 -------------------------------------------------------------------------------
 
+{-
+class Functor f => CFunctor f where
+  liftCoerce :: ((forall a b. Coercible a b => Coercible (f a) (f b)) => r) -> r -> r
+
+instance CFunctor Identity where
+  liftCoerce a _ = a
+ 
+fmapCoerce :: forall f a b. (CFunctor f, Coercible a b) => f a -> f b
+fmapCoerce = liftCoerce @f coerce (fmap coerce)
+
+instance (CFunctor f, CFunctor g) => CFunctor (Compose f g) where
+  liftCoerce x y = coerce (liftCoerce @f (liftCoerce @g x y) y)
+-}
+
+-- type Nice f = (forall a b. (forall x. Coercible (a x) (b x)) => Coercible (f a) (f b)) :: Constraint
+
 class FFunctor (t :: (k -> Type) -> Type) where
   ffmap :: (f ~> g) -> t f -> t g
   default ffmap :: FTraversable t => (f ~> g) -> t f -> t g
   ffmap = ffmapDefault
   {-# inline ffmap #-}
+
+ -- fliftCoerce :: (Nice t => r) -> r -> r
+ -- default fliftCoerce :: Nice t => (Nice t => r) -> r -> r
+ -- fliftCoerce r _ = r
+
+--ffmapCoerce :: forall f a b. (FFunctor f, Coercible a b) => f a -> f b
+--ffmapCoerce = fliftCoerce @_ @f coerce (ffmap coerce)
 
 gffmap :: (Generic1 t, FFunctor (Rep1 t)) => (f ~> g) -> t f -> t g
 gffmap f = to1 . ffmap f . from1
@@ -130,9 +153,14 @@ instance (Functor f, FFunctor g) => FFunctor (Compose f g) where
   ffmap f = Compose #. fmap (ffmap f) .# getCompose
   {-# inline ffmap #-}
 
+  -- wait until liftCoerce is added to functor
+  -- fliftCoerce _ r = r
+
 instance (FFunctor f, FFunctor g) => FFunctor (Product f g) where
   ffmap f (Pair g h) = Pair (ffmap f g) (ffmap f h)
   {-# inline ffmap #-}
+
+  -- fliftCoerce x y = coerce $ fliftCoerce @_ @f (fliftCoerce @_ @g x y) y
 
 instance (FFunctor f, FFunctor g) => FFunctor (Sum f g) where
   ffmap f (InL g) = InL (ffmap f g)

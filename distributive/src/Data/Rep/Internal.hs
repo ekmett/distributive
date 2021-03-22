@@ -65,7 +65,7 @@ import Unsafe.Coerce
 import Data.Tagged
 #endif
 
--- | The dual of a 'Traversable' functor.
+-- |
 --
 -- Due to the lack of non-trivial comonoids in Haskell, we can restrict
 -- ourselves to requiring a 'Functor' rather than some Coapplicative class.
@@ -386,6 +386,17 @@ cotraverse = \fab fga ->
   distrib (FCompose fga) \(FCompose f') -> fab (runIdentity <$> f')
 {-# inline cotraverse #-}
 
+instance Indexable (Coe a) where
+  type Log (Coe a) = a
+  index = runCoe
+  {-# inline index #-}
+
+instance Representable (Coe a) where
+  tabulate = Fun
+  {-# inline tabulate #-}
+  scatter k f (ffmap f -> w) = Fun \a -> k $ ffmap (\g -> Identity $ runCoe g a) w
+  {-# inline scatter #-}
+
 instance (Indexable f, Indexable g) => Indexable (f :*: g) where
   type Log (f :*: g) = Either (Log f) (Log g)
   index = \(f :*: g) -> \case
@@ -400,7 +411,6 @@ instance (Representable f, Representable g) => Representable (f :*: g) where
   tabulate = \ f -> tabulate (f . Left) :*: tabulate (f . Right)
   {-# inline scatter #-}
   {-# inline tabulate #-}
-
 
 deriving newtype instance Indexable f => Indexable (M1 i c f)
 deriving newtype instance Representable f => Representable (M1 i c f)
@@ -446,16 +456,22 @@ instance (Representable f, Representable g) => Representable (f :.: g) where
   {-# inline scatter #-}
   {-# inline tabulate #-}
 
--- TODO: Why Functor f?
-instance (Functor f, Indexable f, Indexable g) => Indexable (Compose f g) where
+instance (Indexable f, Indexable g) => Indexable (Compose f g) where
   type Log (Compose f g) = Log (Rep1 (Compose f g))
-  index = indexGeneric
+  index (Compose fg) (i,j) = index (index fg i) j
   {-# inline index #-}
 
 instance (Representable f, Representable g) => Representable (Compose f g) where
-  tabulate = tabulateGeneric
+  tabulate f = Compose $ tabulate \i -> tabulate \j -> f (i,j)
   {-# inline tabulate #-}
-
+  scatter = \ k phi wg ->
+    Compose $
+    scatter
+      (scatter k coerce .# runAppCompose)
+      id
+      (AppCompose (ffmap phi wg))
+  {-# inline scatter #-}
+  
 instance (Indexable f, Indexable g) => Indexable (Product f g) where
   type Log (Product f g) = Log (Rep1 (Product f g))
   index = indexGeneric
@@ -1272,15 +1288,17 @@ instance (Representable f, FRepresentable g) => FRepresentable (f :.: g) where
   {-# inline fscatter #-}
   {-# inline ftabulate #-}
 
--- TODO: why Functor f?
-instance (Functor f, Indexable f, FIndexable g) => FIndexable (Compose f g) where
-  type FLog (Compose f g) = FLog (Rep1 (Compose f g))
-  findex = findexGeneric
+instance (Indexable f, FIndexable g) => FIndexable (Compose f g) where
+  type FLog (Compose f g) = K1 R (Log f) :*: FLog g
+  findex = \(Compose f) (K1 x :*: y) -> findex (index f x) y
   {-# inline findex #-}
 
 instance (Representable f, FRepresentable g) => FRepresentable (Compose f g) where
-  ftabulate = ftabulateGeneric
+  ftabulate = \f -> Compose $ tabulate \i -> ftabulate \j -> f (K1 i :*: j)
   {-# inline ftabulate #-}
+  fscatter = \k phi wg -> Compose $
+    scatter (fscatter k coerce .# runAppCompose) id $ AppCompose (ffmap phi wg)
+  {-# inline fscatter #-}
 
 instance (FIndexable f, FIndexable g) => FIndexable (Product f g) where
   type FLog (Product f g) = FLog (Rep1 (Product f g))
