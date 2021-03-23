@@ -29,7 +29,7 @@
 -- Portability : non-portable
 
 module Numeric.Fin.Internal
-( Fin(UnsafeFin,Fin,FinZ,FinS,fromFin,KnownFinZ,KnownFinS)
+( Fin(UnsafeFin,Fin,FZ,FS,fromFin,KnownFZ,KnownFS)
 , pattern IntFin
 , toFin
 , int
@@ -88,7 +88,7 @@ newtype Fin (n :: Nat)
   }
   deriving stock (Eq, Ord, Ix)
 
--- | >>> $$(liftTyped (FinS FinZ :: Fin 4))
+-- | >>> $$(liftTyped (FS FZ :: Fin 4))
 -- 1
 deriving stock instance Lift (Fin n)
 
@@ -98,20 +98,20 @@ instance (KnownNat n, Typeable n) => Data (Fin n) where
   dataTypeOf _ = case int @n of
     0 -> finEmptyDataType
     _ -> finDataType
-  gfoldl _ z KnownFinZ = z KnownFinZ
-  gfoldl k z (KnownFinS n) = z KnownFinS `k` n
+  gfoldl _ z KnownFZ = z KnownFZ
+  gfoldl k z (KnownFS n) = z KnownFS `k` n
   gunfold k z c = case natVal (Proxy :: Proxy n) of
     0 -> error "gunfold: Fin 0"
     n -> case constrIndex c of
       1 -> z (UnsafeFin 0)
       2 -> case someNatVal $ n - 1 of
         SomeNat (Proxy :: Proxy m) -> case unsafeCoerce Refl of
-          (Refl :: n :~: S m) -> k (z KnownFinS)
+          (Refl :: n :~: S m) -> k (z KnownFS)
       _ -> error "gunfold: Fin: unknown constructor"
 
 finZConstr, finSConstr :: Constr
-finZConstr = mkConstr finDataType "FinZ" [] Data.Data.Prefix
-finSConstr = mkConstr finDataType "FinS" [] Data.Data.Prefix
+finZConstr = mkConstr finDataType "FZ" [] Data.Data.Prefix
+finSConstr = mkConstr finDataType "FS" [] Data.Data.Prefix
 {-# noinline finZConstr #-}
 {-# noinline finSConstr #-}
 
@@ -168,7 +168,7 @@ instance KnownNat n => Read (Fin n) where
 -- pinky-swear that you are going to do it correctly,
 -- look at 'UnsafeFin', you animal.
 --
--- >>> case FinS FinZ of Fin n -> n
+-- >>> case FS FZ of Fin n -> n
 -- 1
 pattern Fin :: Int -> Fin n
 pattern Fin n <- UnsafeFin n
@@ -201,12 +201,12 @@ pattern IntFin i <- (toFin -> Just i) where
   IntFin x = fromFin x
 
 data Fin' (n :: Nat) where
-  FinZ'      :: Fin' (S n)
-  FinS'      :: Fin n -> Fin' (S n)
+  FZ'      :: Fin' (S n)
+  FS'      :: Fin n -> Fin' (S n)
 
 upFin :: Fin n -> Fin' n
-upFin (UnsafeFin 0) = unsafeCoerce FinZ'
-upFin (UnsafeFin n) = unsafeCoerce $ FinS' $ UnsafeFin (n-1)
+upFin (UnsafeFin 0) = unsafeCoerce FZ'
+upFin (UnsafeFin n) = unsafeCoerce $ FS' $ UnsafeFin (n-1)
 {-# inline[0] upFin #-}
 
 
@@ -218,49 +218,55 @@ knownPred r = case someNatVal $ natVal (Proxy :: Proxy (S n)) - 1 of
 -}
 
 -- | A safe pattern for matching 0. A safe, useful basecase.
-pattern FinZ :: () => forall m. (n ~ S m) => Fin n
-pattern FinZ <- (upFin -> FinZ') where
-  FinZ = UnsafeFin 0
+pattern FZ :: () => forall m. (n ~ S m) => Fin n
+pattern FZ <- (upFin -> FZ') where
+  FZ = UnsafeFin 0
 
 -- | A safe pattern for matching on the successor. Useful for induction.
-pattern FinS :: () => forall m. (n ~ S m) => Fin m -> Fin n
-pattern FinS n <- (upFin -> FinS' n) where
-  FinS n = UnsafeFin (fromFin n + 1)
+pattern FS :: () => forall m. (n ~ S m) => Fin m -> Fin n
+pattern FS n <- (upFin -> FS' n) where
+  FS n = UnsafeFin (fromFin n + 1)
 
 data KnownFin' (n :: Nat) where
-  KnownFinZ' :: KnownNat n => KnownFin' (S n)
-  KnownFinS' :: KnownNat n => Fin n -> KnownFin' (S n)
+  KnownFZ' :: KnownNat n => KnownFin' (S n)
+  KnownFS' :: KnownNat n => Fin n -> KnownFin' (S n)
 
 upKnownFin :: forall n. KnownNat n => Fin n -> KnownFin' n
 upKnownFin = case someNatVal $ natVal (Proxy :: Proxy n) - 1 of
   SomeNat (Proxy :: Proxy o) -> case unsafeCoerce Refl of
     (Refl :: n :~: S o) -> \case
-      UnsafeFin 0 -> (KnownFinZ' :: KnownFin' n)
-      UnsafeFin n -> (KnownFinS' $ UnsafeFin (n-1) :: KnownFin' n)
+      UnsafeFin 0 -> (KnownFZ' :: KnownFin' n)
+      UnsafeFin n -> (KnownFS' $ UnsafeFin (n-1) :: KnownFin' n)
 {-# inline[0] upKnownFin #-}
 
--- | A safe pattern for matching on the successor. Useful for induction.
---
--- This version calculates KnownNat for the predecessor on a match.
---
--- >>> (case FinZ :: Fin 400 of (KnownFinZ :: Fin (S k)) -> int @k) :: Int
--- 399
-pattern KnownFinZ :: KnownNat n => forall m. (KnownNat m, n ~ S m) => Fin n
-pattern KnownFinZ <- (upKnownFin -> KnownFinZ') where
-  KnownFinZ = UnsafeFin 0
+-- TODO: could we unify FZ and KnownFZ? e.g. something like
+-- @
+-- pattern FZ :: forall m. (KnownNat n => KnownNat m, n ~ S m) => Fin n
+-- pattern FS :: forall m. (KnownNat n => KnownNat m, n ~ S m) => Fin m -> Fin n
+-- @
 
 -- | A safe pattern for matching on the successor. Useful for induction.
 --
 -- This version calculates KnownNat for the predecessor on a match.
 --
--- >>> (case FinS FinZ :: Fin 400 of KnownFinS (x :: Fin k) -> int @k) :: Int
+-- >>> (case FZ :: Fin 400 of (KnownFZ :: Fin (S k)) -> int @k) :: Int
 -- 399
-pattern KnownFinS :: KnownNat n => forall m. (KnownNat m, n ~ S m) => Fin m -> Fin n
-pattern KnownFinS n <- (upKnownFin -> KnownFinS' n) where
-  KnownFinS n = UnsafeFin (fromFin n + 1)
+pattern KnownFZ :: KnownNat n => forall m. (KnownNat m, n ~ S m) => Fin n
+pattern KnownFZ <- (upKnownFin -> KnownFZ') where
+  KnownFZ = UnsafeFin 0
 
-{-# complete FinZ, FinS :: Fin #-}
-{-# complete KnownFinZ, KnownFinS :: Fin #-}
+-- | A safe pattern for matching on the successor. Useful for induction.
+--
+-- This version calculates KnownNat for the predecessor on a match.
+--
+-- >>> (case FS FZ :: Fin 400 of KnownFS (x :: Fin k) -> int @k) :: Int
+-- 399
+pattern KnownFS :: KnownNat n => forall m. (KnownNat m, n ~ S m) => Fin m -> Fin n
+pattern KnownFS n <- (upKnownFin -> KnownFS' n) where
+  KnownFS n = UnsafeFin (fromFin n + 1)
+
+{-# complete FZ, FS :: Fin #-}
+{-# complete KnownFZ, KnownFS :: Fin #-}
 
 universe :: forall n. KnownNat n => [Fin n]
 universe = UnsafeFin <$> [0 .. int @n - 1]
@@ -278,12 +284,12 @@ cataFin f z = coerce go where
 {-# inline cataFin #-}
 
 boringFin :: Fin 1
-boringFin = FinZ
+boringFin = FZ
 {-# inline boringFin #-}
 
 -- | Return one less.
 --
--- >>> isMin (FinZ :: Fin 1)
+-- >>> isMin (FZ :: Fin 1)
 -- Nothing
 --
 -- >>> map isMin [minBound..maxBound] :: [Maybe (Fin 3)]
@@ -300,7 +306,7 @@ isMin (Fin n) = Just $ UnsafeFin $ n - 1
 --
 -- @since 0.1.1
 weakenRight1 :: Fin n -> Fin (S n)
-weakenRight1 = FinS
+weakenRight1 = FS
 {-# inline weakenRight1 #-}
 
 -- | >>> map weakenLeft1 universe :: [Fin 5]

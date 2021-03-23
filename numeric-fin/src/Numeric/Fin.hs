@@ -18,7 +18,7 @@
 -- is a good balance.
 
 module Numeric.Fin
-( Fin(Fin,FinZ,FinS,fromFin,KnownFinZ,KnownFinS)
+( Fin(Fin,FZ,FS,fromFin,KnownFZ,KnownFS)
 , pattern IntFin
 , toFin
 , absurdFin

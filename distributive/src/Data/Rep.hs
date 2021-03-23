@@ -66,7 +66,7 @@ module Data.Rep
 , ltLog
 , leLog
 , compareLog
-, Fin(Fin,FinZ,FinS,fromFin)
+, Fin(Fin,FZ,FS,fromFin,KnownFZ,KnownFS)
 , pattern IntFin
 , toFin
 , absurdFin
