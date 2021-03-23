@@ -471,7 +471,7 @@ instance (Representable f, Representable g) => Representable (Compose f g) where
       id
       (AppCompose (ffmap phi wg))
   {-# inline scatter #-}
-  
+
 instance (Indexable f, Indexable g) => Indexable (Product f g) where
   type Log (Product f g) = Log (Rep1 (Product f g))
   index = indexGeneric
@@ -1055,12 +1055,12 @@ instance FFunctor w => FFunctor (AppCompose w g) where
 -- | By definition representable functors preserve limits.
 distributeLim :: Representable f => Lim (Compose f g) -> f (Lim g)
 distributeLim xs = distrib (AppCompose xs) \(AppCompose xs') -> ffmap coerce xs'
-{-# inline distributeLim #-} 
+{-# inline distributeLim #-}
 
 -- | By definition representable functors preserve limits. forall is a limit.
 distributeForall :: Representable f => (forall a. f (g a)) -> f (Lim g)
 distributeForall xs = distrib (AppCompose (Lim (Compose xs))) \(AppCompose xs') -> ffmap coerce xs'
-{-# inline distributeForall #-} 
+{-# inline distributeForall #-}
 
 type (%) f g i = f (g i)
 infixr 9 %
@@ -1847,7 +1847,7 @@ type GInvalid (f :: j -> Type) = GInvalid' f 'False SearchDepth
 
 -- FLog (Rep1 f) is usable
 type GFInvalid (f :: j -> Type) = GInvalid' f 'True SearchDepth
- 
+
 type family IsJust (xs :: Maybe a) :: Bool where
   IsJust ('Just x) = 'True
   IsJust 'Nothing = 'False
@@ -1912,7 +1912,7 @@ type GKnownIndices (f :: (j -> Type) -> Type) =
     ('Just (GIndices f))
 
 type DefaultKnownSize f = GKnownSize (Rep1 f)
-type DefaultKnownIndices f = GKnownIndices (Rep1 f) 
+type DefaultKnownIndices f = GKnownIndices (Rep1 f)
 
 type SearchDepth = 3
 
@@ -1971,14 +1971,14 @@ data V2 a = V2 a a
 instance Show1 V2 where
   liftShowsPrec f _ d (V2 a b) = showParen (d > 10) $ showString "V2 " . f 11 a . showChar ' ' . f 11 b
 
-class 
+class
   ( Traversable f
   , Representable f
   , IsJust (KnownSize f) ~ 'True
   , KnownNat (Size f)
   ) => FiniteRepresentable f
 
-instance 
+instance
   ( Traversable f
   , Representable f
   , IsJust (KnownSize f) ~ 'True
