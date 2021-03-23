@@ -87,7 +87,7 @@ module Data.HKD
 ) where
 
 import Control.Applicative
-import Data.Coerce (coerce)
+import Data.Coerce
 import Data.Data
 import Data.Functor.Compose (Compose (..))
 import Data.Functor.Contravariant
@@ -126,7 +126,7 @@ instance FTraversableWithIndex (Index '[]) F0 where
 type role F1 nominal representational
 newtype F1 a f = F1 { runF1 :: f a }
   deriving stock (Eq, Ord, Show, Read, Data)
-  deriving anyclass 
+  deriving anyclass
   ( FFunctor
   , FFunctorWithIndex (Index '[a])
   , FFoldableWithIndex (Index '[a])
@@ -163,7 +163,7 @@ instance FMonad (F1 a) where
 type role F2 nominal nominal representational
 data F2 a b f = F2' (F1 a f) (F1 b f)
   deriving stock (Eq, Ord, Show, Read, Generic, Generic1, Data)
-  deriving anyclass 
+  deriving anyclass
   ( FFunctor, FFoldable, FTraversable, FApply, FApplicative
   , FFunctorWithIndex (Index '[a,b])
   , FFoldableWithIndex (Index '[a,b])
@@ -189,7 +189,7 @@ instance FMonad (F2 a b) where
 type role F3 nominal nominal nominal representational
 data F3 a b c f = F3' (F1 a f) (F1 b f) (F1 c f)
   deriving stock (Eq, Ord, Show, Read, Generic, Generic1, Data)
-  deriving anyclass 
+  deriving anyclass
   ( FFunctor, FFoldable, FTraversable, FApply, FApplicative
   , FFunctorWithIndex (Index '[a,b,c])
   , FFoldableWithIndex (Index '[a,b,c])
@@ -217,7 +217,7 @@ instance FMonad (F3 a b c) where
 type role F4 nominal nominal nominal nominal representational
 data F4 a b c d f = F4' (F1 a f) (F1 b f) (F1 c f) (F1 d f)
   deriving stock (Eq, Ord, Show, Read, Generic, Generic1, Data)
-  deriving anyclass 
+  deriving anyclass
   ( FFunctor, FFoldable, FTraversable, FApply, FApplicative
   , FFunctorWithIndex (Index '[a,b,c,d])
   , FFoldableWithIndex (Index '[a,b,c,d])
@@ -247,7 +247,7 @@ instance FMonad (F4 a b c d) where
 type role F5 nominal nominal nominal nominal nominal representational
 data F5 a b c d e f = F5' (F1 a f) (F1 b f) (F1 c f) (F1 d f) (F1 e f)
   deriving stock (Eq, Ord, Show, Read, Generic, Generic1, Data)
-  deriving anyclass 
+  deriving anyclass
   ( FFunctor, FFoldable, FTraversable, FApply, FApplicative
   , FFunctorWithIndex (Index '[a,b,c,d,e])
   , FFoldableWithIndex (Index '[a,b,c,d,e])
@@ -436,7 +436,7 @@ newtype FConstrained p f = FConstrained
 {-
 instance
   ( Typeable k
-  , Typeable p 
+  , Typeable p
   , Typeable f
   , forall x. p x => Data (f x)
   ) => Data (FConstrained (p :: k -> Constraint) f) where
@@ -481,7 +481,7 @@ type role FCompose nominal representational nominal
 newtype FCompose a f g = FCompose { runFCompose :: f (F1 a g) }
   deriving (Generic, Generic1)
 
-deriving stock instance 
+deriving stock instance
   ( Typeable k
   , Typeable a
   , Typeable f
@@ -502,9 +502,9 @@ instance Traversable f => FTraversable (FCompose a f) where
   {-# inline ftraverse #-}
 
 type role HKD representational nominal nominal
-newtype HKD (f :: Type -> Type) (x :: i) (a :: i -> Type) = HKD { runHKD :: f (a x) }
+newtype HKD (f :: Type -> Type) (x :: i) (a :: i -> Type) = HKD { runHKD :: f (F1 x a) }
 
-mapHKD :: (f (a x) -> g (b x)) -> HKD f x a -> HKD g x b
+mapHKD :: (f (F1 x a) -> g (F1 x b)) -> HKD f x a -> HKD g x b
 mapHKD = \f -> HKD #. f .# runHKD
 {-# inline mapHKD #-}
 
@@ -520,47 +520,47 @@ instance FFunctor w => FFunctor (DHKD w x) where
   {-# inline ffmap #-}
 
 instance Functor f => FFunctor (HKD f x) where
-  ffmap = \f -> mapHKD (fmap f)
+  ffmap = \f -> mapHKD (fmap (F1 #. f .# runF1))
   {-# inline ffmap #-}
 
 instance FunctorWithIndex i f => FFunctorWithIndex (Atkey i x) (HKD f x) where
-  ifmap = \f -> mapHKD (imap (f . Atkey))
+  ifmap = \f -> mapHKD (imap (\i -> F1 #. f (Atkey i) .# runF1))
   {-# inline ifmap #-}
 
 instance Foldable f => FFoldable (HKD f x) where
-  ffoldMap = \f -> foldMap f .# runHKD
+  ffoldMap = \f -> foldMap (f .# runF1) .# runHKD
   {-# inline ffoldMap #-}
 
 instance FoldableWithIndex i f => FFoldableWithIndex (Atkey i x) (HKD f x) where
-  iffoldMap = \f -> ifoldMap (f . Atkey) .# runHKD
+  iffoldMap = \f -> ifoldMap (\i -> f (Atkey i) .# runF1) .# runHKD
   {-# inline iffoldMap #-}
 
 instance Traversable f => FTraversable (HKD f x) where
-  ftraverse = \f -> fmap HKD . traverse f .# runHKD
+  ftraverse = \f -> fmap HKD . traverse (fmap F1 . f .# runF1) .# runHKD
   {-# inline ftraverse #-}
 
 instance TraversableWithIndex i f => FTraversableWithIndex (Atkey i x) (HKD f x) where
-  iftraverse = \f -> fmap HKD . itraverse (f . Atkey) .# runHKD
+  iftraverse = \f -> fmap HKD . itraverse (\i -> fmap F1 . f (Atkey i) .# runF1) .# runHKD
   {-# inline iftraverse #-}
 
 instance Applicative f => FApply (HKD f x) where
-  fliftA2 = \f (HKD fab) -> HKD #. liftA2 f fab .# runHKD
+  fliftA2 = \f (HKD fab) -> HKD #. liftA2 (\(F1 i) (F1 j) -> F1 $ f i j) fab .# runHKD
   {-# inline fliftA2 #-}
 
 instance Applicative f => FApplicative (HKD f x) where
-  fpure f = HKD $ pure f
+  fpure f = HKD $ pure (F1 f)
   {-# inline fpure #-}
 
 instance Monad f => FMonad (HKD f x) where
-  fbind = \k (HKD fa) f -> HKD $ fmap k $ fa >>= runHKD #. f
+  fbind = \k (HKD fa) f -> HKD $ fmap (F1 #. k .# runF1) $ fa >>= runHKD #. f .# runF1
   {-# inline fbind #-}
 
 instance Contravariant f => FContravariant (HKD f x) where
-  fcontramap = \f -> HKD #. contramap f .# runHKD
+  fcontramap = \f -> HKD #. contramap (F1 #. f .# runF1) .# runHKD
   {-# inline fcontramap #-}
 
 instance Divisible f => FSemidivisible (HKD f x) where
-  fdivide = \f g -> HKD #. divide (\a -> case f a of (b :*: c) -> (b, c)) (runHKD g) .# runHKD
+  fdivide = \f g -> HKD #. divide (\(F1 a) -> case f a of (b :*: c) -> (F1 b, F1 c)) (runHKD g) .# runHKD
   {-# inline fdivide #-}
 
 instance Divisible f => FDivisible (HKD f x) where
@@ -568,17 +568,24 @@ instance Divisible f => FDivisible (HKD f x) where
   {-# inline fconquer #-}
 
 instance Decidable f => FSemidecidable (HKD f x) where
-  fchoose = \f g -> HKD #. choose (\a -> case f a of
-    L1 x -> Left x
-    R1 y -> Right y) (runHKD g) .# runHKD
+  fchoose = \f g -> HKD #. choose (\(F1 a) -> case f a of
+    L1 x -> Left (F1 x)
+    R1 y -> Right (F1 y)) (runHKD g) .# runHKD
   {-# inline fchoose #-}
-  flose f = HKD (lose \x -> case f x of)
+  flose f = HKD (lose \(F1 x) -> case f x of)
   {-# inline flose #-}
 
 -- LKD
 
 type role LKD representational nominal
 newtype LKD f a = LKD { runLKD :: f (Const a) }
+
+deriving stock instance
+  ( Typeable f
+  , Typeable a
+  , Typeable k
+  , Data (f (Const a))
+  ) => Data (LKD (f :: (k -> Type) -> Type) a)
 
 instance FFunctor f => Functor (LKD f) where
   fmap = \f -> LKD #. ffmap (Const #. f .# getConst) .# runLKD
