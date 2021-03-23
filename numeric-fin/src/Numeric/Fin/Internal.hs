@@ -63,7 +63,7 @@ import Unsafe.Coerce
 
 
 -- $setup
--- >>> :set -XTypeApplications -XDataKinds -XScopedTypeVariables
+-- >>> :set -XTypeApplications -XDataKinds -XScopedTypeVariables -XTemplateHaskell
 
 -- | Turn a KnownNat into an Int. Use with @TypeApplications@.
 --
@@ -357,8 +357,9 @@ mirrorFin (Fin i) = UnsafeFin (int @n - i - 1)
 
 -- |
 -- compile time validated numeric literals
--- $$(validFin 34)
-
+--
+-- >>> $$(validFin 34) :: Fin 40
+-- 34
 validFin :: forall n m. (KnownNat n, Quote m, MonadFail m) => Int -> Code m (Fin n)
 validFin i
   | i < 0 = Code $ fail $ "validFin: negative value"
