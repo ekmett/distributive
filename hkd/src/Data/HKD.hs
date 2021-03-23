@@ -88,6 +88,7 @@ module Data.HKD
 
 import Control.Applicative
 import Data.Coerce (coerce)
+import Data.Data
 import Data.Functor.Compose (Compose (..))
 import Data.Functor.Contravariant
 import Data.Functor.Contravariant.Divisible
@@ -109,7 +110,7 @@ type role F0 phantom
 data F0 f = F0
   deriving stock
   ( Generic, Generic1, Functor, Foldable, Traversable
-  , Eq, Ord, Show, Read, Ix, Enum, Bounded)
+  , Eq, Ord, Show, Read, Ix, Enum, Bounded, Data)
   deriving anyclass
   ( FFunctor, FFoldable, FTraversable
   , FFunctorWithIndex (Index '[]), FFoldableWithIndex (Index '[])
@@ -124,7 +125,7 @@ instance FTraversableWithIndex (Index '[]) F0 where
 
 type role F1 nominal representational
 newtype F1 a f = F1 { runF1 :: f a }
-  deriving stock (Eq, Ord, Show, Read)
+  deriving stock (Eq, Ord, Show, Read, Data)
   deriving anyclass 
   ( FFunctor
   , FFunctorWithIndex (Index '[a])
@@ -161,7 +162,7 @@ instance FMonad (F1 a) where
 
 type role F2 nominal nominal representational
 data F2 a b f = F2' (F1 a f) (F1 b f)
-  deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
+  deriving stock (Eq, Ord, Show, Read, Generic, Generic1, Data)
   deriving anyclass 
   ( FFunctor, FFoldable, FTraversable, FApply, FApplicative
   , FFunctorWithIndex (Index '[a,b])
@@ -187,7 +188,7 @@ instance FMonad (F2 a b) where
 
 type role F3 nominal nominal nominal representational
 data F3 a b c f = F3' (F1 a f) (F1 b f) (F1 c f)
-  deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
+  deriving stock (Eq, Ord, Show, Read, Generic, Generic1, Data)
   deriving anyclass 
   ( FFunctor, FFoldable, FTraversable, FApply, FApplicative
   , FFunctorWithIndex (Index '[a,b,c])
@@ -215,7 +216,7 @@ instance FMonad (F3 a b c) where
 
 type role F4 nominal nominal nominal nominal representational
 data F4 a b c d f = F4' (F1 a f) (F1 b f) (F1 c f) (F1 d f)
-  deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
+  deriving stock (Eq, Ord, Show, Read, Generic, Generic1, Data)
   deriving anyclass 
   ( FFunctor, FFoldable, FTraversable, FApply, FApplicative
   , FFunctorWithIndex (Index '[a,b,c,d])
@@ -245,7 +246,7 @@ instance FMonad (F4 a b c d) where
 
 type role F5 nominal nominal nominal nominal nominal representational
 data F5 a b c d e f = F5' (F1 a f) (F1 b f) (F1 c f) (F1 d f) (F1 e f)
-  deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
+  deriving stock (Eq, Ord, Show, Read, Generic, Generic1, Data)
   deriving anyclass 
   ( FFunctor, FFoldable, FTraversable, FApply, FApplicative
   , FFunctorWithIndex (Index '[a,b,c,d,e])
@@ -281,6 +282,7 @@ instance FMonad (F5 a b c d e) where
 
 -- | Newtyped "natural" transformation
 newtype NT f g = NT { runNT :: f ~> g }
+
 
 instance FFunctor (NT f) where
   ffmap = \f (NT g) -> NT (f . g)
@@ -385,8 +387,9 @@ instance FMonad Lim where
 -- * Dicts
 
 data Dict1 p a where
-  Dict1 :: p a => Dict1 p a
+    Dict1 :: p a => Dict1 p a
 
+deriving stock instance (Typeable k, Typeable a, Typeable p, p a) => Data (Dict1 p (a :: k))
 deriving stock instance Eq (Dict1 p a)
 deriving stock instance Ord (Dict1 p a)
 deriving stock instance Show (Dict1 p a)
@@ -430,6 +433,28 @@ newtype FConstrained p f = FConstrained
   { runFConstrained :: forall x. p x => f x
   }
 
+{-
+instance
+  ( Typeable k
+  , Typeable p 
+  , Typeable f
+  , forall x. p x => Data (f x)
+  ) => Data (FConstrained (p :: k -> Constraint) f) where
+
+  toConstr _ = conFConstrained
+  dataTypeOf _ = tyFConstrained
+  gunfold k z c = case constrIndex c of
+    1 -> k (z FConstrained) -- need some way to sneak into c here
+
+tyFConstrained :: DataType
+tyFConstrained = mkDataType "Data.HKD.FConstrained" [conFConstrained]
+{-# noinline tyFConstrained #-}
+
+conFConstrained :: Constr
+conFConstrained = mkConstr tyFConstrained "C1" [] Data.Data.Prefix
+{-# noinline conFConstrained #-}
+-}
+
 instance FFunctor (FConstrained p) where
   ffmap = \f x -> FConstrained (f $ runFConstrained x)
   {-# inline ffmap #-}
@@ -453,18 +478,27 @@ instance FMonad (FConstrained p) where
 -- instance (forall x. p x) => FTraversable (FConstrained p) where
 
 type role FCompose nominal representational nominal
-newtype FCompose a f g = FCompose { runFCompose :: f (g a) }
+newtype FCompose a f g = FCompose { runFCompose :: f (F1 a g) }
+  deriving (Generic, Generic1)
+
+deriving stock instance 
+  ( Typeable k
+  , Typeable a
+  , Typeable f
+  , Typeable g
+  , Data (f (F1 a g))
+  ) => Data (FCompose (a :: k) f g)
 
 instance Functor f => FFunctor (FCompose a f) where
-  ffmap = \f -> FCompose #. (fmap f .# runFCompose)
+  ffmap = \f -> FCompose #. (fmap (F1 #. f .# runF1) .# runFCompose)
   {-# inline ffmap #-}
 
 instance Foldable f => FFoldable (FCompose a f) where
-  ffoldMap = \f -> foldMap f .# runFCompose
+  ffoldMap = \f -> foldMap (f .# runF1) .# runFCompose
   {-# inline ffoldMap #-}
 
 instance Traversable f => FTraversable (FCompose a f) where
-  ftraverse = \f -> fmap FCompose . traverse f .# runFCompose
+  ftraverse = \f -> fmap FCompose . traverse (fmap F1 . f .# runF1) .# runFCompose
   {-# inline ftraverse #-}
 
 type role HKD representational nominal nominal
