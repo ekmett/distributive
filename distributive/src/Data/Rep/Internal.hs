@@ -1526,15 +1526,14 @@ instance FFunctor w => FFunctor (DHKD w x) where
 
 instance Indexable f => FIndexable (HKD f x) where
   type FLog (HKD f x) = Atkey (Log f) x
-  findex = \(HKD fa) (Atkey lg) -> index fa lg
+  findex = \(HKD fa) (Atkey lg) -> runF1 (index fa lg)
   {-# inline findex #-}
 
 instance Representable f => FRepresentable (HKD f x) where
-  fscatter = \k g w -> HKD $ distrib (DHKD (ffmap g w)) $ k . ffmap coerce .# runDHKD
+  fscatter = \k g (ffmap g -> w) -> HKD $ distrib (DHKD w) $ F1 #. k . ffmap coerce .# runDHKD
   {-# inline fscatter #-}
-  ftabulate = \f -> HKD $ tabulate (f . Atkey)
+  ftabulate = \f -> HKD $ tabulate (F1 #. f . Atkey)
   {-# inline ftabulate #-}
-
 
 -------------------------------------------------------------------------------
 -- HKD

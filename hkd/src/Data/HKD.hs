@@ -76,7 +76,7 @@ module Data.HKD
 , F4(F4,..)
 , F5(F5,..)
 , FConstrained(..)
-, FCompose(..)
+, FCompose(FCompose,runFCompose,..)
 , NT(..)
 , Lim(..), traverseLim
 , Dict1(..)
@@ -478,8 +478,17 @@ instance FMonad (FConstrained p) where
 -- instance (forall x. p x) => FTraversable (FConstrained p) where
 
 type role FCompose nominal representational nominal
-newtype FCompose a f g = FCompose { runFCompose :: f (F1 a g) }
-  deriving (Generic, Generic1)
+newtype FCompose a f g = FCompose' { runFCompose' :: f (F1 a g) }
+  deriving stock (Generic, Generic1)
+
+deriving stock instance Eq (f (F1 a g)) => Eq (FCompose a f g)
+deriving stock instance Ord (f (F1 a g)) => Ord (FCompose a f g)
+deriving stock instance Show (f (F1 a g)) => Show (FCompose a f g)
+deriving stock instance Read (f (F1 a g)) => Read (FCompose a f g)
+
+pattern FCompose :: Functor f => f (g a) -> FCompose a f g 
+pattern FCompose { runFCompose } <- FCompose' (fmap runF1 -> runFCompose) where
+  FCompose f = FCompose' (fmap F1 f)
 
 deriving stock instance
   ( Typeable k
@@ -490,15 +499,15 @@ deriving stock instance
   ) => Data (FCompose (a :: k) f g)
 
 instance Functor f => FFunctor (FCompose a f) where
-  ffmap = \f -> FCompose #. (fmap (F1 #. f .# runF1) .# runFCompose)
+  ffmap = \f -> FCompose' #. (fmap (F1 #. f .# runF1) .# runFCompose')
   {-# inline ffmap #-}
 
 instance Foldable f => FFoldable (FCompose a f) where
-  ffoldMap = \f -> foldMap (f .# runF1) .# runFCompose
+  ffoldMap = \f -> foldMap (f .# runF1) .# runFCompose'
   {-# inline ffoldMap #-}
 
 instance Traversable f => FTraversable (FCompose a f) where
-  ftraverse = \f -> fmap FCompose . traverse (fmap F1 . f .# runF1) .# runFCompose
+  ftraverse = \f -> fmap FCompose' . traverse (fmap F1 . f .# runF1) .# runFCompose'
   {-# inline ftraverse #-}
 
 type role HKD representational nominal nominal
