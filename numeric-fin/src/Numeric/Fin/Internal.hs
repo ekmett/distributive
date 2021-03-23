@@ -1,15 +1,20 @@
 {-# Language AllowAmbiguousTypes #-}
 {-# Language ConstraintKinds #-}
 {-# Language DataKinds #-}
+{-# Language DeriveDataTypeable #-}
+{-# Language DeriveLift #-}
 {-# Language PolyKinds #-}
 {-# Language DerivingStrategies #-}
+{-# Language FlexibleContexts #-}
 {-# Language GADTs #-}
 {-# Language KindSignatures #-}
 {-# Language MagicHash #-}
+{-# Language LambdaCase #-}
 {-# Language PatternSynonyms #-}
 {-# Language RankNTypes #-}
 {-# Language RoleAnnotations #-}
 {-# Language ScopedTypeVariables #-}
+{-# Language StandaloneDeriving #-}
 {-# Language TypeApplications #-}
 {-# Language TypeOperators #-}
 {-# Language Unsafe #-}
@@ -24,7 +29,7 @@
 -- Portability : non-portable
 
 module Numeric.Fin.Internal
-( Fin(UnsafeFin,Fin,FinZ,FinS,fromFin)
+( Fin(UnsafeFin,Fin,FinZ,FinS,fromFin,KnownFinZ,KnownFinS)
 , pattern IntFin
 , toFin
 , int
@@ -41,17 +46,24 @@ module Numeric.Fin.Internal
 , weakenLeft
 , split
 , append
+, validFin
 ) where
 
 import Control.Monad
 import Data.Coerce
+import Data.Data
 import Data.GADT.Show
 import Data.Type.Equality
 import GHC.Exts
 import GHC.Ix
 import GHC.TypeNats
+import Language.Haskell.TH.Syntax
 import Text.Read
 import Unsafe.Coerce
+
+
+-- $setup
+-- >>> :set -XTypeApplications -XDataKinds -XScopedTypeVariables
 
 -- | Turn a KnownNat into an Int. Use with @TypeApplications@.
 --
@@ -75,6 +87,41 @@ newtype Fin (n :: Nat)
   { fromFin :: Int
   }
   deriving stock (Eq, Ord, Ix)
+
+-- | >>> $$(liftTyped (FinS FinZ :: Fin 4))
+-- 1
+deriving stock instance Lift (Fin n)
+
+instance (KnownNat n, Typeable n) => Data (Fin n) where
+  toConstr (Fin 0) = finZConstr
+  toConstr (Fin _) = finSConstr
+  dataTypeOf _ = case int @n of
+    0 -> finEmptyDataType
+    _ -> finDataType
+  gfoldl _ z KnownFinZ = z KnownFinZ
+  gfoldl k z (KnownFinS n) = z KnownFinS `k` n
+  gunfold k z c = case natVal (Proxy :: Proxy n) of
+    0 -> error "gunfold: Fin 0"
+    n -> case constrIndex c of
+      1 -> z (UnsafeFin 0)
+      2 -> case someNatVal $ n - 1 of
+        SomeNat (Proxy :: Proxy m) -> case unsafeCoerce Refl of
+          (Refl :: n :~: S m) -> k (z KnownFinS)
+      _ -> error "gunfold: Fin: unknown constructor"
+
+finZConstr, finSConstr :: Constr
+finZConstr = mkConstr finDataType "FinZ" [] Data.Data.Prefix
+finSConstr = mkConstr finDataType "FinS" [] Data.Data.Prefix
+{-# noinline finZConstr #-}
+{-# noinline finSConstr #-}
+
+finDataType :: DataType
+finDataType = mkDataType "Numeric.Fin.Fin" [finZConstr, finSConstr]
+{-# noinline finDataType #-}
+
+finEmptyDataType :: DataType
+finEmptyDataType = mkDataType "Numeric.Fin.Fin" []
+{-# noinline finEmptyDataType #-}
 
 type a /~ b = (a == b) ~ 'False
 
@@ -121,7 +168,7 @@ instance KnownNat n => Read (Fin n) where
 -- pinky-swear that you are going to do it correctly,
 -- look at 'UnsafeFin', you animal.
 --
--- >>> Fin (FinS FinZ)
+-- >>> case FinS FinZ of Fin n -> n
 -- 1
 pattern Fin :: Int -> Fin n
 pattern Fin n <- UnsafeFin n
@@ -129,10 +176,10 @@ pattern Fin n <- UnsafeFin n
 
 -- | You can construct a Fin safely this way.
 --
--- >>> toFin 2 :: Fin 4
+-- >>> toFin 2 :: Maybe (Fin 4)
 -- Just 2
 --
--- >>> toFin 2 :: Fin 2
+-- >>> toFin 2 :: Maybe (Fin 2)
 -- Nothing
 toFin :: forall n. KnownNat n => Int -> Maybe (Fin n)
 toFin i
@@ -154,13 +201,21 @@ pattern IntFin i <- (toFin -> Just i) where
   IntFin x = fromFin x
 
 data Fin' (n :: Nat) where
-  FinZ' :: Fin' (S n)
-  FinS' :: Fin n -> Fin' (S n)
+  FinZ'      :: Fin' (S n)
+  FinS'      :: Fin n -> Fin' (S n)
 
 upFin :: Fin n -> Fin' n
 upFin (UnsafeFin 0) = unsafeCoerce FinZ'
 upFin (UnsafeFin n) = unsafeCoerce $ FinS' $ UnsafeFin (n-1)
 {-# inline[0] upFin #-}
+
+
+{-
+knownPred :: forall n r. KnownNat (S n) => (KnownNat n => r) -> r
+knownPred r = case someNatVal $ natVal (Proxy :: Proxy (S n)) - 1 of
+  SomeNat (Proxy :: Proxy m) -> case unsafeCoerce Refl of
+    (Refl :: n :~: m) -> r
+-}
 
 -- | A safe pattern for matching 0. A safe, useful basecase.
 pattern FinZ :: () => forall m. (n ~ S m) => Fin n
@@ -170,9 +225,42 @@ pattern FinZ <- (upFin -> FinZ') where
 -- | A safe pattern for matching on the successor. Useful for induction.
 pattern FinS :: () => forall m. (n ~ S m) => Fin m -> Fin n
 pattern FinS n <- (upFin -> FinS' n) where
-  FinS n = UnsafeFin (fromFin n - 1)
+  FinS n = UnsafeFin (fromFin n + 1)
+
+data KnownFin' (n :: Nat) where
+  KnownFinZ' :: KnownNat n => KnownFin' (S n)
+  KnownFinS' :: KnownNat n => Fin n -> KnownFin' (S n)
+
+upKnownFin :: forall n. KnownNat n => Fin n -> KnownFin' n
+upKnownFin = case someNatVal $ natVal (Proxy :: Proxy n) - 1 of
+  SomeNat (Proxy :: Proxy o) -> case unsafeCoerce Refl of
+    (Refl :: n :~: S o) -> \case
+      UnsafeFin 0 -> (KnownFinZ' :: KnownFin' n)
+      UnsafeFin n -> (KnownFinS' $ UnsafeFin (n-1) :: KnownFin' n)
+{-# inline[0] upKnownFin #-}
+
+-- | A safe pattern for matching on the successor. Useful for induction.
+--
+-- This version calculates KnownNat for the predecessor on a match.
+--
+-- >>> (case FinZ :: Fin 400 of (KnownFinZ :: Fin (S k)) -> int @k) :: Int
+-- 399
+pattern KnownFinZ :: KnownNat n => forall m. (KnownNat m, n ~ S m) => Fin n
+pattern KnownFinZ <- (upKnownFin -> KnownFinZ') where
+  KnownFinZ = UnsafeFin 0
+
+-- | A safe pattern for matching on the successor. Useful for induction.
+--
+-- This version calculates KnownNat for the predecessor on a match.
+--
+-- >>> (case FinS FinZ :: Fin 400 of KnownFinS (x :: Fin k) -> int @k) :: Int
+-- 399
+pattern KnownFinS :: KnownNat n => forall m. (KnownNat m, n ~ S m) => Fin m -> Fin n
+pattern KnownFinS n <- (upKnownFin -> KnownFinS' n) where
+  KnownFinS n = UnsafeFin (fromFin n + 1)
 
 {-# complete FinZ, FinS :: Fin #-}
+{-# complete KnownFinZ, KnownFinS :: Fin #-}
 
 universe :: forall n. KnownNat n => [Fin n]
 universe = UnsafeFin <$> [0 .. int @n - 1]
@@ -195,7 +283,7 @@ boringFin = FinZ
 
 -- | Return one less.
 --
--- >>> isMin (FZ :: Fin 1)
+-- >>> isMin (FinZ :: Fin 1)
 -- Nothing
 --
 -- >>> map isMin [minBound..maxBound] :: [Maybe (Fin 3)]
@@ -235,10 +323,10 @@ weakenLeft (Fin n) = UnsafeFin n
 
 -- | Append two 'Fin's together.
 --
--- >>> append (Left fin2 :: Either (Fin N.Nat5) (Fin N.Nat4))
+-- >>> append (Left (toEnum 2) :: Either (Fin 5) (Fin 4))
 -- 2
 --
--- >>> append (Right fin2 :: Either (Fin N.Nat5) (Fin N.Nat4))
+-- >>> append (Right (toEnum 2) :: Either (Fin 5) (Fin 4))
 -- 7
 append :: forall n m. KnownNat n => Either (Fin n) (Fin m) -> Fin (n + m)
 append (Left n)  = weakenLeft @m n
@@ -247,13 +335,13 @@ append (Right m) = weakenRight @n m
 
 -- | Inverse of 'append'.
 --
--- >>> split fin2 :: Either (Fin 2) (Fin 3)
+-- >>> split (toEnum 2) :: Either (Fin 2) (Fin 3)
 -- Right 0
 --
--- >>> split fin1 :: Either (Fin 2) (Fin 3)
+-- >>> split (toEnum 1) :: Either (Fin 2) (Fin 3)
 -- Left 1
 --
--- >>> map split universe :: [Either (Fin N.Nat2) (Fin N.Nat3)]
+-- >>> map split universe :: [Either (Fin 2) (Fin 3)]
 -- [Left 0,Left 1,Right 0,Right 1,Right 2]
 --
 split :: forall n m. KnownNat n => Fin (n + m) -> Either (Fin n) (Fin m)
@@ -266,3 +354,14 @@ split (Fin i)
 mirrorFin :: forall n. KnownNat n => Fin n -> Fin n
 mirrorFin (Fin i) = UnsafeFin (int @n - i - 1)
 {-# inline mirrorFin #-}
+
+-- |
+-- compile time validated numeric literals
+-- $$(validFin 34)
+
+validFin :: forall n m. (KnownNat n, Quote m, MonadFail m) => Int -> Code m (Fin n)
+validFin i
+  | i < 0 = Code $ fail $ "validFin: negative value"
+  | i < n = liftTyped (UnsafeFin i)
+  | otherwise = Code $ fail $ "validFin: out of bounds: " ++ show i ++ " >= " ++ show n
+  where n = int @n
