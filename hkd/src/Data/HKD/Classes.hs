@@ -73,6 +73,7 @@ import Control.Applicative
 import Control.Applicative.Backwards
 import Control.Monad(join)
 import Data.Coerce
+import Data.Dependent.Sum
 import Data.Foldable.WithIndex
 import Data.Function.Coerce
 import Data.Functor.Constant
@@ -110,7 +111,7 @@ class Functor f => CFunctor f where
 
 instance CFunctor Identity where
   liftCoerce a _ = a
- 
+
 fmapCoerce :: forall f a b. (CFunctor f, Coercible a b) => f a -> f b
 fmapCoerce = liftCoerce @f coerce (fmap coerce)
 
@@ -136,6 +137,10 @@ class FFunctor (t :: (k -> Type) -> Type) where
 gffmap :: (Generic1 t, FFunctor (Rep1 t)) => (f ~> g) -> t f -> t g
 gffmap f = to1 . ffmap f . from1
 {-# inline gffmap #-}
+
+instance FFunctor (DSum f) where
+  ffmap f (g :=> h) = g :=> f h
+  {-# inline ffmap #-}
 
 instance FFunctor Proxy where
   ffmap = \_ -> coerce
@@ -219,6 +224,12 @@ ftraverse_ k tf = withSome (ffoldMap (Some . k) tf) (() <$)
 ffor_ :: (FFoldable t, Applicative m) => t f -> (forall a. f a -> m b) -> m ()
 ffor_ tf k = ftraverse_ k tf
 {-# inline ffor_ #-}
+
+instance FFoldable (DSum f) where
+  ffoldMap f (_ :=> h) = f h
+  {-# inline ffoldMap #-}
+  flengthAcc n _ = n + 1
+  {-# inline flengthAcc #-}
 
 instance FFoldable Proxy where
   flengthAcc = const
@@ -321,6 +332,10 @@ instance FTraversable t => FFunctor (ViaFTraversable t) where
 instance FTraversable t => FFoldable (ViaFTraversable t) where
   ffoldMap = \f -> ffoldMapDefault f .# runViaFTraversable
   {-# inline ffoldMap #-}
+
+instance FTraversable (DSum f) where
+  ftraverse f (g :=> h) = (g :=>) <$> f h
+  {-# inline ftraverse #-}
 
 instance FTraversable Proxy where
   ftraverse _ Proxy = pure Proxy
@@ -579,6 +594,10 @@ class FFunctor f => FFunctorWithIndex i f | f -> i where
   ifmap = ifmapDefault
   {-# inline ifmap #-}
 
+instance FFunctorWithIndex f (DSum f) where
+  ifmap f (g :=> h) = g :=> f g h
+  {-# inline ifmap #-}
+
 ifmapDefault :: FTraversableWithIndex i f => (forall x. i x -> a x -> b x) -> f a -> f b
 ifmapDefault = \ f -> runIdentity #. iftraverse (\i a -> Identity (f i a))
 {-# inline ifmapDefault #-}
@@ -593,9 +612,16 @@ iffoldMapDefault :: (FTraversableWithIndex i f, Monoid m) => (forall x. i x -> a
 iffoldMapDefault = \f -> getConst #. iftraverse (\i -> Const #. f i)
 {-# inline iffoldMapDefault #-}
 
+instance FFoldableWithIndex f (DSum f) where
+  iffoldMap f (g :=> h) = f g h
+  {-# inline iffoldMap #-}
+
 class (FFunctorWithIndex i f, FFoldableWithIndex i f, FTraversable f) => FTraversableWithIndex i f | f -> i where
   iftraverse :: Applicative m => (forall x. i x -> a x -> m (b x)) -> f a -> m (f b)
 
+instance FTraversableWithIndex f (DSum f) where
+  iftraverse f (g :=> h) = (g :=>) <$> f g h
+  {-# inline iftraverse #-}
 
 -- | Eq constraints on `k`
 type family EqC :: k -> Constraint
@@ -747,7 +773,6 @@ instance FFoldableWithIndex V1 (Const e) where
 instance FTraversableWithIndex V1 (Const e) where
   iftraverse = \_ -> pure .# (Const . getConst)
   {-# inline iftraverse #-}
-  
 
 instance FFunctorWithIndex V1 (Constant e) where
   ifmap = \_ -> coerce

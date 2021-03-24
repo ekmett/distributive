@@ -50,7 +50,7 @@ source-repository head
   subdir:   hkd
 
 common base
-  default-langauge: Haskell2010
+  default-language: Haskell2010
   ghc-options: -Wall
   default-extensions:
     AllowAmbiguousTypes
@@ -139,6 +139,8 @@ library
     , base  >=4.10 && <4.16
     , base-orphans >= 0.5.2 && < 1
     , contravariant >= 1.5.3 && < 1.6
+    , dependent-hashmap
+    , dependent-sum
     , ghc-prim
     , indexed-traversable >= 0.1 && < 0.2
     , mtl >= 2.2 && < 2.3
