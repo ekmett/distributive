@@ -551,12 +551,12 @@ class FApply f => FBind f where
 
 -- | 'fbind' indexed only on the inner layer
 fbindInner :: FBind f => f a -> (forall x. a x -> f b) -> f b
-fbindInner = \fa f -> fbind fa \a -> ffmap CoatKey $ f a
+fbindInner = \fa f -> fbind fa \a -> ffmap (\x -> CoatKey x) $ f a
 {-# inline fbindInner #-}
 
 -- | 'fbind' indexed only on the outer layer
 fbindOuter :: FBind f => f a -> (forall x. a x -> f (Const (b x))) -> f b
-fbindOuter = \fa f -> fbind fa \a -> ffmap (CoatKey . getConst) $ f a
+fbindOuter = \fa f -> fbind fa \a -> ffmap (\x -> CoatKey (getConst x)) $ f a
 {-# inline fbindOuter #-}
 
 class (FApplicative f, FBind f) => FMonad f
