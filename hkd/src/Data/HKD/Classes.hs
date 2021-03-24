@@ -543,7 +543,8 @@ instance FTraversable f => FTraversable (Monoid.Ap f) where
 newtype CoatKey a x y = CoatKey (x ~ y => a x)
 
 runCoatKey :: CoatKey a x x -> a x
-runCoatKey (CoatKey a) = a
+runCoatKey = \(CoatKey a) -> a
+{-# inline runCoatKey #-}
 
 class FApply f => FBind f where
   fbind :: f a -> (forall x. a x -> f (CoatKey b x)) -> f b
@@ -556,6 +557,7 @@ fbindInner = \fa f -> fbind fa \a -> ffmap CoatKey $ f a
 -- | 'fbind' indexed only on the outer layer
 fbindOuter :: FBind f => f a -> (forall x. a x -> f (Const (b x))) -> f b
 fbindOuter = \fa f -> fbind fa \a -> ffmap (CoatKey . getConst) $ f a
+{-# inline fbindOuter #-}
 
 class (FApplicative f, FBind f) => FMonad f
 
