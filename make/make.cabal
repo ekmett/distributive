@@ -1,0 +1,48 @@
+cabal-version: 3.4
+name: make
+version: 0
+synopsis: make
+description: a toy build system
+homepage: https://github.com/ekmett/haskell
+license: BSD-3-Clause
+author: Edward Kmett
+maintainer: Edward Kmett <ekmett@gmail.com>
+copyright: Copyright (c) 2020 Edward Kmett, (c) 2018-2020 Olle Fredriksson
+stability: experimental
+category: Data Structures
+build-type: Simple
+extra-doc-files:
+  README.md,
+  CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/ekmett/haskell
+  subdir: make
+
+common base
+  default-language: Haskell2010
+  build-depends:
+    , base >= 4.14 && < 5
+    , constraints-extras
+    , dependent-hashmap
+    , dependent-sum
+    , deriving-compat
+    , exceptions
+    , hashable
+    , monad-control
+    , primitive
+    , transformers
+    , transformers-base
+    , unliftio-core
+    , unordered-containers
+  ghc-options:
+    -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wredundant-constraints -Widentities
+    -Wno-simplifiable-class-constraints
+
+library
+  import: base
+  hs-source-dirs: src
+  exposed-modules:
+    Make
