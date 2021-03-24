@@ -103,8 +103,8 @@ import Data.Traversable.WithIndex
 import Data.Kind
 import Data.Some.Newtype (Some(..))
 import Data.Void
+import GHC.Arr
 import GHC.Generics
-import GHC.Ix
 import Unsafe.Coerce
 
 type role F0 phantom

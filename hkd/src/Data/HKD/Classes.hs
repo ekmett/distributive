@@ -594,6 +594,10 @@ instance FFunctorWithIndex f (DSum f) where
   ifmap f (g :=> h) = g :=> f g h
   {-# inline ifmap #-}
 
+instance FFunctorWithIndex f (DHashMap f) where
+  ifmap = DHashMap.mapWithKey
+  {-# inline ifmap #-}
+
 ifmapDefault :: FTraversableWithIndex i f => (forall x. i x -> a x -> b x) -> f a -> f b
 ifmapDefault = \ f -> runIdentity #. iftraverse (\i a -> Identity (f i a))
 {-# inline ifmapDefault #-}
@@ -612,11 +616,19 @@ instance FFoldableWithIndex f (DSum f) where
   iffoldMap f (g :=> h) = f g h
   {-# inline iffoldMap #-}
 
+instance FFoldableWithIndex f (DHashMap f) where
+  iffoldMap = DHashMap.foldMapWithKey
+  {-# inline iffoldMap #-}
+
 class (FFunctorWithIndex i f, FFoldableWithIndex i f, FTraversable f) => FTraversableWithIndex i f | f -> i where
   iftraverse :: Applicative m => (forall x. i x -> a x -> m (b x)) -> f a -> m (f b)
 
 instance FTraversableWithIndex f (DSum f) where
   iftraverse f (g :=> h) = (g :=>) <$> f g h
+  {-# inline iftraverse #-}
+
+instance FTraversableWithIndex f (DHashMap f) where
+  iftraverse = DHashMap.traverseWithKey
   {-# inline iftraverse #-}
 
 -- | Eq constraints on `k`
@@ -781,7 +793,6 @@ instance FFoldableWithIndex V1 (Constant e) where
 instance FTraversableWithIndex V1 (Constant e) where
   iftraverse = \_ -> pure .# (Constant . getConstant)
   {-# inline iftraverse #-}
-
 
 -- * K1
 

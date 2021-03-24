@@ -55,8 +55,8 @@ import Data.Coerce
 import Data.Data
 import Data.GADT.Show
 import Data.Type.Equality
+import GHC.Arr
 import GHC.Exts
-import GHC.Ix
 import GHC.TypeNats
 import Language.Haskell.TH.Syntax
 import Text.Read
