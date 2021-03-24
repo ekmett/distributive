@@ -40,6 +40,7 @@ module Data.HKD.Classes
 -- * Foldable
 , FFoldable(..)
 , gffoldMap
+, ftoList
 , flength
 , ftraverse_
 , ffor_
@@ -54,6 +55,7 @@ module Data.HKD.Classes
 , ifmapDefault
 , FFoldableWithIndex(..)
 , iffoldMapDefault
+, iftoList
 , FTraversableWithIndex(..)
 , FApply(..)
 , FApplicative(..)
@@ -191,6 +193,10 @@ class FFoldable (t :: (k -> Type) -> Type) where
   flengthAcc :: Int -> t f -> Int
   flengthAcc acc t = acc + Monoid.getSum (ffoldMap (\_ -> Monoid.Sum 1) t)
   {-# inline flengthAcc #-}
+
+ftoList :: FFoldable t => t f -> [Some f]
+ftoList = ffoldMap (\x -> [Some x])
+{-# inline ftoList #-}
 
 gffoldMap :: (Generic1 t, FFoldable (Rep1 t), Monoid m) => (forall a. f a -> m) -> t f -> m
 gffoldMap f = ffoldMap f . from1
@@ -610,6 +616,10 @@ class FFoldable f => FFoldableWithIndex i f | f -> i where
   default iffoldMap :: (FTraversableWithIndex i f, Monoid m) => (forall x. i x -> a x -> m) -> f a -> m
   iffoldMap = iffoldMapDefault
   {-# inline iffoldMap #-}
+
+iftoList :: FFoldableWithIndex i t => t f -> [DSum i f]
+iftoList = iffoldMap \i a -> [i :=> a]
+{-# inline iftoList #-}
 
 iffoldMapDefault :: (FTraversableWithIndex i f, Monoid m) => (forall x. i x -> a x -> m) -> f a -> m
 iffoldMapDefault = \f -> getConst #. iftraverse (\i -> Const #. f i)
