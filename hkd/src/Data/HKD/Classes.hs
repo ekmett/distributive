@@ -58,8 +58,9 @@ module Data.HKD.Classes
 , FApply(..)
 , FApplicative(..)
 , ViaFApplicative(..)
--- * FMonad
-, FMonad(..)
+-- * FBind
+, FBind(..)
+, FMonad
 , ViaFMonad(..)
 , fbindInner
 , fbindOuter
@@ -535,28 +536,29 @@ instance FTraversable f => FTraversable (Monoid.Ap f) where
   ftraverse = \f -> fmap Monoid.Ap . ftraverse f .# Monoid.getAp
   {-# inline ftraverse #-}
 
--- * FMonad
+-- * FBind
 
 -- fjoin :: f (f :.: b) -> f (Join b)
-class FApplicative f => FMonad f where
+class FApply f => FBind f where
   fbind :: (forall x. b x x -> r x) -> f a -> (forall x. a x -> f (b x)) -> f r
 
 newtype Inner a x y = Inner { runInner :: a y }
 
+class (FApplicative f, FBind f) => FMonad f
+
 -- TODO: avoid the ffmap coerces
 
 -- | 'fbind' with @b@ indexed only on the inner layer
-fbindInner :: FMonad f => f a -> (forall x. a x -> f b) -> f b
+fbindInner :: FBind f => f a -> (forall x. a x -> f b) -> f b
 fbindInner = \fa f -> fbind runInner fa \a -> ffmap Inner $ f a
 {-# inline fbindInner #-}
 
 newtype Outer a x y = Outer { runOuter :: a x }
 
 -- | 'fbind' with @b@ indexed only on the outer layer
-fbindOuter :: FMonad f => f a -> (forall x. a x -> f (Const (b x))) -> f b
+fbindOuter :: FBind f => f a -> (forall x. a x -> f (Const (b x))) -> f b
 fbindOuter = \fa f -> fbind runOuter fa \a -> ffmap coerce $ f a
 {-# inline fbindOuter #-}
-
 
 fliftM :: FMonad f => (a ~> b) -> f a -> f b
 fliftM = \f fa -> fbind runOuter fa \a -> fpure $ Outer $ f a
@@ -564,7 +566,7 @@ fliftM = \f fa -> fbind runOuter fa \a -> fpure $ Outer $ f a
 
 newtype LiftM2 a x y = LiftM2 (x ~ y => a x)
 
-fliftM2 :: FMonad f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
+fliftM2 :: FBind f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
 fliftM2 = \f fa fb -> fbind (\(LiftM2 x) -> x) fa \a -> ffmap (\b -> LiftM2 $ f a b) fb
 {-# inline fliftM2 #-}
 

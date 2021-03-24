@@ -58,8 +58,9 @@ module Data.HKD
 , FApply(..)
 , FApplicative(..)
 , ViaFApplicative(..)
--- * FMonad
-, FMonad(..)
+-- * FBind
+, FBind(..)
+, FMonaod
 , ViaFMonad(..)
 , fbindInner
 , fbindOuter
@@ -156,7 +157,7 @@ instance FApply (F1 a) where
   fliftA2 = \ f (F1 a) (F1 b) -> F1 (f a b)
   {-# inline fliftA2 #-}
 
-instance FMonad (F1 a) where
+instance FBind (F1 a) where
   fbind = \k (F1 a) f -> F1 $ k $ runF1 $ f a
   {-# inline fbind #-}
 
@@ -179,7 +180,7 @@ instance FTraversableWithIndex (Index '[a,b]) (F2 a b) where
     (f (UnsafeIndex 1) b)
   {-# inline iftraverse #-}
 
-instance FMonad (F2 a b) where
+instance FBind (F2 a b) where
   fbind = \k (F2 a b) f ->
     F2
       (k $ case f a of F2 x _ -> x)
@@ -206,7 +207,7 @@ instance FTraversableWithIndex (Index '[a,b,c]) (F3 a b c) where
     (f (UnsafeIndex 2) c)
   {-# inline iftraverse #-}
 
-instance FMonad (F3 a b c) where
+instance FBind (F3 a b c) where
   fbind = \k (F3 a b c) f ->
     F3
       (k $ case f a of F3 x _ _ -> x)
@@ -235,7 +236,7 @@ instance FTraversableWithIndex (Index '[a,b,c,d]) (F4 a b c d) where
     <*> f (UnsafeIndex 3) d
   {-# inline iftraverse #-}
 
-instance FMonad (F4 a b c d) where
+instance FBind (F4 a b c d) where
   fbind = \k (F4 a b c d) f ->
     F4
       (k $ case f a of F4 x _ _ _ -> x)
@@ -266,7 +267,7 @@ instance FTraversableWithIndex (Index '[a,b,c,d,e]) (F5 a b c d e) where
     <*> f (UnsafeIndex 4) e
   {-# inline iftraverse #-}
 
-instance FMonad (F5 a b c d e) where
+instance FBind (F5 a b c d e) where
   fbind = \k (F5 a b c d e) f ->
     F5
       (k $ case f a of F5 x _ _ _ _ -> x)
@@ -296,7 +297,7 @@ instance FApplicative (NT a) where
   fpure = \x -> NT \_ -> x
   {-# inline fpure #-}
 
-instance FMonad (NT r) where
+instance FBind (NT r) where
   fbind = \k (NT ra) f -> NT \r -> k $ runNT (f $ ra r) r
   {-# inline fbind #-}
 
@@ -380,7 +381,7 @@ instance FApplicative Lim where
   fpure x = Lim x
   {-# inline fpure #-}
 
-instance FMonad Lim where
+instance FBind Lim where
   fbind = \k (Lim a) f -> Lim $ k $ runLim $ f a
   {-# inline fbind #-}
 
@@ -423,7 +424,7 @@ pattern Dicts { runDicts } = Dicts' (F1 runDicts)
 deriving newtype instance Eq (f (Dict1 p)) => Eq (Dicts p f)
 deriving newtype instance Ord (f (Dict1 p)) => Ord (Dicts p f)
 
-instance FMonad (Dicts p) where
+instance FBind (Dicts p) where
   fbind = \k (Dicts a) f -> Dicts $ k $ runDicts (f a)
   {-# inline fbind #-}
 
@@ -471,7 +472,7 @@ instance FApplicative (FConstrained p) where
   fpure x = FConstrained x
   {-# inline fpure #-}
 
-instance FMonad (FConstrained p) where
+instance FBind (FConstrained p) where
   fbind = \k (FConstrained a) f -> FConstrained $ k $ runFConstrained $ f a
   {-# inline fbind #-}
 
@@ -560,7 +561,7 @@ instance Applicative f => FApplicative (HKD f x) where
   fpure f = HKD $ pure (F1 f)
   {-# inline fpure #-}
 
-instance Monad f => FMonad (HKD f x) where
+instance Monad f => FBind (HKD f x) where
   fbind = \k (HKD fa) f -> HKD $ fmap (F1 #. k .# runF1) $ fa >>= runHKD #. f .# runF1
   {-# inline fbind #-}
 
@@ -648,6 +649,8 @@ instance FApplicative f => Applicative (LKD f) where
   {-# inline (<*>) #-}
   pure = \a -> LKD $ fpure (Const a)
   {-# inline pure #-}
+
+
 
 instance FMonad f => Monad (LKD f) where
   (>>=) = \(LKD fa) f -> LKD $ fbindOuter fa \(Const a) -> ffmap coerce $ runLKD $ f a
