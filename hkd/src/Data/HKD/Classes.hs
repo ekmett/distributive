@@ -73,6 +73,8 @@ import Control.Applicative
 import Control.Applicative.Backwards
 import Control.Monad(join)
 import Data.Coerce
+import qualified Data.Dependent.HashMap as DHashMap
+import Data.Dependent.HashMap (DHashMap)
 import Data.Dependent.Sum
 import Data.Foldable.WithIndex
 import Data.Function.Coerce

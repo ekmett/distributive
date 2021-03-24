@@ -2,6 +2,7 @@ packages:
   distributive
   hkd
   numeric-fin
+  typed-keys
 
 allow-newer:
   constraints-extras:base,
