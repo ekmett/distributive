@@ -85,6 +85,8 @@ import Data.Functor.Product (Product (..))
 import Data.Functor.Reverse
 import Data.Functor.Sum (Sum (..))
 import Data.Functor.WithIndex
+import Data.GADT.Compare
+import Data.Hashable
 import Data.HKD.Orphans ()
 import Data.Kind (Type, Constraint)
 import qualified Data.Monoid as Monoid
@@ -107,38 +109,19 @@ infixr 0 ~>
 -- FFunctor
 -------------------------------------------------------------------------------
 
-{-
-class Functor f => CFunctor f where
-  liftCoerce :: ((forall a b. Coercible a b => Coercible (f a) (f b)) => r) -> r -> r
-
-instance CFunctor Identity where
-  liftCoerce a _ = a
-
-fmapCoerce :: forall f a b. (CFunctor f, Coercible a b) => f a -> f b
-fmapCoerce = liftCoerce @f coerce (fmap coerce)
-
-instance (CFunctor f, CFunctor g) => CFunctor (Compose f g) where
-  liftCoerce x y = coerce (liftCoerce @f (liftCoerce @g x y) y)
--}
-
--- type Nice f = (forall a b. (forall x. Coercible (a x) (b x)) => Coercible (f a) (f b)) :: Constraint
-
 class FFunctor (t :: (k -> Type) -> Type) where
   ffmap :: (f ~> g) -> t f -> t g
   default ffmap :: FTraversable t => (f ~> g) -> t f -> t g
   ffmap = ffmapDefault
   {-# inline ffmap #-}
 
- -- fliftCoerce :: (Nice t => r) -> r -> r
- -- default fliftCoerce :: Nice t => (Nice t => r) -> r -> r
- -- fliftCoerce r _ = r
-
---ffmapCoerce :: forall f a b. (FFunctor f, Coercible a b) => f a -> f b
---ffmapCoerce = fliftCoerce @_ @f coerce (ffmap coerce)
-
 gffmap :: (Generic1 t, FFunctor (Rep1 t)) => (f ~> g) -> t f -> t g
 gffmap f = to1 . ffmap f . from1
 {-# inline gffmap #-}
+
+instance FFunctor (DHashMap f) where
+  ffmap = DHashMap.map
+  {-# inline ffmap #-}
 
 instance FFunctor (DSum f) where
   ffmap f (g :=> h) = g :=> f h
@@ -160,14 +143,9 @@ instance (Functor f, FFunctor g) => FFunctor (Compose f g) where
   ffmap f = Compose #. fmap (ffmap f) .# getCompose
   {-# inline ffmap #-}
 
-  -- wait until liftCoerce is added to functor
-  -- fliftCoerce _ r = r
-
 instance (FFunctor f, FFunctor g) => FFunctor (Product f g) where
   ffmap f (Pair g h) = Pair (ffmap f g) (ffmap f h)
   {-# inline ffmap #-}
-
-  -- fliftCoerce x y = coerce $ fliftCoerce @_ @f (fliftCoerce @_ @g x y) y
 
 instance (FFunctor f, FFunctor g) => FFunctor (Sum f g) where
   ffmap f (InL g) = InL (ffmap f g)
@@ -231,6 +209,12 @@ instance FFoldable (DSum f) where
   ffoldMap f (_ :=> h) = f h
   {-# inline ffoldMap #-}
   flengthAcc n _ = n + 1
+  {-# inline flengthAcc #-}
+
+instance FFoldable (DHashMap f) where
+  ffoldMap = DHashMap.foldMap
+  {-# inline ffoldMap #-}
+  flengthAcc n m = n + DHashMap.size m
   {-# inline flengthAcc #-}
 
 instance FFoldable Proxy where
@@ -339,6 +323,10 @@ instance FTraversable (DSum f) where
   ftraverse f (g :=> h) = (g :=>) <$> f h
   {-# inline ftraverse #-}
 
+instance FTraversable (DHashMap f) where
+  ftraverse = DHashMap.traverse
+  {-# inline ftraverse #-}
+
 instance FTraversable Proxy where
   ftraverse _ Proxy = pure Proxy
   {-# inline ftraverse #-}
@@ -415,6 +403,10 @@ class FApply t => FApplicative t where
 
 -- | For use with DerivingVia
 newtype ViaFApplicative t f = ViaFApplicative { runViaFApplicative :: t f }
+
+instance (GEq f, Hashable (Some f)) => FApply (DHashMap f) where
+  fliftA2 = DHashMap.intersectionWith
+  {-# inline fliftA2 #-}
 
 instance FApply t => FFunctor (ViaFApplicative t) where
   ffmap = \f -> ViaFApplicative #. join (fliftA2 (const f)) .# runViaFApplicative
