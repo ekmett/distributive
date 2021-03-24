@@ -1,3 +1,4 @@
+{-# Language CPP #-}
 {-# Language AllowAmbiguousTypes #-}
 {-# Language ConstraintKinds #-}
 {-# Language DataKinds #-}
@@ -366,9 +367,18 @@ mirrorFin (Fin i) = UnsafeFin (int @n - i - 1)
 --
 -- >>> $$(validFin 34) :: Fin 40
 -- 34
+# if MIN_VERSION_template_haskell(2,17,0)
 validFin :: forall n m. (KnownNat n, Quote m, MonadFail m) => Int -> Code m (Fin n)
 validFin i
-  | i < 0 = Code $ fail $ "validFin: negative value"
+  | i < 0 = Code $ fail "validFin: negative value"
   | i < n = liftTyped (UnsafeFin i)
   | otherwise = Code $ fail $ "validFin: out of bounds: " ++ show i ++ " >= " ++ show n
   where n = int @n
+# else
+validFin :: forall n. KnownNat n => Int -> Q (TExp (Fin n))
+validFin i
+  | i < 0 = fail "validFin: negative value"
+  | i < n = liftTyped (UnsafeFin i)
+  | otherwise = fail $ "validFin: out of bounds: " ++ show i ++ " >= " ++ show n
+  where n = int @n
+# endif
