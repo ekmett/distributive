@@ -58,10 +58,11 @@ module Data.HKD
 , FApply(..)
 , FApplicative(..)
 , ViaFApplicative(..)
--- * FMonad
+-- * FBind
 , CoatKey(..)
 , runCoatKey
-, FMonad(..)
+, FBind(..)
+, FMonad
 , ViaFMonad(..)
 , fbindInner
 , fbindOuter
@@ -104,8 +105,8 @@ import Data.Traversable.WithIndex
 import Data.Kind
 import Data.Some.Newtype (Some(..))
 import Data.Void
+import GHC.Arr
 import GHC.Generics
-import GHC.Ix
 import Unsafe.Coerce
 
 type role F0 phantom
@@ -158,7 +159,7 @@ instance FApply (F1 a) where
   fliftA2 = \ f (F1 a) (F1 b) -> F1 (f a b)
   {-# inline fliftA2 #-}
 
-instance FMonad (F1 a) where
+instance FBind (F1 a) where
   fbind = \(F1 a) f -> F1 $ runCoatKey $ runF1 $ f a
   {-# inline fbind #-}
 
@@ -181,7 +182,7 @@ instance FTraversableWithIndex (Index '[a,b]) (F2 a b) where
     (f (UnsafeIndex 1) b)
   {-# inline iftraverse #-}
 
-instance FMonad (F2 a b) where
+instance FBind (F2 a b) where
   fbind = \(F2 a b) f ->
     F2
       (runCoatKey $ case f a of F2 x _ -> x)
@@ -208,7 +209,7 @@ instance FTraversableWithIndex (Index '[a,b,c]) (F3 a b c) where
     (f (UnsafeIndex 2) c)
   {-# inline iftraverse #-}
 
-instance FMonad (F3 a b c) where
+instance FBind (F3 a b c) where
   fbind = \(F3 a b c) f ->
     F3
       (runCoatKey $ case f a of F3 x _ _ -> x)
@@ -237,7 +238,7 @@ instance FTraversableWithIndex (Index '[a,b,c,d]) (F4 a b c d) where
     <*> f (UnsafeIndex 3) d
   {-# inline iftraverse #-}
 
-instance FMonad (F4 a b c d) where
+instance FBind (F4 a b c d) where
   fbind = \(F4 a b c d) f ->
     F4
       (runCoatKey $ case f a of F4 x _ _ _ -> x)
@@ -268,7 +269,7 @@ instance FTraversableWithIndex (Index '[a,b,c,d,e]) (F5 a b c d e) where
     <*> f (UnsafeIndex 4) e
   {-# inline iftraverse #-}
 
-instance FMonad (F5 a b c d e) where
+instance FBind (F5 a b c d e) where
   fbind = \(F5 a b c d e) f ->
     F5
       (runCoatKey $ case f a of F5 x _ _ _ _ -> x)
@@ -298,7 +299,7 @@ instance FApplicative (NT a) where
   fpure = \x -> NT \_ -> x
   {-# inline fpure #-}
 
-instance FMonad (NT r) where
+instance FBind (NT r) where
   fbind = \(NT ra) f -> NT \r -> runCoatKey $ runNT (f $ ra r) r
   {-# inline fbind #-}
 
@@ -382,7 +383,7 @@ instance FApplicative Lim where
   fpure x = Lim x
   {-# inline fpure #-}
 
-instance FMonad Lim where
+instance FBind Lim where
   fbind = \(Lim a) f -> Lim $ runCoatKey $ runLim $ f a
   {-# inline fbind #-}
 
@@ -425,7 +426,7 @@ pattern Dicts { runDicts } = Dicts' (F1 runDicts)
 deriving newtype instance Eq (f (Dict1 p)) => Eq (Dicts p f)
 deriving newtype instance Ord (f (Dict1 p)) => Ord (Dicts p f)
 
-instance FMonad (Dicts p) where
+instance FBind (Dicts p) where
   fbind = \(Dicts a) f -> Dicts $ runCoatKey $ runDicts (f a)
   {-# inline fbind #-}
 
@@ -473,7 +474,7 @@ instance FApplicative (FConstrained p) where
   fpure x = FConstrained x
   {-# inline fpure #-}
 
-instance FMonad (FConstrained p) where
+instance FBind (FConstrained p) where
   fbind = \(FConstrained a) f -> FConstrained $ runCoatKey $ runFConstrained $ f a
   {-# inline fbind #-}
 
@@ -562,7 +563,7 @@ instance Applicative f => FApplicative (HKD f x) where
   fpure f = HKD $ pure (F1 f)
   {-# inline fpure #-}
 
-instance Monad f => FMonad (HKD f x) where
+instance Monad f => FBind (HKD f x) where
   fbind = \(HKD fa) f -> HKD $ fmap (F1 #. runCoatKey .# runF1) $ fa >>= runHKD #. f .# runF1
   {-# inline fbind #-}
 
@@ -650,6 +651,8 @@ instance FApplicative f => Applicative (LKD f) where
   {-# inline (<*>) #-}
   pure = \a -> LKD $ fpure (Const a)
   {-# inline pure #-}
+
+
 
 instance FMonad f => Monad (LKD f) where
   (>>=) = \(LKD fa) f -> LKD $ fbindOuter fa \(Const a) -> ffmap coerce $ runLKD $ f a

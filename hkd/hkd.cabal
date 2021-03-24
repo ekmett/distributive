@@ -142,6 +142,7 @@ library
     , dependent-hashmap
     , dependent-sum
     , ghc-prim
+    , hashable
     , indexed-traversable >= 0.1 && < 0.2
     , mtl >= 2.2 && < 2.3
     , numeric-fin >= 0 && < 0.1

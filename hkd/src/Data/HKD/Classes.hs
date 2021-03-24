@@ -58,10 +58,11 @@ module Data.HKD.Classes
 , FApply(..)
 , FApplicative(..)
 , ViaFApplicative(..)
--- * FMonad
+-- * FBind
 , CoatKey(..)
 , runCoatKey
-, FMonad(..)
+, FBind(..)
+, FMonad
 , ViaFMonad(..)
 , fbindInner
 , fbindOuter
@@ -87,6 +88,8 @@ import Data.Functor.Product (Product (..))
 import Data.Functor.Reverse
 import Data.Functor.Sum (Sum (..))
 import Data.Functor.WithIndex
+import Data.GADT.Compare
+import Data.Hashable
 import Data.HKD.Orphans ()
 import Data.Kind (Type, Constraint)
 import qualified Data.Monoid as Monoid
@@ -109,38 +112,19 @@ infixr 0 ~>
 -- FFunctor
 -------------------------------------------------------------------------------
 
-{-
-class Functor f => CFunctor f where
-  liftCoerce :: ((forall a b. Coercible a b => Coercible (f a) (f b)) => r) -> r -> r
-
-instance CFunctor Identity where
-  liftCoerce a _ = a
-
-fmapCoerce :: forall f a b. (CFunctor f, Coercible a b) => f a -> f b
-fmapCoerce = liftCoerce @f coerce (fmap coerce)
-
-instance (CFunctor f, CFunctor g) => CFunctor (Compose f g) where
-  liftCoerce x y = coerce (liftCoerce @f (liftCoerce @g x y) y)
--}
-
--- type Nice f = (forall a b. (forall x. Coercible (a x) (b x)) => Coercible (f a) (f b)) :: Constraint
-
 class FFunctor (t :: (k -> Type) -> Type) where
   ffmap :: (f ~> g) -> t f -> t g
   default ffmap :: FTraversable t => (f ~> g) -> t f -> t g
   ffmap = ffmapDefault
   {-# inline ffmap #-}
 
- -- fliftCoerce :: (Nice t => r) -> r -> r
- -- default fliftCoerce :: Nice t => (Nice t => r) -> r -> r
- -- fliftCoerce r _ = r
-
---ffmapCoerce :: forall f a b. (FFunctor f, Coercible a b) => f a -> f b
---ffmapCoerce = fliftCoerce @_ @f coerce (ffmap coerce)
-
 gffmap :: (Generic1 t, FFunctor (Rep1 t)) => (f ~> g) -> t f -> t g
 gffmap f = to1 . ffmap f . from1
 {-# inline gffmap #-}
+
+instance FFunctor (DHashMap f) where
+  ffmap = DHashMap.map
+  {-# inline ffmap #-}
 
 instance FFunctor (DSum f) where
   ffmap f (g :=> h) = g :=> f h
@@ -162,14 +146,9 @@ instance (Functor f, FFunctor g) => FFunctor (Compose f g) where
   ffmap f = Compose #. fmap (ffmap f) .# getCompose
   {-# inline ffmap #-}
 
-  -- wait until liftCoerce is added to functor
-  -- fliftCoerce _ r = r
-
 instance (FFunctor f, FFunctor g) => FFunctor (Product f g) where
   ffmap f (Pair g h) = Pair (ffmap f g) (ffmap f h)
   {-# inline ffmap #-}
-
-  -- fliftCoerce x y = coerce $ fliftCoerce @_ @f (fliftCoerce @_ @g x y) y
 
 instance (FFunctor f, FFunctor g) => FFunctor (Sum f g) where
   ffmap f (InL g) = InL (ffmap f g)
@@ -233,6 +212,12 @@ instance FFoldable (DSum f) where
   ffoldMap f (_ :=> h) = f h
   {-# inline ffoldMap #-}
   flengthAcc n _ = n + 1
+  {-# inline flengthAcc #-}
+
+instance FFoldable (DHashMap f) where
+  ffoldMap = DHashMap.foldMap
+  {-# inline ffoldMap #-}
+  flengthAcc n m = n + DHashMap.size m
   {-# inline flengthAcc #-}
 
 instance FFoldable Proxy where
@@ -341,6 +326,10 @@ instance FTraversable (DSum f) where
   ftraverse f (g :=> h) = (g :=>) <$> f h
   {-# inline ftraverse #-}
 
+instance FTraversable (DHashMap f) where
+  ftraverse = DHashMap.traverse
+  {-# inline ftraverse #-}
+
 instance FTraversable Proxy where
   ftraverse _ Proxy = pure Proxy
   {-# inline ftraverse #-}
@@ -417,6 +406,10 @@ class FApply t => FApplicative t where
 
 -- | For use with DerivingVia
 newtype ViaFApplicative t f = ViaFApplicative { runViaFApplicative :: t f }
+
+instance (GEq f, Hashable (Some f)) => FApply (DHashMap f) where
+  fliftA2 = DHashMap.intersectionWith
+  {-# inline fliftA2 #-}
 
 instance FApply t => FFunctor (ViaFApplicative t) where
   ffmap = \f -> ViaFApplicative #. join (fliftA2 (const f)) .# runViaFApplicative
@@ -545,31 +538,32 @@ instance FTraversable f => FTraversable (Monoid.Ap f) where
   ftraverse = \f -> fmap Monoid.Ap . ftraverse f .# Monoid.getAp
   {-# inline ftraverse #-}
 
--- * FMonad
+-- * FBind
 
 newtype CoatKey a x y = CoatKey (x ~ y => a x)
 
 runCoatKey :: CoatKey a x x -> a x
 runCoatKey (CoatKey a) = a
 
-class FApplicative f => FMonad f where
+class FApply f => FBind f where
   fbind :: f a -> (forall x. a x -> f (CoatKey b x)) -> f b
 
 -- | 'fbind' indexed only on the inner layer
-fbindInner :: FMonad f => f a -> (forall x. a x -> f b) -> f b
+fbindInner :: FBind f => f a -> (forall x. a x -> f b) -> f b
 fbindInner = \fa f -> fbind fa \a -> ffmap CoatKey $ f a
 {-# inline fbindInner #-}
 
 -- | 'fbind' indexed only on the outer layer
-fbindOuter :: FMonad f => f a -> (forall x. a x -> f (Const (b x))) -> f b
+fbindOuter :: FBind f => f a -> (forall x. a x -> f (Const (b x))) -> f b
 fbindOuter = \fa f -> fbind fa \a -> ffmap (CoatKey . getConst) $ f a
-{-# inline fbindOuter #-}
+
+class (FApplicative f, FBind f) => FMonad f
 
 fliftM :: FMonad f => (a ~> b) -> f a -> f b
 fliftM = \f fa -> fbind fa \a -> fpure $ CoatKey $ f a
 {-# inline fliftM #-}
 
-fliftM2 :: FMonad f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
+fliftM2 :: FBind f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
 fliftM2 = \f fa fb -> fbind fa \a -> ffmap (\b -> CoatKey $ f a b) fb
 {-# inline fliftM2 #-}
 
@@ -597,6 +591,10 @@ instance FFunctorWithIndex f (DSum f) where
   ifmap f (g :=> h) = g :=> f g h
   {-# inline ifmap #-}
 
+instance FFunctorWithIndex f (DHashMap f) where
+  ifmap = DHashMap.mapWithKey
+  {-# inline ifmap #-}
+
 ifmapDefault :: FTraversableWithIndex i f => (forall x. i x -> a x -> b x) -> f a -> f b
 ifmapDefault = \ f -> runIdentity #. iftraverse (\i a -> Identity (f i a))
 {-# inline ifmapDefault #-}
@@ -615,11 +613,19 @@ instance FFoldableWithIndex f (DSum f) where
   iffoldMap f (g :=> h) = f g h
   {-# inline iffoldMap #-}
 
+instance FFoldableWithIndex f (DHashMap f) where
+  iffoldMap = DHashMap.foldMapWithKey
+  {-# inline iffoldMap #-}
+
 class (FFunctorWithIndex i f, FFoldableWithIndex i f, FTraversable f) => FTraversableWithIndex i f | f -> i where
   iftraverse :: Applicative m => (forall x. i x -> a x -> m (b x)) -> f a -> m (f b)
 
 instance FTraversableWithIndex f (DSum f) where
   iftraverse f (g :=> h) = (g :=>) <$> f g h
+  {-# inline iftraverse #-}
+
+instance FTraversableWithIndex f (DHashMap f) where
+  iftraverse = DHashMap.traverseWithKey
   {-# inline iftraverse #-}
 
 -- | Eq constraints on `k`
@@ -784,7 +790,6 @@ instance FFoldableWithIndex V1 (Constant e) where
 instance FTraversableWithIndex V1 (Constant e) where
   iftraverse = \_ -> pure .# (Constant . getConstant)
   {-# inline iftraverse #-}
-
 
 -- * K1
 

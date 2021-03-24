@@ -1481,9 +1481,11 @@ fbindRep :: FRepresentable f => f a -> (a ~> f % CoatKey b) -> f b
 fbindRep = \fa f -> fdistrib (DFBind fa f) \(DFBind (F1 a) ab) -> runCoatKey $ runF1 (ab a)
 {-# inline fbindRep #-}
 
-instance FRepresentable f => FMonad (FDist f) where
+instance FRepresentable f => FBind (FDist f) where
   fbind = \(FDist fa) f -> FDist $ fbindRep fa (runFDist #. f)
   {-# inline fbind #-}
+
+instance FRepresentable f => FMonad (FDist f)
 
 faskRep :: FRepresentable f => f (FLog f)
 faskRep = ftabulate id
