@@ -64,6 +64,7 @@ module Data.HKD.Classes
 , CoatKey(..)
 , runCoatKey
 , FBind(..)
+, ViaFBind(..)
 , FMonad
 , ViaFMonad(..)
 , fbindInner
@@ -565,27 +566,34 @@ fbindOuter :: FBind f => f a -> (forall x. a x -> f (Const (b x))) -> f b
 fbindOuter = \fa f -> fbind fa \a -> ffmap (\x -> CoatKey (getConst x)) $ f a
 {-# inline fbindOuter #-}
 
+fliftM2 :: FBind f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
+fliftM2 = \f fa fb -> fbind fa \a -> ffmap (\b -> CoatKey $ f a b) fb
+{-# inline fliftM2 #-}
+
+newtype ViaFBind f a = ViaFBind { runViaFBind :: f a }
+  deriving newtype FFunctor
+
+-- | Derive 'FApply' from 'fbind' and 'ffmap'
+instance FBind f => FApply (ViaFBind f) where
+  fliftA2 = \f (ViaFBind fa) -> ViaFBind #. fliftM2 f fa .# runViaFBind
+  {-# inline fliftA2 #-}
+
 class (FApplicative f, FBind f) => FMonad f
 
 fliftM :: FMonad f => (a ~> b) -> f a -> f b
 fliftM = \f fa -> fbind fa \a -> fpure $ CoatKey $ f a
 {-# inline fliftM #-}
 
-fliftM2 :: FBind f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
-fliftM2 = \f fa fb -> fbind fa \a -> ffmap (\b -> CoatKey $ f a b) fb
-{-# inline fliftM2 #-}
-
 newtype ViaFMonad f a = ViaFMonad { runViaFMonad :: f a }
 
--- | Derive FFunctor from fbind and fpure
+-- | Derive 'FFunctor' from 'fbind' and 'fpure'
 instance FMonad f => FFunctor (ViaFMonad f) where
   ffmap = \f -> ViaFMonad #. fliftM f .# runViaFMonad
   {-# inline ffmap #-}
 
--- | Derive FApply from fbind and ffmap
-instance FMonad f => FApply (ViaFMonad f) where
-  fliftA2 = \f (ViaFMonad fa) -> ViaFMonad #. fliftM2 f fa .# runViaFMonad
-  {-# inline fliftA2 #-}
+-- | Derive 'FApply' from 'fbind' and 'ffmap'
+deriving via (ViaFBind (f :: (k -> Type) -> Type)) instance FMonad f => FApply (ViaFMonad f)
+
 
 instance (GEq k, Hashable (Some k)) => FBind (DHashMap k) where
   fbind = \m f -> DHashMap.mapMaybeWithKey (\k -> fmap runCoatKey . DHashMap.lookup k . f) m
