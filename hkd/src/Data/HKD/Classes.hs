@@ -581,6 +581,10 @@ instance FMonad f => FApply (ViaFMonad f) where
   fliftA2 = \f (ViaFMonad fa) -> ViaFMonad #. fliftM2 f fa .# runViaFMonad
   {-# inline fliftA2 #-}
 
+instance (GEq k, Hashable (Some k)) => FBind (DHashMap k) where
+  fbind = \m f -> DHashMap.mapMaybeWithKey (\k -> fmap runCoatKey . DHashMap.lookup k . f) m
+  {-# inline fbind #-}
+
 -- * WithIndex
 
 class FFunctor f => FFunctorWithIndex i f | f -> i where
