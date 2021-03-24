@@ -60,7 +60,7 @@ module Data.HKD
 , ViaFApplicative(..)
 -- * FBind
 , FBind(..)
-, FMonaod
+, FMonad
 , ViaFMonad(..)
 , fbindInner
 , fbindOuter
