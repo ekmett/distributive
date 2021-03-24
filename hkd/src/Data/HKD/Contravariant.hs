@@ -325,7 +325,8 @@ class FSemideciding q t where
     => (s ~> t)
     -> (forall b. q b => f b)
     -> f s
-  fsemideciding = \ _ _ -> undefined
+  fsemideciding = \ st -> fsemideciding @q (from1 . st)
+  {-# inline fsemideciding #-}
 
 instance (FSemideciding q s, FSemideciding q t) => FSemideciding q (Product s t)
 instance (FSemideciding q s, FSemideciding q t) => FSemideciding q (Sum s t)
