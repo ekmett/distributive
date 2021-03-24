@@ -30,6 +30,7 @@ common base
     , deriving-compat
     , exceptions
     , hashable
+    , hkd
     , monad-control
     , primitive
     , transformers

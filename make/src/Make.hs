@@ -2,10 +2,14 @@
 {-# Language ConstraintKinds #-}
 {-# Language DefaultSignatures #-}
 {-# Language DeriveAnyClass #-}
+-- {-# Language DeriveDataTypeable #-}
+{-# Language DeriveGeneric #-}
 {-# Language DerivingStrategies #-}
 {-# Language DerivingVia #-}
 {-# Language FlexibleContexts #-}
 {-# Language FlexibleInstances #-}
+{-# Language GeneralizedNewtypeDeriving #-}
+{-# Language PolyKinds #-}
 {-# Language FunctionalDependencies #-}
 {-# Language GADTs #-}
 {-# Language ImportQualifiedPost #-}
@@ -62,26 +66,23 @@ import Data.Dependent.HashMap qualified as DHM
 import Data.Functor.Classes
 import Data.GADT.Compare
 import Data.GADT.Show
+import Data.HKD
 import Data.Hashable
 import Data.HashMap.Lazy (HashMap)
 import qualified Data.HashMap.Lazy as HM
 import Data.HashSet 
 import qualified Data.HashSet as HS
+import Data.Kind
 import Data.Maybe (fromMaybe)
 import Data.Primitive.MVar
 import Data.Primitive.MutVar
 import Data.Some
 import Data.Typeable
+import GHC.Generics
 import Text.Show.Deriving
 
-type f ~> g = ∀ a. f a -> g a
-
-infixr 0 ~>
-
-newtype Nat f m = Nat { runNat :: f ~> m }
-
 -- McBride style indexed Cont
-newtype TaskT f m a 
+newtype TaskT f m (a :: Type)
   = TaskT { unTaskT :: (f ~> m) -> m a }
   deriving 
     ( Functor, Applicative, Monad
@@ -90,10 +91,10 @@ newtype TaskT f m a
     , MonadThrow
     , MonadCatch
     , MonadMask
-    ) via ReaderT (Nat f m) m
+    ) via ReaderT (NT f m) m
 
-deriving via (ReaderT (Nat f m) m) instance MonadBase t m => MonadBase t (TaskT f m)
-deriving via (ReaderT (Nat f m) m) instance MonadBaseControl t m => MonadBaseControl t (TaskT f m)
+deriving via (ReaderT (NT f m) m) instance MonadBase t m => MonadBase t (TaskT f m)
+deriving via (ReaderT (NT f m) m) instance MonadBaseControl t m => MonadBaseControl t (TaskT f m)
 
 instance MonadTrans (TaskT f) where
   lift m = TaskT \_ -> m
@@ -174,8 +175,19 @@ memoise sv rules key = readMutVar sv >>= \v -> case DHM.lookup key v of
         (Just vv', _) -> (s, readMVar vv')
 
 newtype Cyclic f = Cyclic (Some f)
-  deriving stock Show
-  deriving anyclass Exception
+  deriving stock (Eq, Ord, Show, Read, Generic, Generic1)
+  deriving anyclass (Exception, FTraversable)
+  deriving newtype
+  ( FFunctor
+  , FFoldable
+  , FFunctorWithIndex U1
+  , FFoldableWithIndex U1
+  )
+
+deriving newtype instance Hashable (Some f) => Hashable (Cyclic f)
+
+instance FTraversableWithIndex U1 Cyclic where
+  iftraverse f (Cyclic g) = Cyclic <$> iftraverse f g
 
 data MemoEntry s a
   = Started !ThreadId !(MVar s (Maybe a))
