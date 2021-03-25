@@ -23,11 +23,11 @@ import Control.Monad.Fix
 import Control.Monad.Zip
 import Control.Monad.Reader.Class
 import Data.Coerce
+import Data.Foldable
 import Data.Functor.WithIndex
 import Data.Machine.Moore
 import Data.Profunctor
 import Data.Profunctor.Unsafe
-import Data.Sequence (Seq(..), ViewL(..), viewl)
 import Data.List.NonEmpty
 import Data.Rep
 import GHC.Generics
@@ -167,9 +167,7 @@ logMealy = Mealy \a -> Moore a (h a) where
   h a = \((a <>) -> b) -> Moore b (h b)
 {-# inline logMealy #-}
 
--- | Fast forward a mealy machine forward
-driveMealy :: Mealy a b -> Seq a -> Mealy a b
-driveMealy m xs = case viewl xs of
-  y :< ys -> case runMealy m y of
-    Moore _ n -> driveMealy (Mealy n) ys
-  EmptyL -> m
+driveMealy :: Foldable f => Mealy a b -> f a -> Mealy a b
+driveMealy = foldl' \(Mealy m) a -> case m a of
+  Moore _ f -> Mealy f
+{-# inline driveMealy #-}

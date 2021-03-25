@@ -105,9 +105,14 @@ library
     Data.HKD
     Data.HKD.Classes
     Data.HKD.Contravariant
+    Data.HKD.Profunctor
+    Data.HKD.Profunctor.Unsafe
     Data.HKD.Index
     Data.HKD.Index.Internal
     Data.Function.Coerce
+
+  -- TODO: remove Data.Function.Coerce and use Data.Profunctor.Unsafe
+  --  Data.HKD.Profunctor
 
   ghc-options: -Wall -fexpose-all-unfoldings -fspecialize-aggressively
 
