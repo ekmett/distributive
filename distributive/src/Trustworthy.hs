@@ -1,4 +1,5 @@
 {-# LANGUAGE Unsafe #-}
+
 -- | 
 -- Copyright   : (c) Edward Kmett 2021
 -- License     : BSD-2-Clause OR Apache-2.0
@@ -20,4 +21,5 @@
 -- extension, but every time I've asked for it, I've been
 -- told this is against the spirit of the extension, which
 -- as far as I can tell exists solely to make my life hell.
+
 module Trustworthy () where

@@ -24,7 +24,7 @@ import Control.Monad.Zip
 import Data.Coerce
 import Data.Complex
 import Data.Data
-import Numeric.Fin.Internal
+import Data.Dependent.Sum
 import Data.Function.Coerce
 import Data.Foldable (fold)
 import Data.Foldable.WithIndex
@@ -56,6 +56,7 @@ import Data.Void
 import GHC.Generics
 import GHC.TypeLits
 import Numeric
+import Numeric.Fin.Internal
 import Unsafe.Coerce
 
 #ifdef MIN_VERSION_tagged
@@ -2157,3 +2158,14 @@ instance Representable w => Representable (Cokleisli w a) where
   tabulate = Cokleisli
   {-# inline tabulate #-}
 #endif
+
+type Variant f = (,) (Log f)
+type FVariant f = DSum (FLog f)
+
+zapWith :: Indexable f => (a -> b -> r) -> (Log f, a) -> f b -> r
+zapWith k (i, f) g = k f (index g i)
+{-# inline zapWith #-}
+
+fzapWith :: FIndexable f => (forall x. a x -> b x -> r) -> DSum (FLog f) a -> f b -> r
+fzapWith k (i :=> f) g = k f (findex g i)
+{-# inline fzapWith #-}

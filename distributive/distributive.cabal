@@ -43,6 +43,7 @@ library
     , comonad ^>= 6
     , containers
     , contravariant ^>= 1.5.3
+    , dependent-sum ^>= 0.7.1
     , ghc-prim
     , hkd ^>= 0.2
     , indexed-traversable ^>= 0.1
@@ -68,7 +69,6 @@ library
     Data.HKD.Record.Internal
     Data.HKD.Rep
     Data.HKD.Rep.Endo
-    Data.HKD.Variant
     Data.Machine.Mealy
     Data.Machine.Moore
     Control.Comonad.Rep.Store

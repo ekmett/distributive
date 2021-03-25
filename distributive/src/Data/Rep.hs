@@ -120,6 +120,9 @@ module Data.Rep
 -- *** As right adjoints
 , leftAdjunctRep
 , rightAdjunctRep
+-- * Zapping Adjunctions
+, Variant
+, zapWith
 ) where
 
 import Data.Rep.Internal

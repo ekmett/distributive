@@ -57,6 +57,10 @@ module Data.HKD.Rep
 -- * Constrained Representable operations
 , FAll(..)
 , cfdistrib
+
+-- * Zapping adjunctions
+, FVariant
+, fzapWith
 ) where
 
 import Data.Rep.Internal
