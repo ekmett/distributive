@@ -1,3 +1,4 @@
+{-# Language CPP #-}
 {-# Language Safe #-}
 
 -- |
@@ -16,6 +17,9 @@ module Data.Machine.Moore
 ) where
 
 import Control.Applicative
+#ifdef MIN_VERSION_comonad
+import Control.Comonad
+#endif
 import Control.Monad.Fix
 import Control.Monad.Zip
 import Control.Monad.Reader.Class
@@ -25,14 +29,14 @@ import GHC.Generics
 import Numeric
 import Prelude
 
--- data Moore a b where
---   Moore :: Representable f => f b -> (a -> Endo f) -> Log f -> Moore a b
-
--- [a] -> b
-
 data Moore a b = Moore b (a -> Moore a b)
   deriving stock (Functor, Generic, Generic1)
-  deriving (Applicative, Monad, MonadFix, MonadZip, MonadReader [a], FunctorWithIndex [a]) via Dist (Moore a)
+  deriving 
+  ( Applicative, Monad, MonadFix, MonadZip, MonadReader [a], FunctorWithIndex [a]
+#ifdef MIN_VERSION_comonad
+  , Comonad, ComonadApply
+#endif
+  ) via Dist (Moore a)
   deriving (Semigroup, Monoid, Num, Fractional, Floating)  via Dist (Moore a) b
 
 instance Indexable (Moore a) where

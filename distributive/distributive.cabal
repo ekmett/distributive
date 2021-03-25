@@ -44,11 +44,18 @@ flag tagged
     .
     Disabling this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
 
+flag comonad
+  manual: True
+  default: True
+  description:
+    You can disable the use of the `comonad` package using `-f-comonad`.
+    .
+    Disabling this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
+
 library
   build-depends:
     , base >= 4.10 && < 5
     , base-orphans >= 0.5.2 && < 1
-    , comonad ^>= 5.1
     , contravariant ^>= 1.5.3
     , ghc-prim
     , hkd ^>= 0.2
@@ -75,7 +82,6 @@ library
     Data.HKD.Variant
     Data.Machine.Mealy
     Data.Machine.Moore
-    Control.Comonad.Rep.Store
     Control.Monad.Rep.Reader
     Control.Monad.Rep.State
 
@@ -83,6 +89,10 @@ library
 
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1
+
+  if flag(comonad)
+    build-depends: comonad ^>= 6
+    exposed-modules: Control.Comonad.Rep.Store
 
   ghc-options: -Wall -fexpose-all-unfoldings -fspecialize-aggressively
 

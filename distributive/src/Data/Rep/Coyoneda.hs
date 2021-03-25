@@ -1,3 +1,4 @@
+{-# Language CPP #-}
 {-# Language Safe #-}
 
 -- |
@@ -25,6 +26,10 @@ import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Rep
 import Text.Read hiding (lift)
+#ifdef MIN_VERSION_comonad
+import Control.Comonad
+import Control.Comonad.Trans.Class
+#endif
 
 type role Coyoneda representational nominal
 data Coyoneda f a where
@@ -171,4 +176,14 @@ hoistCoyoneda :: (forall a. f a -> g a) -> (Coyoneda f b -> Coyoneda g b)
 hoistCoyoneda = \f (CoyonedaDist g x) -> CoyonedaDist g (f x)
 {-# inline hoistCoyoneda #-}
 
--- instance ComonadTrans Coyoneda where lower (Coyoneda g fa) = fmap (index g) fa
+#ifdef MIN_VERSION_comonad
+instance ComonadTrans Coyoneda where
+  lower (CoyonedaDist g fa) = index g <$> fa
+  {-# inline lower #-}
+
+instance Comonad f => Comonad (Coyoneda f) where
+  extend k (CoyonedaDist f v) = Coyoneda id $ extend (k . CoyonedaDist f) v
+  {-# INLINE extend #-}
+  extract (CoyonedaDist f v) = index f (extract v)
+  {-# INLINE extract #-}
+#endif

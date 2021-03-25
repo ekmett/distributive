@@ -17,8 +17,6 @@ module Data.Rep.Internal where
 import Control.Applicative
 import Control.Applicative.Backwards
 import Control.Arrow
-import Control.Comonad
-import Control.Comonad.Trans.Traced
 import Control.Monad.Fix
 import Control.Monad.Reader
 import Control.Monad.Trans.Identity
@@ -60,11 +58,13 @@ import GHC.TypeLits
 import Numeric
 import Unsafe.Coerce
 
--- import Control.Comonad
--- import Control.Comonad.Traced (TracedT(..))
-
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
+#endif
+
+#ifdef MIN_VERSION_comonad
+import Control.Comonad
+import Control.Comonad.Trans.Traced
 #endif
 
 -- |
@@ -103,7 +103,6 @@ class Indexable f where
   {-# inline index #-}
 
 class (Indexable f, Functor f) => Representable f where
-
   -- | Defaults to 'tabulateLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'tabulateGeneric'
   tabulate :: (Log f -> a) -> f a
   default tabulate :: DefaultTabulate f => (Log f -> a) -> f a
@@ -542,8 +541,6 @@ instance Representable f => Representable (Kleisli f a) where
   {-# inline scatter #-}
   {-# inline tabulate #-}
 
--- instance Representable f => Representable (Cokleisli f a)
-
 #ifdef MIN_VERSION_tagged
 instance Indexable (Tagged r)
 instance Representable (Tagged r)
@@ -829,13 +826,23 @@ mzipWithRep = liftR2
 
 -- * Comonad
 
--- instance (Representable f, Monoid (Log f)) => Comonad (Dist f) where
---  extract = extractRep
---  {-# inline extract #-}
---  duplicate = duplicateRep
---  {-# inline duplicate #-}
---  extend = extendRep
---  {-# inline extend #-}
+#ifdef MIN_VERSION_comonad
+instance (Representable f, Monoid (Log f)) => Comonad (Dist f) where
+  extract = extractRep
+  {-# inline extract #-}
+  duplicate = duplicateRep
+  {-# inline duplicate #-}
+  extend = extendRep
+  {-# inline extend #-}
+
+instance (Representable f, Monoid (Log f)) => ComonadApply (Dist f) where
+  (<@>) = apRep
+  {-# inline (<@>) #-}
+  (<@) = const
+  {-# inline (<@) #-}
+  (@>) = \_ x -> x
+  {-# inline (@>) #-}
+#endif
 
 -- | A default definition for 'extract' from @Comonad@ in terms of 'Representable'
 extractRep :: (Indexable f, Monoid (Log f)) => f a -> a
@@ -948,6 +955,8 @@ logPath :: forall f. (Representable f, Traversable f) => Log f -> Path
 logPath = index (runTrail (traverse id $ pureRep @f end) id)
 {-# inline logPath #-}
 
+#ifdef MIN_VERSION_comonad
+
 instance (Representable f, Comonad f) => Semigroup (Logarithm f) where
   (<>) = \(Logarithm f) (Logarithm g) -> Logarithm \x -> f $ g $ duplicate x
   {-# inline (<>) #-}
@@ -955,6 +964,8 @@ instance (Representable f, Comonad f) => Semigroup (Logarithm f) where
 instance (Representable f, Comonad f) => Monoid (Logarithm f) where
   mempty = Logarithm extract
   {-# inline mempty #-}
+
+#endif
 
 -- unfortunate orphans, caused by having @hkd@ export the data type
 -- rather than making it up here.
@@ -2130,6 +2141,7 @@ gtabulateFin
 gtabulateFin f = to1 $ gunsafeTabulateFin f
 {-# inline gtabulateFin #-}
 
+#ifdef MIN_VERSION_comonad
 instance Indexable w => Indexable (TracedT m w) where
   type Log (TracedT m w) = (Log w, m)
   index (TracedT wma) (lw,m) = index wma lw m
@@ -2144,3 +2156,4 @@ instance Indexable w => Indexable (Cokleisli w a) where
 instance Representable w => Representable (Cokleisli w a) where
   tabulate = Cokleisli
   {-# inline tabulate #-}
+#endif
