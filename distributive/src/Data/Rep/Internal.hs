@@ -948,6 +948,14 @@ logPath :: forall f. (Representable f, Traversable f) => Log f -> Path
 logPath = index (runTrail (traverse id $ pureRep @f end) id)
 {-# inline logPath #-}
 
+instance (Representable f, Comonad f) => Semigroup (Logarithm f) where
+  (<>) = \(Logarithm f) (Logarithm g) -> Logarithm \x -> f $ g $ duplicate x
+  {-# inline (<>) #-}
+
+instance (Representable f, Comonad f) => Monoid (Logarithm f) where
+  mempty = Logarithm extract
+  {-# inline mempty #-}
+
 -- unfortunate orphans, caused by having @hkd@ export the data type
 -- rather than making it up here.
 instance (Representable f, Traversable f) => Eq (Logarithm f) where
@@ -2125,7 +2133,7 @@ gtabulateFin f = to1 $ gunsafeTabulateFin f
 instance Indexable w => Indexable (TracedT m w) where
   type Log (TracedT m w) = (Log w, m)
   index (TracedT wma) (lw,m) = index wma lw m
-  
+
 instance Representable w => Representable (TracedT m w) where
 
 instance Indexable w => Indexable (Cokleisli w a) where
