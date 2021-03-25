@@ -1,10 +1,5 @@
 {-# Language CPP #-}
 {-# Language Trustworthy #-}
-{-# options_ghc -fenable-rewrite-rules -fno-warn-orphans #-}
-
-#ifndef MIN_VERSION_base
-#define MIN_VERSION_base(_x,_y,_z) 1
-#endif
 
 -- |
 -- Copyright   : (c) Edward Kmett 2011-2021,
@@ -43,6 +38,7 @@ import Control.Monad.State.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Writer.Class as Writer
 import Data.Coerce
+import Data.Data
 import Data.Function.Coerce
 import Data.Functor.Contravariant
 import Data.Functor.Identity
@@ -61,6 +57,7 @@ pattern Reader { runReader } <- ReaderT (Coerce runReader)
 -- This monad in turn is also representable if @m@ is 'Representable'.
 type role ReaderT representational nominal nominal
 newtype ReaderT f m b = ReaderRepT { runReaderRepT :: f (m b) }
+  deriving (Generic, Generic1, Data)
 
 pattern ReaderT :: Representable f => (Log f -> m a) -> ReaderT f m a
 pattern ReaderT { runReaderT } = ReaderRepT (Tabulate runReaderT)

@@ -1,10 +1,6 @@
 {-# Language CPP #-}
 {-# Language Trustworthy #-}
 
-#ifndef MIN_VERSION_base
-#define MIN_VERSION_base(_x,_y,_z) 1
-#endif
-
 -- |
 -- Copyright   : (c) Edward Kmett 2011-2021,
 --               (c) Sjoerd Visscher 2011
@@ -46,11 +42,13 @@ import Control.Monad.State.Class
 import Control.Monad.Trans.Class
 import Control.Monad.Writer.Class
 import Data.Coerce
+import Data.Data
 import Data.Function.Coerce
 import Data.Functor.Contravariant
 import Data.Functor.Identity
 import Data.Rep
 import Data.HKD
+import GHC.Generics
 
 -- | A memoized state monad parameterized by a 'Representable' functor @g@, where
 -- 'Log' g is the state to carry.
@@ -112,7 +110,14 @@ mapState f = mapStateT (Identity #. f .# runIdentity)
 type role StateT nominal nominal nominal
 newtype StateT g m a = StateDistT
   { runStateDistT :: g (m (a, Log g))
-  }
+  } deriving (Generic) -- Generic1 would require me to flip the (,) breaking State compat
+
+deriving stock instance
+  ( Typeable g
+  , Typeable m
+  , Typeable a
+  , Data (g (m (a, Log g)))
+  ) => Data (StateT g m a)
 
 -- | Emulate a traditional state monad
 pattern StateT :: Representable g => (Log g -> m (a, Log g)) -> StateT g m a

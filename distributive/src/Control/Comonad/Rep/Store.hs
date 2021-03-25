@@ -1,9 +1,4 @@
-{-# Language FlexibleContexts #-}
-{-# Language FlexibleInstances #-}
-{-# Language MultiParamTypeClasses #-}
 {-# Language Safe #-}
-{-# Language TypeFamilies #-}
-{-# Language UndecidableInstances #-}
 
 -- |
 -- Copyright   : (c) Edward Kmett 2011-2021
@@ -20,16 +15,14 @@
 
 module Control.Comonad.Rep.Store
 ( Store
-, store
+, pattern Store
 , runStore
-, StoreT(..)
-, storeT
+, StoreT(StoreT, ..)
 , runStoreT
 , ComonadStore(..)
 ) where
 
 import Control.Comonad
--- import Control.Comonad.Cofree.Class
 import Control.Comonad.Env.Class
 import Control.Comonad.Hoist.Class
 import Control.Comonad.Store.Class
@@ -50,19 +43,18 @@ type Store g = StoreT g Identity
 
 -- | Construct a store comonad computation from a function and a current index.
 -- (The inverse of 'runStore'.)
-store :: Representable g
-      => (Log g -> a)  -- ^ computation
-      -> Log g         -- ^ index
-      -> Store g a
-store = storeT . Identity
-{-# inline store #-}
+pattern Store :: Representable g => (Log g -> a) -> Log g -> Store g a
+pattern Store f l = StoreDist (Tabulate f) l
+
+pattern StoreDist :: g a -> Log g -> Store g a
+pattern StoreDist f l = StoreDistT (Identity f) l
 
 -- | Unwrap a store comonad computation as a function and a current index.
 -- (The inverse of 'store'.)
 runStore :: Representable g
          => Store g a           -- ^ a store to access
          -> (Log g -> a, Log g) -- ^ initial state
-runStore (StoreT (Identity ga) k) = (index ga, k)
+runStore (StoreDistT (Identity ga) k) = (index ga, k)
 {-# inline runStore #-}
 
 -- ---------------------------------------------------------------------------
@@ -71,9 +63,17 @@ runStore (StoreT (Identity ga) k) = (index ga, k)
 --   * @g@ - A representable functor used to memoize results for an index @Log g@
 --
 --   * @w@ - The inner comonad.
-data StoreT g w a = StoreT (w (g a)) (Log g)
+data StoreT g w a = StoreDistT (w (g a)) (Log g)
   deriving stock (Generic, Generic1, Functor, Foldable, Traversable)
   -- deriving anyclass (FunctorWithIndex (Log w, Log g))
+  
+pattern StoreT :: (Functor w, Representable g) => w (Log g -> a) -> Log g -> StoreT g w a
+pattern StoreT w s <- StoreDistT (fmap index -> w) s where
+  StoreT w s = StoreDistT (fmap tabulate w) s
+
+runStoreT :: (Functor w, Indexable g) => StoreT g w a -> (w (Log g -> a), Log g)
+runStoreT (StoreDistT w s) = (index <$> w, s)
+{-# inline runStoreT #-}
 
 deriving stock instance 
   ( Typeable g
@@ -87,62 +87,54 @@ instance
   ( FunctorWithIndex i w
   , FunctorWithIndex j g
   ) => FunctorWithIndex (i, j) (StoreT g w) where
-  imap f (StoreT wg lg) = StoreT (imap (\i -> imap \j -> f (i,j)) wg) lg
+  imap f (StoreDistT wg lg) = StoreDistT (imap (\i -> imap \j -> f (i,j)) wg) lg
 
 instance 
   ( FoldableWithIndex i w
   , FoldableWithIndex j g
   ) => FoldableWithIndex (i, j) (StoreT g w) where
-  ifoldMap f (StoreT wg _) = ifoldMap (\i -> ifoldMap \j -> f (i,j)) wg
+  ifoldMap f (StoreDistT wg _) = ifoldMap (\i -> ifoldMap \j -> f (i,j)) wg
 
 instance 
   ( TraversableWithIndex i w
   , TraversableWithIndex j g
   ) => TraversableWithIndex (i, j) (StoreT g w) where
-  itraverse f (StoreT wg lg) = (`StoreT` lg) <$> itraverse (\i -> itraverse \j -> f (i,j)) wg
-
-storeT :: (Functor w, Representable g) => w (Log g -> a) -> Log g -> StoreT g w a
-storeT = StoreT . fmap tabulate
-{-# inline storeT #-}
-
-runStoreT :: (Functor w, Indexable g) => StoreT g w a -> (w (Log g -> a), Log g)
-runStoreT (StoreT w s) = (index <$> w, s)
-{-# inline runStoreT #-}
+  itraverse f (StoreDistT wg lg) = (`StoreDistT` lg) <$> itraverse (\i -> itraverse \j -> f (i,j)) wg
 
 instance (Comonad w, Representable g, Log g ~ s) => ComonadStore s (StoreT g w) where
-  pos (StoreT _ s) = s
+  pos (StoreDistT _ s) = s
   {-# inline pos #-}
-  peek s (StoreT w _) = extract w `index` s
+  peek s (StoreDistT w _) = extract w `index` s
   {-# inline peek #-}
-  peeks f (StoreT w s) = extract w `index` f s
+  peeks f (StoreDistT w s) = extract w `index` f s
   {-# inline peeks #-}
-  seek s (StoreT w _) = StoreT w s
+  seek s (StoreDistT w _) = StoreDistT w s
   {-# inline seek #-}
-  seeks f (StoreT w s) = StoreT w (f s)
+  seeks f (StoreDistT w s) = StoreDistT w (f s)
   {-# inline seeks #-}
 
 instance (ComonadApply w, Semigroup (Log g), Representable g) => ComonadApply (StoreT g w) where
-  StoreT ff m <@> StoreT fa n = StoreT (apRep <$> ff <@> fa) (m <> n)
+  StoreDistT ff m <@> StoreDistT fa n = StoreDistT (apRep <$> ff <@> fa) (m <> n)
   {-# inline (<@>) #-}
 
 instance (Applicative w, Monoid (Log g), Representable g) => Applicative (StoreT g w) where
-  pure a = StoreT (pure (pureRep a)) mempty
+  pure a = StoreDistT (pure (pureRep a)) mempty
   {-# inline pure #-}
-  StoreT ff m <*> StoreT fa n = StoreT (apRep <$> ff <*> fa) (m `mappend` n)
+  StoreDistT ff m <*> StoreDistT fa n = StoreDistT (apRep <$> ff <*> fa) (m `mappend` n)
   {-# inline (<*>) #-}
 
 instance (Comonad w, Representable g) => Comonad (StoreT g w) where
-  duplicate (StoreT wf s) = StoreT (extend (tabulate . StoreT) wf) s
+  duplicate (StoreDistT wf s) = StoreDistT (extend (tabulate . StoreDistT) wf) s
   {-# inline duplicate #-}
-  extract (StoreT wf s) = index (extract wf) s
+  extract (StoreDistT wf s) = index (extract wf) s
   {-# inline extract #-}
 
 instance Representable g => ComonadTrans (StoreT g) where
-  lower (StoreT w s) = fmap (`index` s) w
+  lower (StoreDistT w s) = fmap (`index` s) w
   {-# inline lower #-}
 
 instance ComonadHoist (StoreT g) where
-  cohoist f (StoreT w s) = StoreT (f w) s
+  cohoist f (StoreDistT w s) = StoreDistT (f w) s
   {-# inline cohoist #-}
 
 instance (ComonadTraced m w, Representable g) => ComonadTraced m (StoreT g w) where
@@ -153,8 +145,6 @@ instance (ComonadEnv m w, Representable g) => ComonadEnv m (StoreT g w) where
   ask = ask . lower
   {-# inline ask #-}
 
-{-
-instance (Representable g, ComonadCofree f w) => ComonadCofree f (StoreT g w) where
-  unwrap (StoreT w s) = fmap (`StoreT` s) (unwrap w)
-  {-# inline unwrap #-}
--}
+-- instance (Representable g, ComonadCofree f w) => ComonadCofree f (StoreT g w) where
+--  unwrap (StoreDistT w s) = fmap (`StoreDistT` s) (unwrap w)
+--  {-# inline unwrap #-}
