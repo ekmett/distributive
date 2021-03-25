@@ -36,14 +36,6 @@ tested-with:
   GHC == 8.10.3,
   GHC == 9.0.1
 
-flag tagged
-  manual: True
-  default: True
-  description:
-    You can disable the use of the `tagged` package using `-f-tagged`.
-    .
-    Disabling this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
-
 source-repository head
   type:     git
   location: git://github.com/ekmett/distributive.git
@@ -132,22 +124,20 @@ library
     -- https://gitlab.haskell.org/ghc/ghc/-/merge_requests/3295
     ghc-options: -Winferred-safe-imports -Wmissing-safe-haskell-mode
 
-  if flag(tagged)
-    build-depends: tagged >= 0.7 && < 1
-
   build-depends:
-    , base  >=4.10 && <4.16
+    , base >=4.10 && <4.16
     , base-orphans >= 0.5.2 && < 1
-    , contravariant >= 1.5.3 && < 1.6
-    , dependent-hashmap
-    , dependent-sum
+    , contravariant ^>= 1.5.3
+    , dependent-hashmap ^>= 0.1
+    , dependent-sum ^>= 0.7.1
     , ghc-prim
-    , hashable
-    , indexed-traversable >= 0.1 && < 0.2
-    , mtl >= 2.2 && < 2.3
-    , numeric-fin >= 0 && < 0.1
-    , some ^>=1.0.0.3
-    , transformers >= 0.3 && < 0.6
+    , hashable ^>= 1.3
+    , indexed-traversable ^>= 0.1
+    , mtl ^>= 2.2
+    , numeric-fin ^>= 0
+    , some ^>= 1
+    , tagged >= 0.7 && < 1
+    , transformers ^>= 0.5
 
 test-suite example-np
   import: base
