@@ -2,6 +2,10 @@
 --------------
 * Rebuilt on top of Aaron Vargo's suggestion to use distribution over a higher-kinded
   data type to improve the asymptotic performance of recursive distributive instances.
+  `Distributive` has been renamed to `Representable` and is now as powerful as the older
+  `Representable` from `adjunctions`.
+* Removed flags. 
+* Inverted dependency with `comonad`.
 
 0.6.2.1 [2020.12.30]
 --------------------
