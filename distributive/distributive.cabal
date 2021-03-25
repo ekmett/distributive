@@ -40,6 +40,7 @@ library
   build-depends:
     , base >= 4.10 && < 5
     , base-orphans >= 0.5.2 && < 1
+    , bifunctors ^>= 6
     , comonad ^>= 6
     , containers
     , contravariant ^>= 1.5.3
@@ -49,6 +50,7 @@ library
     , indexed-traversable ^>= 0.1
     , mtl ^>= 2.2
     , numeric-fin ^>= 0
+    , profunctors ^>= 6
     , some ^>= 1.0
     , tagged >= 0.7 && < 1
     , transformers ^>= 0.5
@@ -71,9 +73,16 @@ library
     Data.HKD.Rep.Endo
     Data.Machine.Mealy
     Data.Machine.Moore
+    Data.Profunctor.Closed
+    Data.Profunctor.Mapping
+    Data.Profunctor.Rep
+    Data.Profunctor.Sieve
     Control.Comonad.Rep.Store
     Control.Monad.Rep.Reader
     Control.Monad.Rep.State
+
+  exposed-modules:
+    Data.Distributive
 
   ghc-options: -Wall -fexpose-all-unfoldings -fspecialize-aggressively
 

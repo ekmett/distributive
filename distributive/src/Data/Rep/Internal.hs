@@ -45,6 +45,7 @@ import Data.Maybe
 import qualified Data.Monoid as Monoid
 import Data.Ord (Down(..))
 import Data.Orphans ()
+import Data.Profunctor
 import qualified Data.Semigroup as Semigroup
 import Data.Some
 import Data.Traversable
@@ -2142,19 +2143,40 @@ gtabulateFin
 gtabulateFin f = to1 $ gunsafeTabulateFin f
 {-# inline gtabulateFin #-}
 
+#ifdef MIN_VERSION_profunctors
+instance Indexable w => Indexable (Costar w a) where
+  type Log (Costar w a) = w a
+  index = runCostar
+  {-# inline index #-}
+
+instance Representable w => Representable (Costar w a) where
+  tabulate = Costar
+  {-# inline tabulate #-}
+
+instance Indexable w => Indexable (Star w a) where
+  type Log (Star w a) = (a, Log w)
+  index (Star f) (a,b)  = index (f a) b
+  {-# inline index #-}
+
+instance Representable w => Representable (Star w a) where
+  tabulate f = Star \a -> tabulate \b -> f (a, b)
+  {-# inline tabulate #-}
+#endif
+
 #ifdef MIN_VERSION_comonad
 instance Indexable w => Indexable (TracedT m w) where
   type Log (TracedT m w) = (Log w, m)
-  index (TracedT wma) (lw,m) = index wma lw m
+  index = \(TracedT wma) (lw,m) -> index wma lw m
+  {-# inline index #-}
 
 instance Representable w => Representable (TracedT m w) where
 
-instance Indexable w => Indexable (Cokleisli w a) where
+instance Indexable (Cokleisli w a) where
   type Log (Cokleisli w a) = w a
-  index (Cokleisli f) w = f w
+  index = runCokleisli
   {-# inline index #-}
 
-instance Representable w => Representable (Cokleisli w a) where
+instance Representable (Cokleisli w a) where
   tabulate = Cokleisli
   {-# inline tabulate #-}
 #endif

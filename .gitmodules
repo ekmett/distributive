@@ -1,3 +1,9 @@
 [submodule "comonad"]
 	path = comonad
 	url = git@github.com:ekmett/comonad.git
+[submodule "profunctors"]
+	path = profunctors
+	url = git@github.com:ekmett/profunctors.git
+[submodule "bifunctors"]
+	path = bifunctors
+	url = git@github.com:ekmett/bifunctors.git

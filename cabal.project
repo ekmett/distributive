@@ -1,9 +1,11 @@
 packages:
+  bifunctors
   comonad
   distributive
   hkd
   make
   numeric-fin
+  profunctors
   typed-keys
 
 allow-newer:
