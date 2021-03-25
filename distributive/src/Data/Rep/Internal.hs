@@ -17,6 +17,8 @@ module Data.Rep.Internal where
 import Control.Applicative
 import Control.Applicative.Backwards
 import Control.Arrow
+import Control.Comonad
+import Control.Comonad.Trans.Traced
 import Control.Monad.Fix
 import Control.Monad.Reader
 import Control.Monad.Trans.Identity
@@ -2119,3 +2121,18 @@ gtabulateFin
   => (Fin (GSize (Rep1 f)) -> a) -> f a
 gtabulateFin f = to1 $ gunsafeTabulateFin f
 {-# inline gtabulateFin #-}
+
+instance Indexable w => Indexable (TracedT m w) where
+  type Log (TracedT m w) = (Log w, m)
+  index (TracedT wma) (lw,m) = index wma lw m
+  
+instance Representable w => Representable (TracedT m w) where
+
+instance Indexable w => Indexable (Cokleisli w a) where
+  type Log (Cokleisli w a) = w a
+  index (Cokleisli f) w = f w
+  {-# inline index #-}
+
+instance Representable w => Representable (Cokleisli w a) where
+  tabulate = Cokleisli
+  {-# inline tabulate #-}

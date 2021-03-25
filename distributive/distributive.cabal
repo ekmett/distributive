@@ -48,15 +48,16 @@ library
   build-depends:
     , base >= 4.10 && < 5
     , base-orphans >= 0.5.2 && < 1
-    , contravariant >= 1.5.3 && < 1.6
+    , comonad ^>= 5.1
+    , contravariant ^>= 1.5.3
     , ghc-prim
     , hkd ^>= 0.2
-    , indexed-traversable >= 0.1 && < 0.2
-    , mtl >= 2.2 && < 2.3
-    , numeric-fin  >= 0 && < 0.1
-    , some >= 1.0 && < 1.1
-    , transformers >= 0.3 && < 0.6
-    , vector >= 0.12 && < 0.13
+    , indexed-traversable ^>= 0.1
+    , mtl ^>= 2.2
+    , numeric-fin  ^>= 0
+    , some ^>= 1.0
+    , transformers ^>= 0.5
+    , vector ^>= 0.12
 
   hs-source-dirs:  src
 
@@ -74,9 +75,11 @@ library
     Data.HKD.Variant
     Data.Machine.Mealy
     Data.Machine.Moore
-    -- Data.Machine.Rep.Moore
+    Control.Comonad.Rep.Store
     Control.Monad.Rep.Reader
     Control.Monad.Rep.State
+
+    -- Data.Machine.Rep.Moore
 
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1

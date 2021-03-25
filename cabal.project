@@ -1,4 +1,5 @@
 packages:
+  comonad
   distributive
   hkd
   make

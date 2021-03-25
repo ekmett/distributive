@@ -1,0 +1,3 @@
+[submodule "comonad"]
+	path = comonad
+	url = git@github.com:ekmett/comonad.git
