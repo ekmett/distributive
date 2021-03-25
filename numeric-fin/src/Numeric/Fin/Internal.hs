@@ -17,7 +17,9 @@
 {-# Language ScopedTypeVariables #-}
 {-# Language StandaloneDeriving #-}
 {-# Language TypeApplications #-}
+{-# Language TypeFamilies #-}
 {-# Language TypeOperators #-}
+{-# Language UndecidableInstances #-}
 {-# Language Unsafe #-}
 {-# Language ViewPatterns #-}
 {-# options_haddock hide #-}
@@ -54,11 +56,11 @@ import Control.Monad
 import Data.Coerce
 import Data.Data
 import Data.GADT.Show
-import Data.Type.Equality
 import GHC.Arr
 import GHC.Exts
 import GHC.TypeNats
-import Language.Haskell.TH.Syntax
+import GHC.TypeLits (TypeError, ErrorMessage(..))
+import Language.Haskell.TH.Syntax hiding (Type)
 import Text.Read
 import Unsafe.Coerce
 
@@ -124,15 +126,17 @@ finEmptyDataType :: DataType
 finEmptyDataType = mkDataType "Numeric.Fin.Fin" []
 {-# noinline finEmptyDataType #-}
 
-type a /~ b = (a == b) ~ 'False
+type family NonZero (p :: ErrorMessage) (n :: Nat) :: Constraint where
+  NonZero p 0 = TypeError p
+  NonZero _ _ = ()
 
-instance (0 /~ n, KnownNat n) => Bounded (Fin n) where
+instance (NonZero ('Text "Bounded: Fin 0 is uninhabited") n, KnownNat n) => Bounded (Fin n) where
   minBound = UnsafeFin 0
   maxBound = UnsafeFin (int @n - 1)
   {-# inline minBound #-}
   {-# inline maxBound #-}
 
-instance (0 /~ n, KnownNat n) => Enum (Fin n) where
+instance (NonZero ('Text "Enum: Fin 0 is uninhabited") n, KnownNat n) => Enum (Fin n) where
   succ (Fin i)
     | i < int @n - 1 = UnsafeFin (i + 1)
     | otherwise = error "Fin.succ: too big"
@@ -140,7 +144,8 @@ instance (0 /~ n, KnownNat n) => Enum (Fin n) where
   pred (Fin n) = UnsafeFin (n - 1)
   fromEnum = fromFin
   toEnum x
-    | x < 0 = error "Fin.toEnum: negative"
+    | x < 0 = error "Fin.toEnum: too small"
+    | x >= int @n = error "Fin.toEnum: too big"
     | otherwise = UnsafeFin x
   enumFrom = coerce $ enumFrom @Int
   enumFromTo = coerce (enumFromTo @Int)
