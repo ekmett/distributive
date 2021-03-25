@@ -28,15 +28,40 @@
 {-# options_ghc -Wno-deprecations #-}
 
 -- |
--- Copyright  : (c) Edward Kmett 2020, Olle Fredriksson 2018-2020
+-- Copyright  : (c) Edward Kmett 2020-2021, Olle Fredriksson 2018-2020
 -- License    : BSD-3-Clause
 -- Maintainer : Edward Kmett <ekmett@gmail.com>
 -- Stability  : experimental
 -- Portability: non-portable
 --
--- This is a version of Olle's @rock@ built as a monad transformer.
+-- This is a version of Olle's @rock@ rebuilt as a monad transformer.
 
-module Make where
+module Control.Make 
+( TaskT(..)
+, MonadTask(..)
+, mapTask
+, bindTask
+, runTask
+, GHashable
+, trackM
+, track
+, memoise
+, Cyclic(..)
+, MemoEntry(..)
+, memoiseWithCycleDetection
+, ValueDeps(..)
+, Traces
+, verifyDependencies
+, record
+, TaskKind(..)
+, Traced(..)
+, tracing
+, verifyTraces
+, traceFetch
+, ReverseDependencies
+, trackReverseDependencies
+, reachableReverseDependencies
+) where
 
 import Control.Applicative
 import Control.Concurrent (ThreadId, myThreadId)

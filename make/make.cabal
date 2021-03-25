@@ -2,12 +2,13 @@ cabal-version: 3.4
 name: make
 version: 0
 synopsis: make
-description: a toy build system
+description: A simple build system
 homepage: https://github.com/ekmett/haskell
-license: BSD-3-Clause
+license: BSD-2-Clause
 author: Edward Kmett
 maintainer: Edward Kmett <ekmett@gmail.com>
-copyright: Copyright (c) 2020 Edward Kmett, (c) 2018-2020 Olle Fredriksson
+copyright: (c) 2020 Edward Kmett, 
+           (c) 2018-2020 Olle Fredriksson
 stability: experimental
 category: Data Structures
 build-type: Simple
@@ -46,4 +47,4 @@ library
   import: base
   hs-source-dirs: src
   exposed-modules:
-    Make
+    Control.Make
