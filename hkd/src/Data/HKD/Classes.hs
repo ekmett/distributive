@@ -61,8 +61,8 @@ module Data.HKD.Classes
 , FApplicative(..)
 , ViaFApplicative(..)
 -- * FBind
-, CoatKey(..)
-, runCoatKey
+, Coatkey(..)
+, runCoatkey
 , FBind(..)
 , FMonad
 , ViaFMonad(..)
@@ -546,33 +546,53 @@ instance FTraversable f => FTraversable (Monoid.Ap f) where
 
 -- * FBind
 
-newtype CoatKey a x y = CoatKey (x ~ y => a x)
+newtype Coatkey a x y = Coatkey (x ~ y => a x)
 
-runCoatKey :: CoatKey a x x -> a x
-runCoatKey = \(CoatKey a) -> a
-{-# inline runCoatKey #-}
+runCoatkey :: Coatkey a x x -> a x
+runCoatkey = \(Coatkey a) -> a
+{-# inline runCoatkey #-}
 
 class FApply f => FBind f where
-  fbind :: f a -> (forall x. a x -> f (CoatKey b x)) -> f b
+  fbind :: f a -> (forall x. a x -> f (Coatkey b x)) -> f b
 
 -- | 'fbind' indexed only on the inner layer
 fbindInner :: FBind f => f a -> (forall x. a x -> f b) -> f b
-fbindInner = \fa f -> fbind fa \a -> ffmap (\x -> CoatKey x) $ f a
+fbindInner = \fa f -> fbind fa \a -> ffmap (\x -> Coatkey x) $ f a
 {-# inline fbindInner #-}
 
 -- | 'fbind' indexed only on the outer layer
 fbindOuter :: FBind f => f a -> (forall x. a x -> f (Const (b x))) -> f b
-fbindOuter = \fa f -> fbind fa \a -> ffmap (\x -> CoatKey (getConst x)) $ f a
+fbindOuter = \fa f -> fbind fa \a -> ffmap (\x -> Coatkey (getConst x)) $ f a
 {-# inline fbindOuter #-}
 
+-- | 
+-- 'Applicative and Bind are enough to show 'Monad'
+--
+-- @
+-- ma 
+-- = pure id <*> ma
+-- = join $ fmap (\f -> f <$> ma) (pure id)
+-- = join $ pure $ id <$> ma 
+-- = join $ pure ma
+-- @
+--
+-- @
+-- ma = 
+-- = ma <* pure ()
+-- = liftA2 const ma (pure ())
+-- = join $ fmap (\a -> const a <$> pure ()) ma
+-- = join $ fmap (\a -> pure (const a ())) ma
+-- = join $ fmap pure ma
+-- @
 class (FApplicative f, FBind f) => FMonad f
+instance (FApplicative f, FBind f) => FMonad f
 
 fliftM :: FMonad f => (a ~> b) -> f a -> f b
-fliftM = \f fa -> fbind fa \a -> fpure $ CoatKey $ f a
+fliftM = \f fa -> fbind fa \a -> fpure $ Coatkey $ f a
 {-# inline fliftM #-}
 
 fliftM2 :: FBind f => (forall x. a x -> b x -> c x) -> f a -> f b -> f c
-fliftM2 = \f fa fb -> fbind fa \a -> ffmap (\b -> CoatKey $ f a b) fb
+fliftM2 = \f fa fb -> fbind fa \a -> ffmap (\b -> Coatkey $ f a b) fb
 {-# inline fliftM2 #-}
 
 newtype ViaFMonad f a = ViaFMonad { runViaFMonad :: f a }
@@ -588,7 +608,7 @@ instance FMonad f => FApply (ViaFMonad f) where
   {-# inline fliftA2 #-}
 
 instance (GEq k, Hashable (Some k)) => FBind (DHashMap k) where
-  fbind = \m f -> DHashMap.mapMaybeWithKey (\k -> fmap runCoatKey . DHashMap.lookup k . f) m
+  fbind = \m f -> DHashMap.mapMaybeWithKey (\k -> fmap runCoatkey . DHashMap.lookup k . f) m
   {-# inline fbind #-}
 
 -- * WithIndex

@@ -59,8 +59,8 @@ module Data.HKD
 , FApplicative(..)
 , ViaFApplicative(..)
 -- * FBind
-, CoatKey(..)
-, runCoatKey
+, Coatkey(..)
+, runCoatkey
 , FBind(..)
 , FMonad
 , ViaFMonad(..)
@@ -160,7 +160,7 @@ instance FApply (F1 a) where
   {-# inline fliftA2 #-}
 
 instance FBind (F1 a) where
-  fbind = \(F1 a) f -> F1 $ runCoatKey $ runF1 $ f a
+  fbind = \(F1 a) f -> F1 $ runCoatkey $ runF1 $ f a
   {-# inline fbind #-}
 
 type role F2 nominal nominal representational
@@ -185,8 +185,8 @@ instance FTraversableWithIndex (Index '[a,b]) (F2 a b) where
 instance FBind (F2 a b) where
   fbind = \(F2 a b) f ->
     F2
-      (runCoatKey $ case f a of F2 x _ -> x)
-      (runCoatKey $ case f b of F2 _ y -> y)
+      (runCoatkey $ case f a of F2 x _ -> x)
+      (runCoatkey $ case f b of F2 _ y -> y)
   {-# inline fbind #-}
 
 type role F3 nominal nominal nominal representational
@@ -212,9 +212,9 @@ instance FTraversableWithIndex (Index '[a,b,c]) (F3 a b c) where
 instance FBind (F3 a b c) where
   fbind = \(F3 a b c) f ->
     F3
-      (runCoatKey $ case f a of F3 x _ _ -> x)
-      (runCoatKey $ case f b of F3 _ y _ -> y)
-      (runCoatKey $ case f c of F3 _ _ z -> z)
+      (runCoatkey $ case f a of F3 x _ _ -> x)
+      (runCoatkey $ case f b of F3 _ y _ -> y)
+      (runCoatkey $ case f c of F3 _ _ z -> z)
   {-# inline fbind #-}
 
 type role F4 nominal nominal nominal nominal representational
@@ -241,10 +241,10 @@ instance FTraversableWithIndex (Index '[a,b,c,d]) (F4 a b c d) where
 instance FBind (F4 a b c d) where
   fbind = \(F4 a b c d) f ->
     F4
-      (runCoatKey $ case f a of F4 x _ _ _ -> x)
-      (runCoatKey $ case f b of F4 _ x _ _ -> x)
-      (runCoatKey $ case f c of F4 _ _ x _ -> x)
-      (runCoatKey $ case f d of F4 _ _ _ x -> x)
+      (runCoatkey $ case f a of F4 x _ _ _ -> x)
+      (runCoatkey $ case f b of F4 _ x _ _ -> x)
+      (runCoatkey $ case f c of F4 _ _ x _ -> x)
+      (runCoatkey $ case f d of F4 _ _ _ x -> x)
   {-# inline fbind #-}
 
 type role F5 nominal nominal nominal nominal nominal representational
@@ -272,11 +272,11 @@ instance FTraversableWithIndex (Index '[a,b,c,d,e]) (F5 a b c d e) where
 instance FBind (F5 a b c d e) where
   fbind = \(F5 a b c d e) f ->
     F5
-      (runCoatKey $ case f a of F5 x _ _ _ _ -> x)
-      (runCoatKey $ case f b of F5 _ x _ _ _ -> x)
-      (runCoatKey $ case f c of F5 _ _ x _ _ -> x)
-      (runCoatKey $ case f d of F5 _ _ _ x _ -> x)
-      (runCoatKey $ case f e of F5 _ _ _ _ x -> x)
+      (runCoatkey $ case f a of F5 x _ _ _ _ -> x)
+      (runCoatkey $ case f b of F5 _ x _ _ _ -> x)
+      (runCoatkey $ case f c of F5 _ _ x _ _ -> x)
+      (runCoatkey $ case f d of F5 _ _ _ x _ -> x)
+      (runCoatkey $ case f e of F5 _ _ _ _ x -> x)
   {-# inline fbind #-}
 
 -------------------------------------------------------------------------------
@@ -300,7 +300,7 @@ instance FApplicative (NT a) where
   {-# inline fpure #-}
 
 instance FBind (NT r) where
-  fbind = \(NT ra) f -> NT \r -> runCoatKey $ runNT (f $ ra r) r
+  fbind = \(NT ra) f -> NT \r -> runCoatkey $ runNT (f $ ra r) r
   {-# inline fbind #-}
 
 instance FFunctorWithIndex f (NT f) where
@@ -384,7 +384,7 @@ instance FApplicative Lim where
   {-# inline fpure #-}
 
 instance FBind Lim where
-  fbind = \(Lim a) f -> Lim $ runCoatKey $ runLim $ f a
+  fbind = \(Lim a) f -> Lim $ runCoatkey $ runLim $ f a
   {-# inline fbind #-}
 
 -- * Dicts
@@ -427,7 +427,7 @@ deriving newtype instance Eq (f (Dict1 p)) => Eq (Dicts p f)
 deriving newtype instance Ord (f (Dict1 p)) => Ord (Dicts p f)
 
 instance FBind (Dicts p) where
-  fbind = \(Dicts a) f -> Dicts $ runCoatKey $ runDicts (f a)
+  fbind = \(Dicts a) f -> Dicts $ runCoatkey $ runDicts (f a)
   {-# inline fbind #-}
 
 -- * FConstrained
@@ -475,7 +475,7 @@ instance FApplicative (FConstrained p) where
   {-# inline fpure #-}
 
 instance FBind (FConstrained p) where
-  fbind = \(FConstrained a) f -> FConstrained $ runCoatKey $ runFConstrained $ f a
+  fbind = \(FConstrained a) f -> FConstrained $ runCoatkey $ runFConstrained $ f a
   {-# inline fbind #-}
 
 -- instance (forall x. p x) => FTraversable (FConstrained p) where
@@ -564,7 +564,7 @@ instance Applicative f => FApplicative (HKD f x) where
   {-# inline fpure #-}
 
 instance Monad f => FBind (HKD f x) where
-  fbind = \(HKD fa) f -> HKD $ fmap (F1 #. runCoatKey .# runF1) $ fa >>= runHKD #. f .# runF1
+  fbind = \(HKD fa) f -> HKD $ fmap (F1 #. runCoatkey .# runF1) $ fa >>= runHKD #. f .# runF1
   {-# inline fbind #-}
 
 instance Contravariant f => FContravariant (HKD f x) where
