@@ -62,6 +62,7 @@ module Data.HKD
 , Coatkey(..)
 , runCoatkey
 , FBind(..)
+, ViaFBind(..)
 , FMonad
 , ViaFMonad(..)
 , fbindInner
