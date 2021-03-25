@@ -1,6 +1,7 @@
 packages:
   bifunctors
   comonad
+  constraints
   distributive
   hkd
   make
@@ -10,4 +11,5 @@ packages:
 
 allow-newer:
   constraints-extras:base,
-  constraints-extras:template-haskell
+  constraints-extras:template-haskell,
+  constraints-extras:constraints
