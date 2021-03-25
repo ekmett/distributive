@@ -49,7 +49,9 @@ module Numeric.Fin.Internal
 , weakenLeft
 , split
 , append
+#if __GLASGOW_HASKELL__ >= 810
 , validFin
+#endif
 ) where
 
 import Control.Monad
@@ -72,8 +74,8 @@ import Unsafe.Coerce
 --
 -- >>> int @5
 -- 5
-int :: forall n. KnownNat n => Int
-int = fromIntegral $ natVal' (proxy# @n)
+int :: forall (n :: Nat). KnownNat n => Int
+int = fromIntegral $ natVal' (proxy# @_ @n)
 
 -- | The successor of a natural number.
 type S n = 1 + n
@@ -367,6 +369,9 @@ mirrorFin :: forall n. KnownNat n => Fin n -> Fin n
 mirrorFin (Fin i) = UnsafeFin (int @n - i - 1)
 {-# inline mirrorFin #-}
 
+-- TODO: backport this. if you care. you do it.
+#if __GLASGOW_HASKELL__ >= 810
+
 -- |
 -- compile time validated numeric literals
 --
@@ -387,3 +392,5 @@ validFin i
   | otherwise = fail $ "validFin: out of bounds: " ++ show i ++ " >= " ++ show n
   where n = int @n
 # endif
+
+#endif

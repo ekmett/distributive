@@ -107,6 +107,8 @@ closedMapping = map'
 
 newtype CofreeMapping p a b = CofreeMapping { runCofreeMapping :: forall f. Functor f => p (f a) (f b) }
 
+deriving stock instance (forall f. Functor f => Functor (p (f a))) => Functor (CofreeMapping p a)
+
 instance Profunctor p => Profunctor (CofreeMapping p) where
   lmap f (CofreeMapping p) = CofreeMapping (lmap (fmap f) p)
   rmap g (CofreeMapping p) = CofreeMapping (rmap (fmap g) p)
