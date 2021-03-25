@@ -41,12 +41,13 @@ library
     , base >= 4.10 && < 5
     , base-orphans >= 0.5.2 && < 1
     , comonad ^>= 6
+    , containers
     , contravariant ^>= 1.5.3
     , ghc-prim
     , hkd ^>= 0.2
     , indexed-traversable ^>= 0.1
     , mtl ^>= 2.2
-    , numeric-fin  ^>= 0
+    , numeric-fin ^>= 0
     , some ^>= 1.0
     , tagged >= 0.7 && < 1
     , transformers ^>= 0.5
@@ -54,6 +55,8 @@ library
 
   hs-source-dirs:  src
 
+  other-modules:
+    Trustworthy
   exposed-modules:
     Data.Rep
     Data.Rep.Coyoneda
