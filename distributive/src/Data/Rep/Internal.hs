@@ -2125,7 +2125,7 @@ gtabulateFin f = to1 $ gunsafeTabulateFin f
 instance Indexable w => Indexable (TracedT m w) where
   type Log (TracedT m w) = (Log w, m)
   index (TracedT wma) (lw,m) = index wma lw m
-  
+
 instance Representable w => Representable (TracedT m w) where
 
 instance Indexable w => Indexable (Cokleisli w a) where
