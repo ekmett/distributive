@@ -578,23 +578,54 @@ instance FBind f => FApply (ViaFBind f) where
 -- 'Applicative and Bind are enough to show 'Monad'
 --
 -- @
--- ma
--- = pure id <*> ma
--- = join $ fmap (\f -> f <$> ma) (pure id)
--- = join $ pure $ id <$> ma
--- = join $ pure ma
+-- fa
+-- = pure id <*> fa
+-- = join $ fmap (\f -> f <$> fa) (pure id)
+-- = join $ pure $ id <$> fa
+-- = join $ pure fa
 -- @
 --
 -- @
--- ma =
--- = ma <* pure ()
--- = liftA2 const ma (pure ())
--- = join $ fmap (\a -> const a <$> pure ()) ma
--- = join $ fmap (\a -> pure (const a ())) ma
--- = join $ fmap pure ma
+-- fa
+-- = fa <* pure ()
+-- = liftA2 const fa (pure ())
+-- = join $ fmap (\a -> const a <$> pure ()) fa
+-- = join $ fmap (\a -> pure (const a ())) fa
+-- = join $ fmap pure fa
+-- @
+--
+-- Likewise, 'FApplicative' and 'FBind' are enough to show 'FMonad' :
+--
+-- @
+-- fa
+-- = fliftA2 const fa (fpure Proxy)
+-- = fbind fa \a -> ffmap (\x -> Coatkey $ const a x) (fpure Proxy)
+-- = fbind fa \a -> ffmap (const $ Coatkey a) (fpure Proxy)
+-- = fbind fa \a -> fpure (Coatkey a)
+--
+-- fa
+-- = fliftA2 (flip const) (fpure Proxy) fa
+-- = fbind (fpure Proxy) \x -> ffmap (\a -> Coatkey $ flip const x a) fa
+-- = fbind (fpure Proxy) \_ -> ffmap (\a -> Coatkey a) fa
+-- = fbind (fpure (Const fa)) (\(Const fa') -> ffmap Coatkey fa')
 -- @
 class (FApplicative f, FBind f) => FMonad f
 instance (FApplicative f, FBind f) => FMonad f
+
+-- _proof :: forall f a. (FApplicative f, FBind f) => f a -> [f a]
+-- _proof fa =
+--   [ fa
+--   , fliftA2 const fa (fpure Proxy)
+--   , fbind fa \a -> ffmap (\x -> Coatkey $ const a x) (fpure Proxy)
+--   , fbind fa \a -> ffmap (const $ Coatkey a) (fpure Proxy)
+--   , fbind fa \a -> fpure (Coatkey a)
+
+--   , fa
+--   , fliftA2 (flip const) (fpure Proxy) fa
+--   , fbind (fpure Proxy) \x -> ffmap (\a -> Coatkey $ flip const x a) fa
+--   , fbind (fpure Proxy) \_ -> ffmap (\a -> Coatkey a) fa
+--   , fbind (fpure (Const fa)) (\(Const ma) -> ffmap Coatkey ma)
+--   ]
 
 fliftM :: FMonad f => (a ~> b) -> f a -> f b
 fliftM = \f fa -> fbind fa \a -> fpure $ Coatkey $ f a
