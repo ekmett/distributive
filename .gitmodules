@@ -7,3 +7,6 @@
 [submodule "bifunctors"]
 	path = bifunctors
 	url = git@github.com:ekmett/bifunctors.git
+[submodule "constraints"]
+	path = constraints
+	url = git@github.com:ekmett/constraints.git
