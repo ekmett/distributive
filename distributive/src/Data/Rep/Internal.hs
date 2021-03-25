@@ -956,8 +956,6 @@ instance (Representable f, Comonad f) => Monoid (Logarithm f) where
   mempty = Logarithm extract
   {-# inline mempty #-}
 
--- unfortunate orphans, caused by having @hkd@ export the data type
--- rather than making it up here.
 instance (Representable f, Traversable f) => Eq (Logarithm f) where
   (==) = on (==) logarithmPath
   {-# inline (==) #-}
