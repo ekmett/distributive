@@ -1,5 +1,5 @@
 {-# Language CPP #-}
-{-# Language Safe #-}
+{-# Language Trustworthy #-}
 
 -- |
 -- Copyright   :  (C) 2012-2021 Edward Kmett
@@ -24,11 +24,18 @@ import Control.Monad.Fix
 import Control.Monad.Zip
 import Control.Monad.Reader.Class
 import Data.Rep
+import Data.Coerce
+import Data.Profunctor.Closed
+import Data.Profunctor.Unsafe
+import Data.Profunctor.Strong
+import Data.Profunctor.Sieve
+import qualified Data.Profunctor.Rep as Pro
 import Data.Functor.WithIndex
 import GHC.Generics
 import Numeric
 import Prelude
 
+type role Moore representational representational
 data Moore a b = Moore b (a -> Moore a b)
   deriving stock (Functor, Generic, Generic1)
   deriving 
@@ -60,3 +67,38 @@ logMoore = h mempty where
 unfoldMoore :: (s -> b) -> (s -> a -> s) -> s -> Moore a b
 unfoldMoore = \f g s -> Moore (f s) (unfoldMoore f g . g s)
 {-# inline unfoldMoore #-}
+
+instance Profunctor Moore where
+  rmap = fmap
+  {-# INLINE rmap #-}
+  lmap f = go where
+    go (Moore b g) = Moore b (go . g . f)
+  {-# INLINE lmap #-}
+  dimap f g = go where
+    go (Moore b h) = Moore (g b) (go . h . f)
+  {-# INLINE dimap #-}
+  (#.) _ = coerce
+  {-# INLINE (#.) #-}
+  (.#) g _ = coerce g
+  {-# INLINE (.#) #-}
+
+instance Cosieve Moore [] where
+  cosieve (Moore b k) = \case
+    [] -> b
+    (a:as) -> cosieve (k a) as
+  {-# INLINE cosieve #-}
+
+instance Costrong Moore where
+  unfirst = Pro.unfirstCorep
+  unsecond = Pro.unsecondCorep
+  {-# INLINE unfirst #-}
+  {-# INLINE unsecond #-}
+
+instance Pro.Corepresentable Moore where
+  type Corep Moore = []
+  cotabulate = \f -> Moore (f []) \a -> Pro.cotabulate (f.(a:))
+  {-# INLINE cotabulate #-}
+
+instance Closed Moore where
+  closed = \m -> Pro.cotabulate \fs x -> cosieve m (fmap ($x) fs)
+  {-# INLINE closed #-}

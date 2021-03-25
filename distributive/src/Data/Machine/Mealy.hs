@@ -22,8 +22,11 @@ import Control.Category
 import Control.Monad.Fix
 import Control.Monad.Zip
 import Control.Monad.Reader.Class
+import Data.Coerce
 import Data.Functor.WithIndex
 import Data.Machine.Moore
+import Data.Profunctor
+import Data.Profunctor.Unsafe
 import Data.Sequence (Seq(..), ViewL(..), viewl)
 import Data.List.NonEmpty
 import Data.Rep
@@ -115,24 +118,52 @@ instance ArrowChoice Mealy where
         Moore d n' -> Moore d (go m n')
   {-# inline (|||) #-}
 
+instance Profunctor Mealy where
+  rmap = fmap
+  {-# INLINE rmap #-}
+  lmap f = \(Mealy m) -> Mealy $ go m where
+    go m a = case m (f a) of
+      Moore b n -> Moore b (go n)
+  {-# INLINE lmap #-}
+  dimap f g = \(Mealy m) -> Mealy $ go m where
+    go m a = case m (f a) of
+      Moore b n -> Moore (g b) (go n)
+  {-# INLINE dimap #-}
+  (#.) _ = Mealy . coerce . runMealy -- why can't these use #. and .#?
+  {-# INLINE (#.) #-}
+  g .# _ = coerce g
+  {-# INLINE (.#) #-}
+
+instance Strong Mealy where
+  first' = first
+  {-# INLINE first' #-}
+  second' = second
+  {-# INLINE second' #-}
+
+instance Choice Mealy where
+  left' = left
+  right' = right
+  {-# INLINE left' #-}
+  {-# INLINE right' #-}
+
 instance Indexable (Mealy a) where
   type Log (Mealy a) = NonEmpty a
   index = \(Mealy f) (x:|xs) -> index (f x) xs
   {-# inline index #-}
 
 instance Representable (Mealy a) where
-  tabulate = \f -> Mealy $ \a -> tabulate (f . (a :|))
+  tabulate = \f -> Mealy \a -> tabulate (f . (a :|))
   {-# inline tabulate #-}
 
 -- | A 'Mealy' machine modeled with explicit state.
 unfoldMealy :: (s -> a -> (b, s)) -> s -> Mealy a b
-unfoldMealy f = go where
-  go s = Mealy $ \a -> case f s a of
-    (b, t) -> Moore b (runMealy $ go t)
+unfoldMealy f = Mealy . go where
+  go s a = case f s a of
+    (b, t) -> Moore b (go t)
 {-# inline unfoldMealy #-}
 
 logMealy :: Semigroup a => Mealy a a
-logMealy = Mealy $ \a -> Moore a (h a) where
+logMealy = Mealy \a -> Moore a (h a) where
   h a = \((a <>) -> b) -> Moore b (h b)
 {-# inline logMealy #-}
 
