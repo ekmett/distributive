@@ -109,6 +109,10 @@ newtype CofreeMapping p a b = CofreeMapping { runCofreeMapping :: forall f. Func
 
 deriving stock instance (forall f. Functor f => Functor (p (f a))) => Functor (CofreeMapping p a)
 
+instance (forall f. Functor f => Foldable (p (f a))) => Foldable (CofreeMapping p a) where
+  foldMap f (CofreeMapping g) = foldMap (f . runIdentity) g
+  {-# inline foldMap #-}
+
 instance Profunctor p => Profunctor (CofreeMapping p) where
   lmap f (CofreeMapping p) = CofreeMapping (lmap (fmap f) p)
   rmap g (CofreeMapping p) = CofreeMapping (rmap (fmap g) p)
