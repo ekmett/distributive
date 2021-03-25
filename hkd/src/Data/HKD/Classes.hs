@@ -574,19 +574,19 @@ instance FBind f => FApply (ViaFBind f) where
   fliftA2 = \f (ViaFBind fa) -> ViaFBind #. fliftM2 f fa .# runViaFBind
   {-# inline fliftA2 #-}
 
--- | 
+-- |
 -- 'Applicative and Bind are enough to show 'Monad'
 --
 -- @
--- ma 
+-- ma
 -- = pure id <*> ma
 -- = join $ fmap (\f -> f <$> ma) (pure id)
--- = join $ pure $ id <$> ma 
+-- = join $ pure $ id <$> ma
 -- = join $ pure ma
 -- @
 --
 -- @
--- ma = 
+-- ma =
 -- = ma <* pure ()
 -- = liftA2 const ma (pure ())
 -- = join $ fmap (\a -> const a <$> pure ()) ma
