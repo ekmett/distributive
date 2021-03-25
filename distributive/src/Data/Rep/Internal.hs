@@ -1477,15 +1477,13 @@ instance FFunctor (DFBind a b) where
 
 data DFBind a b f = DFBind (f a) (a ~> f % b)
 
-fbindRep :: FRepresentable f => f a -> (a ~> f % CoatKey b) -> f b
-fbindRep = \fa f -> fdistrib (DFBind fa f) \(DFBind (F1 a) ab) -> runCoatKey $ runF1 (ab a)
+fbindRep :: FRepresentable f => f a -> (a ~> f % Coatkey b) -> f b
+fbindRep = \fa f -> fdistrib (DFBind fa f) \(DFBind (F1 a) ab) -> runCoatkey $ runF1 (ab a)
 {-# inline fbindRep #-}
 
 instance FRepresentable f => FBind (FDist f) where
   fbind = \(FDist fa) f -> FDist $ fbindRep fa (runFDist #. f)
   {-# inline fbind #-}
-
-instance FRepresentable f => FMonad (FDist f)
 
 faskRep :: FRepresentable f => f (FLog f)
 faskRep = ftabulate id
