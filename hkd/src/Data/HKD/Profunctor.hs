@@ -11,6 +11,7 @@ module Data.HKD.Profunctor
 ) where
 
 import Data.Coerce
+import Data.Functor.Compose
 import Data.HKD.Classes
 import Data.HKD.Profunctor.Unsafe
 import GHC.Generics
@@ -32,6 +33,21 @@ fswaps :: (a :+: b) ~> (b :+: a)
 fswaps (L1 a) = R1 a
 fswaps (R1 b) = L1 b
 {-# inline fswaps #-}
+
+flensVL
+  :: forall p s t a b. FStrong p 
+  => (forall f. Functor f => (forall x. a x -> f (b x)) -> forall y. s y -> f (t y))
+  -> p a b -> p s t
+flensVL l = fdimap hither yon . ffirst where
+  hither :: s x -> (a :*: c) x
+  hither = undefined
+  yon :: (b :*: c) x -> t x
+  yon = undefined
+
+-- (\s -> getCompose $ l (\a -> Compose (a :*: NT id)) s) (\(x :*: y) -> _ y x) . ffirst
+
+-- uncurry (flip id)) . ffirst
+{-# inline flensVL #-}
 
 class FProfunctor p => FChoice p where
   fleft :: p a b -> p (a :+: c) (b :+: c) 

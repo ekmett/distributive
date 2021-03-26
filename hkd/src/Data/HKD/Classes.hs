@@ -1,5 +1,7 @@
+{-# Language CPP #-}
 {-# Language GeneralizedNewtypeDeriving #-}
-{-# language Trustworthy #-}
+{-# Language TypeApplications #-}
+{-# Language Trustworthy #-}
 
 -- |
 -- Copyright :  (c) 2019-2021 Edward Kmett
@@ -643,8 +645,9 @@ instance FMonad f => FFunctor (ViaFMonad f) where
   {-# inline ffmap #-}
 
 -- | Derive 'FApply' from 'fbind' and 'ffmap'
-deriving via (ViaFBind (f :: (k -> Type) -> Type)) instance FMonad f => FApply (ViaFMonad f)
-
+instance FMonad f => FApply (ViaFMonad f) where
+  fliftA2 = \f (ViaFMonad fa) -> ViaFMonad #. fliftM2 f fa .# runViaFMonad
+  {-# inline fliftA2 #-}
 
 instance (GEq k, Hashable (Some k)) => FBind (DHashMap k) where
   fbind = \m f -> DHashMap.mapMaybeWithKey (\k -> fmap runCoatkey . DHashMap.lookup k . f) m
@@ -706,22 +709,22 @@ instance FTraversableWithIndex f (DHashMap f) where
 -- | Eq constraints on `k`
 type family EqC :: k -> Constraint
 
-type instance EqC @Type = Eq
 
 class (forall x. EqC x => Eq (w x)) => FEq w
 instance (forall x. EqC x => Eq (w x)) => FEq w
 
-type instance EqC @(k -> Type) = FEq
+type instance EqC = Eq
+type instance EqC = FEq
 
 -- | Ord constraints on `k`
 type family OrdC' :: k -> Constraint
 
-type instance OrdC' @Type = Ord
 
 class (FEq w, forall x. OrdC x => Ord (w x)) => FOrd w
 instance (FEq w, forall x. OrdC x => Ord (w x)) => FOrd w
 
-type instance OrdC' @(k -> Type) = FOrd
+type instance OrdC' = Ord
+type instance OrdC' = FOrd
 
 class (EqC x, OrdC' x) => OrdC x where
 instance (EqC x, OrdC' x) => OrdC x where

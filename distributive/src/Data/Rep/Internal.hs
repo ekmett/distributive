@@ -4,7 +4,7 @@
 {-# options_haddock not-home #-}
 
 -- |
--- Copyright   : (C) 2011-2021 Edward Kmett,
+-- Copyright   : (c) 2011-2021 Edward Kmett,
 --               (c) 2017-2021 Aaron Vargo,
 --               (c) 2021 Oleg Grenrus
 -- License     : BSD-2-Clause OR Apache-2.0
