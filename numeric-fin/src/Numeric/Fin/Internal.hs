@@ -75,7 +75,7 @@ import Unsafe.Coerce
 -- >>> int @5
 -- 5
 int :: forall (n :: Nat). KnownNat n => Int
-int = fromIntegral $ natVal' (proxy# @_ @n)
+int = fromIntegral $ natVal' (proxy# :: Proxy# n)
 
 -- | The successor of a natural number.
 type S n = 1 + n
