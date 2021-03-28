@@ -10,3 +10,6 @@
 [submodule "constraints"]
 	path = constraints
 	url = git@github.com:ekmett/constraints.git
+[submodule "contravariant"]
+	path = contravariant
+	url = git@github.com:ekmett/contravariant.git

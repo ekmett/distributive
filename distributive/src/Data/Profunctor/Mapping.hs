@@ -33,6 +33,7 @@ import Data.Profunctor
 import Data.Profunctor.Cayley
 import Data.Profunctor.Closed
 import Data.Profunctor.Composition
+import Data.Profunctor.Functor
 import Data.Profunctor.Monad
 import Data.Profunctor.Traversing
 import Data.Profunctor.Unsafe
