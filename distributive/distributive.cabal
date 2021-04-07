@@ -43,7 +43,7 @@ library
     , bifunctors ^>= 6
     , comonad ^>= 6
     , containers
-    , contravariant ^>= 1.5.3
+    , contravariant ^>= 1.6
     , dependent-sum ^>= 0.7.1
     , ghc-prim
     , hkd ^>= 0.2

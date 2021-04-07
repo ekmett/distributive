@@ -115,6 +115,7 @@ library
   --  Data.HKD.Profunctor
 
   ghc-options: -Wall -fexpose-all-unfoldings -fspecialize-aggressively
+  ghc-options: -O2
 
   if impl(ghc >=8.0)
     ghc-options: -Wno-trustworthy-safe
@@ -129,10 +130,13 @@ library
     -- https://gitlab.haskell.org/ghc/ghc/-/merge_requests/3295
     ghc-options: -Winferred-safe-imports -Wmissing-safe-haskell-mode
 
+  if impl(ghc >= 9.2)
+    ghc-options: -finline-generics-aggressively
+
   build-depends:
     , base >=4.10 && <4.16
     , base-orphans >= 0.5.2 && < 1
-    , contravariant ^>= 1.5.3
+    , contravariant ^>= 1.6
     , dependent-hashmap ^>= 0.1
     , dependent-sum ^>= 0.7.1
     , ghc-prim
