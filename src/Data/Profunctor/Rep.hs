@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -72,11 +73,11 @@ class (Sieve p (Rep p), Strong p) => Representable p where
 
 -- | Default definition for 'first'' given that p is 'Representable'.
 firstRep :: Representable p => p a b -> p (a, c) (b, c)
-firstRep p = tabulate $ \(a,c) -> (\b -> (b, c)) <$> sieve p a
+firstRep p = tabulate $ \(a,c) -> (,c) <$> sieve p a
 
 -- | Default definition for 'second'' given that p is 'Representable'.
 secondRep :: Representable p => p a b -> p (c, a) (c, b)
-secondRep p = tabulate $ \(c,a) -> (,) c <$> sieve p a
+secondRep p = tabulate $ \(c,a) -> (c,) <$> sieve p a
 
 instance Representable (->) where
   type Rep (->) = Identity
@@ -134,12 +135,12 @@ class (Cosieve p (Corep p), Costrong p) => Corepresentable p where
 -- | Default definition for 'unfirst' given that @p@ is 'Corepresentable'.
 unfirstCorep :: Corepresentable p => p (a, d) (b, d) -> p a b
 unfirstCorep p = cotabulate f
-  where f fa = b where (b, d) = cosieve p ((\a -> (a, d)) <$> fa)
+  where f fa = b where (b, d) = cosieve p $ (,d) <$> fa
 
 -- | Default definition for 'unsecond' given that @p@ is 'Corepresentable'.
 unsecondCorep :: Corepresentable p => p (d, a) (d, b) -> p a b
 unsecondCorep p = cotabulate f
-  where f fa = b where (d, b) = cosieve p ((,) d <$> fa)
+  where f fa = b where (d, b) = cosieve p $ (d,) <$> fa
 
 -- | Default definition for 'closed' given that @p@ is 'Corepresentable'
 closedCorep :: Corepresentable p => p a b -> p (x -> a) (x -> b)

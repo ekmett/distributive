@@ -41,7 +41,7 @@ import Prelude hiding (id,(.))
 import Trustworthy ()
 
 type role Mealy representational nominal
-data Mealy a b = Mealy { runMealy :: a -> Moore a b }
+newtype Mealy a b = Mealy { runMealy :: a -> Moore a b }
   deriving stock (Functor, Generic, Generic1)
   deriving
   ( Applicative, Monad, MonadFix, MonadZip
