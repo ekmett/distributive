@@ -25,7 +25,6 @@ tested-with:
   GHC == 8.10.3
 
 extra-source-files:
-  .hlint.yaml
   .vim.custom
   config
   CHANGELOG.md

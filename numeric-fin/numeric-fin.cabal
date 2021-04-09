@@ -18,7 +18,6 @@ tested-with:
   GHC == 8.8.4,
   GHC == 8.10.3
 extra-source-files:
-  .hlint.yaml
   CHANGELOG.md
   README.md
 

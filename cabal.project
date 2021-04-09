@@ -1,7 +1,6 @@
 packages:
   distributive
   hkd
-  make
   numeric-fin
   typed-keys
 
