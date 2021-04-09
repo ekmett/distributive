@@ -1,8 +1,4 @@
-packages:
-  distributive
-  hkd
-  numeric-fin
-  typed-keys
+packages: .
 
 allow-newer:
   constraints-extras:base,
@@ -33,4 +29,14 @@ source-repository-package
   type: git
   branch: main
   location: git@github.com:ekmett/profunctors.git
+
+source-repository-package
+  type: git
+  branch: main
+  location: git@github.com:ekmett/numeric-fin.git
+
+source-repository-package
+  type: git
+  branch: main
+  location: git@github.com:ekmett/hkd.git
 
