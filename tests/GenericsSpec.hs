@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -7,7 +8,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TypeOperators  #-}
--- {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  GenericSpec
@@ -23,7 +25,7 @@ module GenericsSpec (main, spec) where
 
 import Test.Hspec
 
-import Data.Distributive
+import Data.Rep
 import Data.Type.Equality
 import GHC.Generics
 
@@ -43,16 +45,19 @@ spec = do
       runId (plast (runId (pinit (distribute polyRecExample)))) `shouldBe` 1
 
 newtype Id a = Id { runId :: a }
-  deriving (Eq, Generic1, Functor, Show, Distributive)
+  deriving stock (Generic1, Functor, Show)
+  deriving newtype Eq
+  deriving anyclass (Indexable, Representable)
 
 idExample :: Id (Id Int)
 idExample = Id (Id 42)
 
-_logId :: Log Id :~: ()
+_logId :: Log Id :~: Fin 1
 _logId = Refl
 
 data Stream a = (:>) { shead :: a, stail :: Stream a }
-  deriving (Generic1, Functor, Distributive)
+  deriving stock (Generic1, Functor)
+  deriving anyclass (Indexable, Representable)
 
 streamExample :: Id (Stream Int)
 streamExample = Id $ let s = 0 :> fmap (+1) s in s
@@ -61,7 +66,8 @@ _logStream :: Log Stream :~: Logarithm Stream
 _logStream = Refl
 
 data PolyRec a = PolyRec { pinit :: Id (PolyRec a), plast :: a }
-  deriving (Generic1, Functor, Distributive)
+  deriving stock (Generic1, Functor)
+  deriving anyclass (Indexable, Representable)
 
 polyRecExample :: Id (PolyRec Int)
 polyRecExample = Id $ let p = PolyRec (Id $ fmap (+1) p) 0 in p
@@ -70,7 +76,8 @@ _logPolyRec :: Log PolyRec :~: Logarithm PolyRec
 _logPolyRec = Refl
 
 data Id2 a = Id2 (Id a) (Id a)
-  deriving (Generic1, Functor, Distributive)
+  deriving stock (Generic1, Functor)
+  deriving anyclass (Indexable, Representable)
 
-_logId2 :: Log Id2 :~: Either () ()
+_logId2 :: Log Id2 :~: Fin 2
 _logId2 = Refl
