@@ -13,7 +13,7 @@ copyright:     Copyright 2011-2021 Edward A. Kmett,
                Copyright 2017-2021 Aaron Vargo,
                Copyright 2021 Oleg Grenrus
 synopsis:      Representable (aka distributive) functors
-description:   
+description:
   Representable (aka distributive) functors.
   .
   Representable functors can distribute out through any other Functor,
@@ -22,7 +22,7 @@ description:
 tested-with:
   GHC == 8.6.5,
   GHC == 8.8.4,
-  GHC == 8.10.3,
+  GHC == 8.10.4,
   GHC == 9.0.1
 
 extra-source-files:

@@ -1,8 +1,6 @@
 packages: .
 
 allow-newer:
-  constraints-extras:base,
-  constraints-extras:template-haskell,
   constraints-extras:constraints
 
 source-repository-package

@@ -46,14 +46,14 @@ jobs:
     name: Haskell-CI - Linux - ${{ matrix.compiler }}
     runs-on: ubuntu-18.04
     container:
-      image: buildpack-deps:bionic
+      image: buildpack-deps:xenial
     continue-on-error: ${{ matrix.allow-failure }}
     strategy:
       matrix:
         include:
           - compiler: ghc-9.0.1
             allow-failure: false
-          - compiler: ghc-8.10.3
+          - compiler: ghc-8.10.4
             allow-failure: false
           - compiler: ghc-8.8.4
             allow-failure: false
@@ -168,43 +168,41 @@ jobs:
           echo "package distributive" >> cabal.project
           echo "    ghc-options: -Werror=missing-methods" >> cabal.project
           cat >> cabal.project <<EOF
-          allow-newer: constraints-extras:base
-          allow-newer: constraints-extras:template-haskell
           allow-newer: constraints-extras:constraints
 
           source-repository-package
             type:     git
-            location: git@github.com:ekmett/bifunctors.git
+            location: https://github.com/ekmett/bifunctors.git
             branch:   main
 
           source-repository-package
             type:     git
-            location: git@github.com:ekmett/comonad.git
+            location: https://github.com/ekmett/comonad.git
             branch:   main
 
           source-repository-package
             type:     git
-            location: git@github.com:ekmett/constraints.git
+            location: https://github.com/ekmett/constraints.git
             branch:   main
 
           source-repository-package
             type:     git
-            location: git@github.com:ekmett/contravariant.git
+            location: https://github.com/ekmett/contravariant.git
             branch:   main
 
           source-repository-package
             type:     git
-            location: git@github.com:ekmett/profunctors.git
+            location: https://github.com/ekmett/profunctors.git
             branch:   main
 
           source-repository-package
             type:     git
-            location: git@github.com:ekmett/numeric-fin.git
+            location: https://github.com/ekmett/numeric-fin.git
             branch:   main
 
           source-repository-package
             type:     git
-            location: git@github.com:ekmett/hkd.git
+            location: https://github.com/ekmett/hkd.git
             branch:   main
           EOF
           $HCPKG list --simple-output --names-only | perl -ne 'for (split /\s+/) { print "constraints: $_ installed\n" unless /^(distributive)$/; }' >> cabal.project.local
