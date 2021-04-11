@@ -109,7 +109,7 @@ instance All p '[] where
   {-# inline para #-}
 
 instance (p a, All p as) => All (p :: i -> Constraint) (a ': as) where
-  para nil kons = kons (proxy# @a) (para @i @p nil kons)
+  para nil kons = kons (proxy# :: Proxy# a) (para @i @p nil kons)
   {-# inline para #-}
 
 withLen :: forall as f r. Record as f -> (KnownLength as => r) -> r
@@ -133,7 +133,7 @@ instance (KnownLength as, All p as) => FAll (p :: i -> Constraint) (Record as) w
 
 {-
 instance (EqC f, All EqC as) => Eq (Record (as :: [Type]) f) where
-  xs == ys = 
+  xs == ys =
     withLen xs $
     Monoid.getAll $
     ffoldMap getConst $
@@ -142,14 +142,14 @@ instance (EqC f, All EqC as) => Eq (Record (as :: [Type]) f) where
       (fall @_ @Eq) xs ys
 
 instance (EqC f, All EqC as) => Eq (Record (as :: [Type]) f) where
-  xs == ys = 
+  xs == ys =
     withLen xs $
     Monoid.getAll $
     ffoldMap getConst $
     fliftD3
       (\Dict1 x y -> Const $ Monoid.All $ x == y)
       (fall @_ @Eq) xs ys
--} 
+-}
 
 {-
 instance (Eq1 f, All Eq as) => Eq (Record (as :: [Type]) f) where
