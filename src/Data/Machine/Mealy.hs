@@ -28,7 +28,7 @@ import Data.Functor.WithIndex
 import Data.Machine.Moore
 import Data.Profunctor
 import Data.Profunctor.Unsafe
-import Data.List.NonEmpty
+import Data.List.NonEmpty (NonEmpty(..))
 import Data.Rep
 import GHC.Generics
 import Numeric
