@@ -154,7 +154,7 @@ instance Distributive (Tagged t) where
 #endif
 
 instance Distributive ((->)e) where
-  distribute a e = fmap ($e) a
+  distribute a e = fmap ($ e) a
   collect f q e = fmap (flip f e) q
 
 instance Distributive g => Distributive (ReaderT e g) where
