@@ -69,6 +69,10 @@ import Control.Comonad
 import Control.Comonad.Trans.Traced
 #endif
 
+#if MIN_VERSION_ghc_prim(0,7,0)
+import GHC.Tuple (Solo)
+#endif
+
 -- |
 --
 -- Due to the lack of non-trivial comonoids in Haskell, we can restrict
@@ -489,6 +493,11 @@ instance Representable Proxy
 
 instance Indexable Identity
 instance Representable Identity
+
+#if MIN_VERSION_ghc_prim(0,7,0)
+instance Indexable Solo
+instance Representable Solo
+#endif
 
 instance Indexable ((->) x) where
   type Log ((->) x) = x
