@@ -1,3 +1,4 @@
+{-# Language DerivingVia #-}
 {-# Language Trustworthy #-}
 
 -- |

@@ -1,4 +1,5 @@
 {-# Language CPP #-}
+{-# Language DerivingVia #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language Unsafe #-}
 {-# options_haddock not-home #-}

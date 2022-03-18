@@ -1,4 +1,5 @@
-{-# Language Safe #-}
+{-# Language DerivingVia #-}
+{-# Language Trustworthy #-}
 
 -- |
 -- Copyright   : (c) Edward Kmett 2011-2021
@@ -66,7 +67,7 @@ runStore (StoreDistT (Identity ga) k) = (index ga, k)
 data StoreT g w a = StoreDistT (w (g a)) (Log g)
   deriving stock (Generic, Generic1, Functor, Foldable, Traversable)
   -- deriving anyclass (FunctorWithIndex (Log w, Log g))
-  
+
 pattern StoreT :: (Functor w, Representable g) => w (Log g -> a) -> Log g -> StoreT g w a
 pattern StoreT w s <- StoreDistT (fmap index -> w) s where
   StoreT w s = StoreDistT (fmap tabulate w) s
@@ -75,7 +76,7 @@ runStoreT :: (Functor w, Indexable g) => StoreT g w a -> (w (Log g -> a), Log g)
 runStoreT (StoreDistT w s) = (index <$> w, s)
 {-# inline runStoreT #-}
 
-deriving stock instance 
+deriving stock instance
   ( Typeable g
   , Typeable w
   , Typeable a
@@ -83,19 +84,19 @@ deriving stock instance
   , Data (Log g)
   ) => Data (StoreT g w a)
 
-instance 
+instance
   ( FunctorWithIndex i w
   , FunctorWithIndex j g
   ) => FunctorWithIndex (i, j) (StoreT g w) where
   imap f (StoreDistT wg lg) = StoreDistT (imap (\i -> imap \j -> f (i,j)) wg) lg
 
-instance 
+instance
   ( FoldableWithIndex i w
   , FoldableWithIndex j g
   ) => FoldableWithIndex (i, j) (StoreT g w) where
   ifoldMap f (StoreDistT wg _) = ifoldMap (\i -> ifoldMap \j -> f (i,j)) wg
 
-instance 
+instance
   ( TraversableWithIndex i w
   , TraversableWithIndex j g
   ) => TraversableWithIndex (i, j) (StoreT g w) where

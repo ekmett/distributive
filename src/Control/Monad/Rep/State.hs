@@ -1,4 +1,5 @@
 {-# Language CPP #-}
+{-# Language DerivingVia #-}
 {-# Language Trustworthy #-}
 
 -- |
@@ -121,7 +122,7 @@ deriving stock instance
 
 -- | Emulate a traditional state monad
 pattern StateT :: Representable g => (Log g -> m (a, Log g)) -> StateT g m a
-pattern StateT { runStateT } = StateDistT (Tabulate runStateT) 
+pattern StateT { runStateT } = StateDistT (Tabulate runStateT)
 
 {-# complete StateT #-}
 
@@ -134,7 +135,7 @@ mapStateT = \f -> StateDistT #. fmap f .# runStateDistT
 --
 -- * @'evalStateT' m s = 'fmap' 'fst' ('runStateT' m s)@
 evalStateT :: (Representable g, Functor m) => StateT g m a -> Log g -> m a
-evalStateT = \m -> fmap fst . runStateT m 
+evalStateT = \m -> fmap fst . runStateT m
 {-# inline evalStateT #-}
 
 -- | Evaluate a state computation with the given initial state
@@ -200,7 +201,7 @@ instance (Representable g, MonadWriter w m) => MonadWriter w (StateT g m) where
   {-# inline pass #-}
 
 liftListen :: (Representable f, Functor m) => Listen w m (a, Log f) -> Listen w (StateT f m) a
-liftListen = \listen' -> mapStateT $ 
+liftListen = \listen' -> mapStateT $
   fmap (\((a,s'), w) -> ((a,w), s')) . listen'
 {-# inline liftListen #-}
 

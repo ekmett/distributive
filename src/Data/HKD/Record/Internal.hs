@@ -1,3 +1,4 @@
+{-# Language DerivingVia #-}
 {-# Language Unsafe #-}
 {-# options_haddock not-home #-}
 

@@ -102,7 +102,6 @@ library
     DeriveDataTypeable
     DeriveGeneric
     DeriveTraversable
-    DerivingVia
     EmptyCase
     ExistentialQuantification
     ExplicitNamespaces

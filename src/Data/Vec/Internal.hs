@@ -1,4 +1,5 @@
 {-# Language CPP #-}
+{-# Language DerivingVia #-}
 {-# Language GeneralizedNewtypeDeriving #-}
 {-# Language Unsafe #-}
 {-# options_haddock hide #-}
@@ -60,7 +61,7 @@ instance KnownNat n => Representable (Vec n) where
 
 instance (KnownNat n, Read a) => Read (Vec n a) where
   readPrec = do
-    l <- step readPrec 
+    l <- step readPrec
     let v = V.fromList l
     UnsafeVec v <$ guard (V.length v == int @n)
 

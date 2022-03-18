@@ -1,4 +1,5 @@
 {-# Language CPP #-}
+{-# Language DerivingVia #-}
 {-# Language Trustworthy #-}
 
 -- |
@@ -38,7 +39,7 @@ import Prelude
 type role Moore representational representational
 data Moore a b = Moore b (a -> Moore a b)
   deriving stock (Functor, Generic, Generic1)
-  deriving 
+  deriving
   ( Applicative, Monad, MonadFix, MonadZip, MonadReader [a], FunctorWithIndex [a]
 #ifdef MIN_VERSION_comonad
   , Comonad, ComonadApply
@@ -48,7 +49,7 @@ data Moore a b = Moore b (a -> Moore a b)
 
 instance Indexable (Moore a) where
   type Log (Moore a) = [a]
-  index = \(Moore b k) -> \case 
+  index = \(Moore b k) -> \case
     [] -> b
     (a:as) -> index (k a) as
   {-# inline index #-}
