@@ -1,5 +1,5 @@
-{-# Language DerivingVia #-}
-{-# Language Trustworthy #-}
+{-# Language DerivingStrategies #-}
+{-# Language Safe #-}
 
 -- |
 -- Copyright   : (c) Edward Kmett 2011-2021

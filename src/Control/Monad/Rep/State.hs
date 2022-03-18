@@ -1,5 +1,5 @@
 {-# Language CPP #-}
-{-# Language DerivingVia #-}
+{-# Language DerivingStrategies #-}
 {-# Language Trustworthy #-}
 
 -- |
