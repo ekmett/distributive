@@ -199,7 +199,6 @@ instance (Applicative (Rep p), Representable p) => Applicative (Prep p) where
     go (xf',xa') = sieve pf xf' <*> sieve pa xa'
 
 instance (Monad (Rep p), Representable p) => Monad (Prep p) where
-  return a = Prep () $ tabulate $ const $ return a
   Prep xa pa >>= f = Prep xa $ tabulate $ sieve pa >=> \a -> case f a of
     Prep xb pb -> sieve pb xb
 
@@ -258,7 +257,7 @@ instance (Corepresentable p, Corepresentable q) => Corepresentable (Procompose p
   cotabulate f = Procompose (cotabulate (f . Compose)) (cotabulate id)
   {-# INLINE cotabulate #-}
 
--- ORPHAN 
+-- ORPHAN
 instance (Corepresentable p, Corepresentable q) => Costrong (Procompose p q) where
   unfirst = unfirstCorep
   {-# INLINE unfirst #-}
