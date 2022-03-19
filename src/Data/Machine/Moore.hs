@@ -101,5 +101,5 @@ instance Pro.Corepresentable Moore where
   {-# INLINE cotabulate #-}
 
 instance Closed Moore where
-  closed = \m -> Pro.cotabulate \fs x -> cosieve m (fmap ($x) fs)
+  closed = \m -> Pro.cotabulate \fs x -> cosieve m (fmap ($ x) fs)
   {-# INLINE closed #-}
