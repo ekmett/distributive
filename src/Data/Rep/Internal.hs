@@ -152,7 +152,7 @@ class (Indexable f, Functor f) => Representable f where
   -- 'distrib' :: ('Representable' f, 'FFunctor' w) => w f -> (w 'Identity' -> r) -> f r
   -- @
   --
-  -- as well, outside o the class, which is quite concise for many workloads.
+  -- as well, outside of the class, which is quite concise for many workloads.
   scatter :: FFunctor w => (w Identity -> r) -> (g ~> f) -> w g -> f r
   default scatter
     :: (Generic1 f, Representable (Rep1 f), FFunctor w)
@@ -289,7 +289,7 @@ dist = scatter id id
 --
 -- This might be useful if you define custom 'tabulate' and 'index' functions
 -- but do not need to carefully peel apart your structure layer by layer and
--- for some reason you are unable to define 'Generic1' and so canot simply use
+-- for some reason you are unable to define 'Generic1' and so cannot simply use
 -- 'DeriveAnyClass'.
 scatterDefault
   :: (Representable f, FFunctor w)
@@ -979,8 +979,6 @@ instance Comonad f => Monoid (Logarithm f) where
 
 #endif
 
--- unfortunate orphans, caused by having @hkd@ export the data type
--- rather than making it up here.
 instance (Representable f, Traversable f) => Eq (Logarithm f) where
   (==) = on (==) logarithmPath
   {-# inline (==) #-}
