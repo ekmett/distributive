@@ -968,11 +968,12 @@ logPath = index (runTrail (traverse id $ pureRep @f end) id)
 
 #ifdef MIN_VERSION_comonad
 
-instance (Representable f, Comonad f) => Semigroup (Logarithm f) where
+-- these are a special case of (Comonad f, Monad g) => Monoid (f ~> g)
+instance Comonad f => Semigroup (Logarithm f) where
   (<>) = \(Logarithm f) (Logarithm g) -> Logarithm \x -> f $ g $ duplicate x
   {-# inline (<>) #-}
 
-instance (Representable f, Comonad f) => Monoid (Logarithm f) where
+instance Comonad f => Monoid (Logarithm f) where
   mempty = Logarithm extract
   {-# inline mempty #-}
 
