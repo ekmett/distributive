@@ -304,8 +304,7 @@ scatterDefault = \k phi wg ->
 -- to manipulate 'Logarithm's regardless of the choice of 'Log' for your distributive
 -- functor.
 tabulateLogarithm :: Representable f => (Logarithm f -> a) -> f a
-tabulateLogarithm = \ f ->
-  distrib (Tab f) \(Tab f') -> f' (Logarithm runIdentity)
+tabulateLogarithm = \f -> distrib (NT id) \(NT g) -> f $ Logarithm \x -> runIdentity $ g x
 {-# inline tabulateLogarithm #-}
 
 -- | @'Logarithm' f = f ~> 'Identity'@
