@@ -58,6 +58,9 @@ import Data.Tagged
 #if __GLASGOW_HASKELL__ >= 702
 import GHC.Generics (U1(..), (:*:)(..), (:.:)(..), Par1(..), Rec1(..), M1(..))
 #endif
+#if MIN_VERSION_ghc_prim(0,7,0)
+import GHC.Tuple (Solo(..))
+#endif
 
 #ifdef HLINT
 {-# ANN module "hlint: ignore Use section" #-}
@@ -280,4 +283,10 @@ instance Distributive f => Distributive (M1 i c f) where
   collect = coerce (collect :: (a -> f b) -> g a -> f (g b))
     :: forall g a b . Functor g
     => (a -> M1 i c f b) -> g a -> M1 i c f (g b)
+#endif
+
+#if MIN_VERSION_ghc_prim(0,7,0)
+instance Distributive Solo where
+  distribute = Solo . fmap (\(Solo y) -> y)
+  collect f = Solo . fmap (\x -> case f x of Solo y -> y)
 #endif

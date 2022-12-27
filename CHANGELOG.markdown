@@ -1,3 +1,7 @@
+next [????.??.??]
+-----------------
+* Add a `Distributive` instance for `Solo`.
+
 0.6.2.1 [2020.12.30]
 --------------------
 * The build-type has been changed from `Custom` to `Simple`.

@@ -57,6 +57,7 @@ library
   build-depends:
     base                >= 4   && < 5,
     base-orphans        >= 0.5.2 && < 1,
+    ghc-prim,
     transformers        >= 0.3 && < 0.7
 
   hs-source-dirs:  src
@@ -68,9 +69,6 @@ library
 
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1
-
-  if impl(ghc>=7.2 && < 7.6)
-    build-depends: ghc-prim
 
   if impl(ghc < 8.0)
     if flag(semigroups)
