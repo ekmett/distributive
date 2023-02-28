@@ -297,7 +297,8 @@ scatterDefault
   -> (g ~> f)
   -> w g -> f r
 scatterDefault = \k phi wg ->
-  tabulate \x -> k $ ffmap (\g -> Identity $ index (phi g) x) wg
+  let wf = ffmap phi wg
+  in tabulate \i -> k $ ffmap (Identity . (`index` i)) wf
 {-# inline scatterDefault #-}
 
 -- | Default definition for 'tabulate' when @'Log' f@ = @'Logarithm' f@. Can be used
