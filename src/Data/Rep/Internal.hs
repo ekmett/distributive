@@ -74,27 +74,6 @@ import Control.Comonad.Trans.Traced
 import GHC.Tuple (Solo)
 #endif
 
--- |
---
--- Due to the lack of non-trivial comonoids in Haskell, we can restrict
--- ourselves to requiring a 'Functor' rather than some Coapplicative class.
--- Categorically every 'Representable' functor is actually a right adjoint,
--- and so it must be 'Representable' endofunctor and preserve all limits.
--- This is a fancy way of saying @f@ is isomorphic to @(->) x@ for some x.
--- We use the name @'Log' f@ for @x@.
---
---
--- @
--- 'tabulate' '.' 'index' ≡ 'id'
--- 'index' '.' 'tabulate' ≡ 'id'
--- @
---
--- To be distributable a container will need to have a way to consistently
--- zip a potentially infinite number of copies of itself. This effectively
--- means that the holes in all values of that type, must have the same
--- cardinality, fixed sized vectors, infinite streams, functions, etc.
--- and no extra information to try to merge together.
-
 class Indexable f where
   -- | Defaults to @'Log' ('Rep1' f)@ when @f@ is non-recursive, otherwise to 'Logarithm'.
   type Log f
@@ -109,6 +88,67 @@ class Indexable f where
   index = defaultIndex
   {-# inline index #-}
 
+-- | A 'Representable' functor is a functor which is isomorphic to @(->) x@ for
+-- some type @x@, and can be thought of as a container of a fixed size which
+-- contains nothing other than its elements, with @x@ being the type of its
+-- indicies. We call the type @x@ @'Log' f@, and the two halves of the
+-- isomorphism 'tabulate' and 'index'.
+--
+-- However, the above definition's reliance on indexing makes it asymptotically
+-- inefficient for structures without random access. This class therefore
+-- provides an alternative, equivalent definition of representable functors as
+-- "better distributive functors". In its simplest form, this is a functor which
+-- supports the operation
+--
+-- @
+-- 'dist' :: 'FFunctor' w => w f -> f (w 'Identity')
+-- @
+--
+-- satisfying the law
+--
+-- @
+-- 'dist' . 'F1' = 'fmap' ('F1' . 'Identity')
+-- @
+--
+-- See the docs for 'dist'.
+--
+-- However, one will usually want to 'fmap' immediately after using 'dist', so
+-- it makes sense to instead define this class in terms of 'distrib', so that
+-- the two operations can be fused. However, 'distrib' (as well as 'dist') would
+-- prevent this class from being derived with GeneralizedNewtypeDeriving or
+-- DerivingVia, so this class is instead defined in terms of 'scatter'.
+--
+-- There are a few different ways to implement this class:
+--
+-- If you have a 'Generic1' instance for your functor, you should be able to
+-- derive this class. This may be inefficient for recursive types,
+-- where the derived instance may be recursive in a way which prevents
+-- specialization of the 'FFunctor' argument to 'scatter'.
+--
+-- You can provide an implementation of 'scatter' satisfying the law
+--
+-- @
+-- 'scatter' k phi . 'F1' ≡ 'fmap' (k . 'F1' . 'Identity') . phi
+-- @
+--
+-- You can provide an isomorphism by implementing 'Log', 'tabulate', and 'index', satisfying
+--
+-- @
+-- 'tabulate' . 'index' ≡ 'id'
+-- 'index' . 'tabulate'  ≡ 'id'
+-- @
+--
+-- and define
+--
+-- @
+-- 'scatter' = 'scatterDefault'
+-- @
+--
+-- 'scatterDefault' will be asymptotically inefficient when 'index' is not O(1).
+--
+-- When providing an isomorphism, you can use @'Logarithm' f@ and
+-- 'indexLogarithm' as definitions for @'Log' f@ and 'index', in which case you
+-- then only need an appropriate definition for 'tabulate'.
 class (Indexable f, Functor f) => Representable f where
   -- | Defaults to 'tabulateLogarithm' when @'Log' f = 'Logarithm' f@, otherwise to 'tabulateGeneric'
   tabulate :: (Log f -> a) -> f a
@@ -116,43 +156,22 @@ class (Indexable f, Functor f) => Representable f where
   tabulate = defaultTabulate
   {-# inline tabulate #-}
 
-  -- | Scatter the contents of an 'FFunctor'. This admittedly complicated operation
-  -- is necessary to get asymptotically optimal performance for 'Representable' functors
-  -- like Mealy and Moore machines that have many layers to them.
-  --
-  -- If you have a 'Generic1' instance for your 'Functor', this should be able to be
-  -- generated automatically. Otherwise, if you must, you can use 'scatterDefault' as
-  -- a fallback in terms of 'tabulate' and 'index', which is offered in terms of the
-  -- law relating 'scatter' to 'tabulate' and 'index':
-  --
-  -- @
-  -- 'scatter' phi wg ≡ 'tabulate' \\x -> 'ffmap' (\\g -> 'Identity' '$' 'index' (phi g) x) wg
+  -- |@
+  -- 'scatter' k phi wg ≡ 'distrib' ('ffmap' phi wg) k
   -- @
   --
-  -- Defaults to 'scatterGeneric'
+  -- Version of 'distrib' with an extra map to make it compatible with
+  -- GeneralizedNewtypeDeriving. The extra map isn't particularly useful
+  -- otherwise. Implementations will often immediately @'ffmap' phi wg@ and
+  -- then essentially implement 'distrib'.
   --
-  -- The obvious API for this function is the much simpler
-  --
-  -- @
-  -- 'dist ':: ('Representable' f, 'FFunctor' w) => w f -> f (w 'Identity')
-  -- @
-  --
-  -- However, most uses of this function aren't interested in leaving a @w 'Identity'@ inside @f@
-  -- and immediately 'ffmap' to replace it. However, most implementations have to 'ffmap' to put
-  -- it there. This leads to two unfused 'ffmap' calls. By adding a @(w 'Identity' -> r)@ step
-  -- we clean up that concern.
-  --
-  -- Another concern with the obvious implementation as a class method is that 'w f' knows nothing
-  -- about whether 'w' takes a representational argument. As a result, @GeneralizedNewtypeDeriving@
-  -- wouldn't work for this class if this was a member. (For an example of this, try to use GND on
-  -- 'Traversable' today!) Adding a natural transformation before we process allows this
-  -- dictionary to be derived with GND. This latter mapping is a lot less useful, so we supply
+  -- Implementations must satisfy the law
   --
   -- @
-  -- 'distrib' :: ('Representable' f, 'FFunctor' w) => w f -> (w 'Identity' -> r) -> f r
+  -- 'scatter' k phi . 'F1' ≡ 'fmap' (k . 'F1' . 'Identity') . phi
   -- @
   --
-  -- as well, outside of the class, which is quite concise for many workloads.
+  -- Defaults to 'scatterGeneric'.
   scatter :: FFunctor w => (w Identity -> r) -> (g ~> f) -> w g -> f r
   default scatter
     :: (Generic1 f, Representable (Rep1 f), FFunctor w)
@@ -268,29 +287,49 @@ defaultIndex :: forall f a. DefaultIndex f => f a -> (Log f -> a)
 defaultIndex = defaultIndex' @(LogTypeOf f)
 {-# inline defaultIndex #-}
 
--- | A helper for the most common usage pattern when working with 'scatter'.
---
--- @
--- 'distrib' w k ≡ 'scatter' k id w
+-- | @
+-- 'distrib' wf k ≡ 'fmap' k ('dist' wf) ≡ 'tabulate' \\i -> k '$' 'ffmap' ('Identity' . (`'index'` i)) wf
 -- @
 --
--- flipped version of 'cotrav'
+-- Encodes the common pattern of using 'fmap' after 'dist', and allows the two
+-- operations to be fused. Can be asymptotically faster than 'tabulate'/'index'
+-- for 'Representable' functors without random access.
 distrib :: (Representable f, FFunctor w) => w f -> (w Identity -> r) -> f r
 distrib = \ w k -> scatter k id w
 {-# inline distrib #-}
 
--- | The essential essence of the new 'scatter' with administrative mapping removed.
+-- | @
+-- 'dist' wf ≡ 'tabulate' \\i -> 'ffmap' ('Identity' '.' (`'index'` i)) wf
+-- @
+--
+-- However, 'dist' can be asymptotically faster than 'tabulate'/'index' for
+-- 'Representable' functors without random access, as it may walk through the
+-- @f@s in @wf@ rather than repeatedly 'index' into them.
+--
+-- When combined with 'fmap' (see 'distrib'), 'dist' is powerful enough to
+-- implement any operation on 'Representable' functors which doesn't depend on 'Log'.
+--
+-- One intuition for 'dist' is that it transposes a 2D container:
+--
+-- * A @w f@ can be thought of as a 2D container with rows given by the
+-- container @f@, where different rows may have different element types
+-- (determined by @w@). E.g. @data Foo f = Foo (f Int) (f Bool)@ can be thought
+-- of as the type of 2D containers consisting of a row of ints and a row of
+-- bools.
+--
+-- * 'dist' takes a 2D container with rows given by a representable functor —
+-- i.e. where the rows all have the same length — and returns a row of its columns
+--
+-- * The type of a column is @w Identity@, as a column is a 2D container with
+-- rows of length one
 dist :: (Representable f, FFunctor w) => w f -> f (w Identity)
 dist = scatter id id
 {-# inline dist #-}
 
--- | Implements 'scatter' in terms of 'tabulate' and 'index' by the law
--- that relates 'scatter' to its canonical implementation.
+-- | Implements 'scatter' in terms of 'tabulate' and 'index'.
 --
--- This might be useful if you define custom 'tabulate' and 'index' functions
--- but do not need to carefully peel apart your structure layer by layer and
--- for some reason you are unable to define 'Generic1' and so cannot simply use
--- 'DeriveAnyClass'.
+-- This can be used as a definition for 'scatter' when providing a definition
+-- for 'tabulate', but will be asymptotically inefficient when 'index' is not O(1).
 scatterDefault
   :: (Representable f, FFunctor w)
   => (w Identity -> r)
@@ -301,43 +340,23 @@ scatterDefault = \k phi wg ->
   in tabulate \i -> k $ ffmap (Identity . (`index` i)) wf
 {-# inline scatterDefault #-}
 
--- | Default definition for 'tabulate' when @'Log' f@ = @'Logarithm' f@. Can be used
--- to manipulate 'Logarithm's regardless of the choice of 'Log' for your distributive
+-- | Default definition for 'tabulate' when @'Log' f = 'Logarithm' f@. Can be used
+-- to manipulate 'Logarithm's regardless of the choice of 'Log' for your 'Representable'
 -- functor.
 tabulateLogarithm :: Representable f => (Logarithm f -> a) -> f a
 tabulateLogarithm = \f -> distrib (NT id) \(NT g) -> f $ Logarithm \x -> runIdentity $ g x
 {-# inline tabulateLogarithm #-}
 
--- | @'Logarithm' f = f ~> 'Identity'@
+-- | @f '~>' 'Identity'@
 --
--- When @f@ is 'Representable', this is the representation/logarithm of @f@, up to isomorphism. i.e.
---
--- @f a ≅ Logarithm f -> a@
---
--- Consider the case where @f = (->) r@. It follows from the yoneda lemma that
---
--- @(->) r '~>' 'Identity' ≅ r@
---
--- i.e. we have
---
--- @'Logarithm' ((->) r) = forall a. (r -> a) -> a ≅ r@
---
--- This works more generally for any 'Representable' functor. E.g. given
---
--- @data V2 a = V2 a a@
---
--- we have
---
--- @
--- V2 a ≅ Bool -> a
--- 'Logarithm' V2 ≅ Bool
--- @
-type role Logarithm representational
+-- When @f@ is 'Representable' this is isomorphic to @'Log' f@, and may be used
+-- as a definition for @'Log' f@. This makes it possible to derive
+-- 'Representable' without constructing a 'Log' specific to @f@, which is
+-- necessary to show that "better distributive functors" are in fact equivalent
+-- to 'Representable' functors.
 newtype Logarithm f = Logarithm { runLogarithm :: forall a. f a -> a }
 
--- | A 'Log' for a distributive functor needs to support 'index' and 'tabulate'.
---
--- 'Logarithm' is a universal choice for 'Log'.
+-- | Default definition for 'index' when @'Log' f = 'Logarithm' f@
 indexLogarithm :: f a -> Logarithm f -> a
 indexLogarithm = \fa (Logarithm fa2a) -> fa2a fa
 {-# inline indexLogarithm #-}
