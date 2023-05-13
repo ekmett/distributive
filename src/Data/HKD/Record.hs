@@ -10,7 +10,7 @@
 -- Heterogeneous vectors.
 
 module Data.HKD.Record
-( Index(Index, IndexZ, IndexS)
+( Index(Index, IZ, IS, KnownIZ, KnownIS)
 , toIndex
 , Length
 , KnownLength

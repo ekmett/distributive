@@ -61,7 +61,6 @@ newtype ReaderT f m b = ReaderRepT { runReaderRepT :: f (m b) }
 
 pattern ReaderT :: Representable f => (Log f -> m a) -> ReaderT f m a
 pattern ReaderT { runReaderT } = ReaderRepT (Tabulate runReaderT)
-
 {-# complete ReaderT #-}
 
 instance (Functor f, Functor m) => Functor (ReaderT f m) where
