@@ -51,7 +51,7 @@ newtype Mealy a b = Mealy { runMealy :: a -> Moore a b }
   ) via Dist (Mealy a)
   deriving
   ( Semigroup, Monoid, Num, Fractional, Floating
-  )  via Dist (Mealy a) b
+  ) via Dist (Mealy a) b
 
 instance Category Mealy where
   id = Mealy go where
