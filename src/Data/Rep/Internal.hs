@@ -209,6 +209,7 @@ scatterGeneric = \k phi -> to1 . scatter k (from1 . phi)
 pattern Tabulate :: Representable f => (Log f -> a) -> f a
 pattern Tabulate i <- (index -> i) where
   Tabulate i = tabulate i
+{-# COMPLETE Tabulate #-}
 
 -- * Generic derivation
 
@@ -1218,6 +1219,7 @@ fscatterDefault = \k phi wg ->
 pattern FTabulate :: FRepresentable f => (FLog f ~> a) -> f a
 pattern FTabulate i <- (findex -> i) where
   FTabulate i = ftabulate i
+{-# COMPLETE FTabulate #-}
 
 type family DefaultFLog' (containsRec1 :: Bool) (f :: (i -> Type) -> Type) :: i -> Type where
   DefaultFLog' 'True  f = FLogarithm f
