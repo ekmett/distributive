@@ -195,8 +195,10 @@ instance Profunctor p => Functor (Prep p) where
 
 instance (Applicative (Rep p), Representable p) => Applicative (Prep p) where
   pure a = Prep () $ tabulate $ const $ pure a
-  Prep xf pf <*> Prep xa pa = Prep (xf,xa) (tabulate go) where
-    go (xf',xa') = sieve pf xf' <*> sieve pa xa'
+  Prep xf pf <*> prep = Prep xf (tabulate go) where
+    go xf' = case prep of Prep xa pa -> sieve pf xf' <*> sieve pa xa
+  Prep xa pa  *> prep = Prep xa (tabulate go) where
+    go xa' = case prep of Prep xb pb -> sieve pa xa'  *> sieve pb xb
 
 instance (Monad (Rep p), Representable p) => Monad (Prep p) where
   Prep xa pa >>= f = Prep xa $ tabulate $ sieve pa >=> \a -> case f a of
