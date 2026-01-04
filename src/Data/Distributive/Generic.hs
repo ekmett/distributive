@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -15,14 +16,17 @@
 ----------------------------------------------------------------------------
 module Data.Distributive.Generic
   ( GDistributive(..)
+#ifdef __GLASGOW_HASKELL__
   , genericCollect
   , genericDistribute
+#endif
   ) where
 
 import Data.Distributive
 import GHC.Generics
 import Data.Coerce
 
+#ifdef __GLASGOW_HASKELL__
 -- | 'collect' derived from a 'Generic1' type
 --
 -- This can be used to easily produce a 'Distributive' instance for a
@@ -39,6 +43,7 @@ genericCollect f = to1 . gcollect (from1 . f)
 -- It's often more efficient to use 'genericCollect' instead.
 genericDistribute  :: (Functor f, Generic1 g, GDistributive (Rep1 g)) => f (g a) -> g (f a)
 genericDistribute = to1 . gdistribute . fmap from1
+#endif
 
 
 -- Can't distribute over,
