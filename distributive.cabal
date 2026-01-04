@@ -48,7 +48,6 @@ flag tagged
 library
   build-depends:
     base                >= 4.9 && < 5,
-    base-orphans        >= 0.5.2 && < 1,
     transformers        >= 0.3 && < 0.7
 
   hs-source-dirs:  src

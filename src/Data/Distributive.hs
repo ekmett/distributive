@@ -34,7 +34,6 @@ import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
 import qualified Data.Monoid as Monoid
-import Data.Orphans ()
 import Data.Proxy
 import qualified Data.Semigroup as Semigroup
 import GHC.Generics (U1(..), (:*:)(..), (:.:)(..), Par1(..), Rec1(..), M1(..))

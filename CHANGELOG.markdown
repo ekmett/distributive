@@ -1,6 +1,7 @@
 next [????.??.??]
 -----------------
 * Drop support for pre-8.0 versions of GHC.
+* Drop unnecessary `base-orphans` dependency.
 
 0.6.2.1 [2020.12.30]
 --------------------
