@@ -13,19 +13,19 @@ copyright:     Copyright (C) 2011-2016 Edward A. Kmett
 synopsis:      Distributive functors -- Dual to Traversable
 description:   Distributive functors -- Dual to @Traversable@
 build-type:    Simple
-tested-with:   GHC == 7.0.4
-             , GHC == 7.2.2
-             , GHC == 7.4.2
-             , GHC == 7.6.3
-             , GHC == 7.8.4
-             , GHC == 7.10.3
-             , GHC == 8.0.2
+tested-with:   GHC == 8.0.2
              , GHC == 8.2.2
              , GHC == 8.4.4
              , GHC == 8.6.5
              , GHC == 8.8.4
              , GHC == 8.10.4
-             , GHC == 9.0.1
+             , GHC == 9.0.2
+             , GHC == 9.2.8
+             , GHC == 9.4.8
+             , GHC == 9.6.7
+             , GHC == 9.8.4
+             , GHC == 9.10.3
+             , GHC == 9.12.2
 extra-source-files:
   .hlint.yaml
   .vim.custom
@@ -35,15 +35,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: git://github.com/ekmett/distributive.git
-
-flag semigroups
-  manual: True
-  default: True
-  description:
-    You can disable the use of the `semigroups` package using `-f-semigroups`.
-    .
-    Disabling this is an unsupported configuration, but it may be useful for accelerating builds in sandboxes for expert users.
+  location: https://github.com/ekmett/distributive.git
 
 flag tagged
   manual: True
@@ -55,30 +47,17 @@ flag tagged
 
 library
   build-depends:
-    base                >= 4   && < 5,
+    base                >= 4.9 && < 5,
     base-orphans        >= 0.5.2 && < 1,
     transformers        >= 0.3 && < 0.7
 
   hs-source-dirs:  src
   exposed-modules:
     Data.Distributive
-
-  if impl(ghc>=7.2)
-    exposed-modules: Data.Distributive.Generic
+    Data.Distributive.Generic
 
   if flag(tagged)
     build-depends: tagged >= 0.7 && < 1
-
-  if impl(ghc>=7.2 && < 7.6)
-    build-depends: ghc-prim
-
-  if impl(ghc < 8.0)
-    if flag(semigroups)
-      build-depends: semigroups >= 0.13 && < 1
-
-  if impl(ghc < 7.8)
-    hs-source-dirs: src-compat
-    other-modules: Data.Coerce
 
   ghc-options: -Wall
 

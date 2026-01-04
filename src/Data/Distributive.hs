@@ -2,13 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-#if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
-#endif
-
-#if __GLASGOW_HASKELL__ >= 706
 {-# LANGUAGE PolyKinds #-}
-#endif
 
 -----------------------------------------------------------------------------
 -- |
@@ -30,33 +25,22 @@ module Data.Distributive
 import Control.Applicative
 import Control.Applicative.Backwards
 import Control.Monad (liftM)
-#if __GLASGOW_HASKELL__ < 707
-import Control.Monad.Instances ()
-#endif
 import Control.Monad.Trans.Identity
 import Control.Monad.Trans.Reader
 import Data.Coerce
+import Data.Complex
 import Data.Functor.Compose
 import Data.Functor.Identity
 import Data.Functor.Product
 import Data.Functor.Reverse
 import qualified Data.Monoid as Monoid
 import Data.Orphans ()
-
-#if MIN_VERSION_base(4,4,0)
-import Data.Complex
-#endif
-#if __GLASGOW_HASKELL__ >= 707 || defined(MIN_VERSION_tagged)
 import Data.Proxy
-#endif
-#if __GLASGOW_HASKELL__ >= 800 || defined(MIN_VERSION_semigroups)
 import qualified Data.Semigroup as Semigroup
-#endif
+import GHC.Generics (U1(..), (:*:)(..), (:.:)(..), Par1(..), Rec1(..), M1(..))
+
 #ifdef MIN_VERSION_tagged
 import Data.Tagged
-#endif
-#if __GLASGOW_HASKELL__ >= 702
-import GHC.Generics (U1(..), (:*:)(..), (:.:)(..), Par1(..), Rec1(..), M1(..))
 #endif
 
 #ifdef HLINT
@@ -79,9 +63,7 @@ import GHC.Generics (U1(..), (:*:)(..), (:.:)(..), Par1(..), Rec1(..), M1(..))
 -- and no extra information to try to merge together.
 --
 class Functor g => Distributive g where
-#if __GLASGOW_HASKELL__ >= 707
   {-# MINIMAL distribute | collect #-}
-#endif
   -- | The dual of 'Data.Traversable.sequenceA'
   --
   -- >>> distribute [(+1),(+2)] 1
@@ -140,11 +122,9 @@ instance Distributive Identity where
     :: forall a b f . Functor f => (a -> Identity b) -> f a -> Identity (f b)
   distribute = Identity . fmap runIdentity
 
-#if __GLASGOW_HASKELL__ >= 707 || defined(MIN_VERSION_tagged)
 instance Distributive Proxy where
   collect _ _ = Proxy
   distribute _ = Proxy
-#endif
 
 #if defined(MIN_VERSION_tagged)
 instance Distributive (Tagged t) where
@@ -209,7 +189,6 @@ instance Distributive Monoid.Sum where
     => (a -> Monoid.Sum b) -> f a -> Monoid.Sum (f b)
   distribute = Monoid.Sum . fmap Monoid.getSum
 
-#if __GLASGOW_HASKELL__ >= 800 || defined(MIN_VERSION_semigroups)
 instance Distributive Semigroup.Min where
   collect = coerce (fmap :: (a -> b) -> f a -> f b)
     :: forall f a b . Functor f
@@ -233,21 +212,17 @@ instance Distributive Semigroup.Last where
     :: forall f a b . Functor f
     => (a -> Semigroup.Last b) -> f a -> Semigroup.Last (f b)
   distribute = Semigroup.Last . fmap Semigroup.getLast
-#endif
 
-#if MIN_VERSION_base(4,4,0)
 instance Distributive Complex where
   distribute wc = fmap realP wc :+ fmap imagP wc where
     -- Redefine realPart and imagPart to avoid incurring redundant RealFloat
     -- constraints on older versions of base
     realP (r :+ _) = r
     imagP (_ :+ i) = i
-#endif
 
 instance (Distributive m, Monad m) => Distributive (WrappedMonad m) where
   collect f = WrapMonad . collect (coerce f)
 
-#if __GLASGOW_HASKELL__ >= 702
 instance Distributive U1 where
   distribute _ = U1
 
@@ -280,4 +255,3 @@ instance Distributive f => Distributive (M1 i c f) where
   collect = coerce (collect :: (a -> f b) -> g a -> f (g b))
     :: forall g a b . Functor g
     => (a -> M1 i c f b) -> g a -> M1 i c f (g b)
-#endif
