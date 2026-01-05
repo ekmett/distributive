@@ -1,5 +1,5 @@
 dist
-dist-newstyle
+dist-*
 docs
 wiki
 TAGS
@@ -30,4 +30,3 @@ cabal.project.local
 cabal.project.local~
 .HTF/
 .ghc.environment.*
-dist-mcabal

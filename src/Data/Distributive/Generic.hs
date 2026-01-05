@@ -26,6 +26,7 @@ import Data.Distributive
 import GHC.Generics
 import Data.Coerce
 
+-- This part is GHC only, since MicroHs doesn't support type families (Rep1) yet.
 #ifdef __GLASGOW_HASKELL__
 -- | 'collect' derived from a 'Generic1' type
 --
