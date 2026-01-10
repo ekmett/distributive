@@ -1,5 +1,5 @@
-next [????.??.??]
------------------
+0.6.3 [2026.01.10]
+------------------
 * Drop support for pre-8.0 versions of GHC.
 * Drop unnecessary `base-orphans` dependency.
 
