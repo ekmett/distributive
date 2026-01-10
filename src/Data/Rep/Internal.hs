@@ -45,7 +45,6 @@ import Data.Kind
 import Data.Maybe
 import qualified Data.Monoid as Monoid
 import Data.Ord (Down(..))
-import Data.Orphans ()
 import Data.Profunctor
 import qualified Data.Semigroup as Semigroup
 import Data.Some

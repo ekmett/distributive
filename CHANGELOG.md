@@ -4,8 +4,13 @@
   data type to improve the asymptotic performance of recursive distributive instances.
   `Distributive` has been renamed to `Representable` and is now as powerful as the older
   `Representable` from `adjunctions`.
-* Removed flags. 
+* Removed flags.
 * Inverted dependency with `comonad`.
+
+0.6.3 [2026.01.10]
+------------------
+* Drop support for pre-8.0 versions of GHC.
+* Drop unnecessary `base-orphans` dependency.
 
 0.6.2.1 [2020.12.30]
 --------------------

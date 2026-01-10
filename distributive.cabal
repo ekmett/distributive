@@ -38,7 +38,6 @@ source-repository head
 library
   build-depends:
     , base >= 4.10 && < 5
-    , base-orphans >= 0.5.2 && < 1
     , bifunctors ^>= 6
     , comonad ^>= 6
     , containers
